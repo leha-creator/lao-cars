@@ -162,7 +162,7 @@ Enum-ы в `app/Enums/`: `CarStatus`, `EngineType`, `DriveType`, `ServiceCategor
 
 ### Фаза 4 — Сиды, тесты и синхронизация контекста
 
-- [ ] **10. Сиды справочников и контента** *(зависит от 2, 6, 8, 9)*
+- [x] **10. Сиды справочников и контента** *(зависит от 2, 6, 8, 9)*
   `database/seeders/`: `BrandSeeder` (марки, реально встречающиеся в импорте из Китая: Zeekr, Voyah, BYD, Li Auto, Exeed, Chery, Haval, Geely — Zeekr, Voyah и BYD прямо названы в ТЗ), `ServiceSeeder` (позиции по всем пяти категориям `ServiceCategory`, часть с ценой, часть с «по запросу»), `EmployeeSeeder` и `ReviewSeeder` (в том числе один немодерированный отзыв — чтобы фильтр модерации было на чём проверить), `SiteSettingSeeder` с ключами из макета: `contacts.*` (телефон, e-mail, адрес «Москва, ул. Осенняя, 17, корп. 1», часы работы), `socials.*` (Telegram, WhatsApp, VK), `home.ticker` (четыре тезиса), `home.promo`, `home.advantages` (четыре карточки), `footer.guarantee` (блок «Гарантия 30 дней»), `services_page.*`, `parts_page.*`, `seo.default_title` / `seo.default_description`.
   Все сиды идемпотентны — через `updateOrCreate` по `slug` или `key`: повторный `db:seed` не должен плодить дубли.
   Подключить в `DatabaseSeeder`, сохранив существующее создание тестового пользователя.
@@ -170,7 +170,7 @@ Enum-ы в `app/Enums/`: `CarStatus`, `EngineType`, `DriveType`, `ServiceCategor
   Логирование: INFO по завершении каждого сида — сколько записей создано и сколько обновлено. Через `$this->command->info()`, чтобы вывод был виден в консоли.
   Проверка: `php artisan migrate:fresh --seed` отрабатывает; повторный `php artisan db:seed` не увеличивает счётчики.
 
-- [ ] **11. Сид автомобилей с реальными фотографиями** *(зависит от 5, 10)*
+- [x] **11. Сид автомобилей с реальными фотографиями** *(зависит от 5, 10)*
   `CarSeeder` — 10–12 автомобилей через фабрику поверх марок из `BrandSeeder`: разные статусы, часть с `show_on_homepage`, часть под заказ без пробега, один без цены.
   `CarPhotoSeeder` — копирует изображения из `assets/cars/` в `storage/app/public/cars/` и раскладывает по автомобилям (4–6 фото на карточку, `sort_order` по порядку копирования).
   Два ограничения обязательны, иначе сид становится вредным:
