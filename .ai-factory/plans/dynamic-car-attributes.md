@@ -156,7 +156,7 @@ Enum `app/Enums/CarAttributeType`: `text`, `number`, `boolean`, `select`.
 
 > **Чекпоинт коммита:** `feat: сиды стартового набора характеристик`
 
-- [ ] **7. Тесты характеристик, значений и сидов** *(зависит от 6)*
+- [x] **7. Тесты характеристик, значений и сидов** *(зависит от 6)*
   `tests/Feature/Models/CarAttributeTest.php`: приведение типов для всех четырёх вариантов (включая `'2.5'` → float и `'4'` → int), `format()` с единицей измерения и для `boolean` («Да» / «Нет»), `format(null)` возвращает `null`, `isValidValue()` для `select` (значение вне `options` отклоняется) и для прочих типов, скоупы `inCard` / `inFilter` / `ordered`, уникальность `key`.
   `tests/Feature/Models/CarAttributeValueTest.php`: связи в обе стороны, каскад при удалении автомобиля, каскад при удалении характеристики, падение на повторной паре `(car_id, car_attribute_id)`, аксессоры `casted` и `formatted`.
   Дополнить `tests/Feature/Models/CarTest.php`: `cardAttributes()` — группировка, порядок групп по минимальному `sort_order`, характеристика с `group = null` собрана под ключом `null` и идёт последней, исключение характеристик с `show_in_card = false`, пустая коллекция у авто без характеристик; `attributeValue('body_type')` отдаёт типизированное значение и `null` для неизвестного ключа; `syncAttributeValues()` — создание, обновление, удаление при пустом значении, игнорирование неизвестного ключа.

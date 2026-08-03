@@ -1,8 +1,11 @@
 <?php
 
+use App\Enums\CarAttributeType;
 use App\Enums\ServiceCategory;
 use App\Models\Brand;
 use App\Models\Car;
+use App\Models\CarAttribute;
+use App\Models\CarAttributeValue;
 use App\Models\CarPhoto;
 use App\Models\Employee;
 use App\Models\Review;
@@ -14,6 +17,8 @@ it('fills every content table', function () {
 
     expect(Brand::count())->toBeGreaterThan(0)
         ->and(Car::count())->toBeGreaterThan(0)
+        ->and(CarAttribute::count())->toBeGreaterThan(0)
+        ->and(CarAttributeValue::count())->toBeGreaterThan(0)
         ->and(Service::count())->toBeGreaterThan(0)
         ->and(Employee::count())->toBeGreaterThan(0)
         ->and(Review::count())->toBeGreaterThan(0)
@@ -39,12 +44,18 @@ it('stays idempotent on a repeated run', function () {
         'employees' => Employee::count(),
         'reviews' => Review::count(),
         'settings' => Setting::count(),
+        'attributes' => CarAttribute::count(),
+        'attribute_values' => CarAttributeValue::count(),
     ];
 
     $this->seed();
 
     expect(Brand::count())->toBe($counts['brands'])
         ->and(Car::count())->toBe($counts['cars'])
+        ->and(CarAttribute::count())->toBe($counts['attributes'])
+        // Значения задаются константой, без fake(): случайные
+        // переписывались бы updateOrCreate на каждом прогоне.
+        ->and(CarAttributeValue::count())->toBe($counts['attribute_values'])
         ->and(Service::count())->toBe($counts['services'])
         ->and(Employee::count())->toBe($counts['employees'])
         ->and(Review::count())->toBe($counts['reviews'])
@@ -84,4 +95,35 @@ it('seeds a catalog that exercises every card state', function () {
         ->and(Car::onOrder()->count())->toBeGreaterThan(0)
         ->and(Car::query()->whereNull('price')->count())->toBeGreaterThan(0)
         ->and(Car::query()->whereNull('mileage')->count())->toBeGreaterThan(0);
+});
+
+it('seeds an attribute of every type so no branch stays uncovered', function () {
+    // Веха 3.4 строит редактор значений, 4.3 — сетку карточки; обе
+    // должны столкнуться с каждым типом на демо-данных.
+    $this->seed();
+
+    foreach (CarAttributeType::cases() as $type) {
+        expect(CarAttribute::query()->where('type', $type)->count())
+            ->toBeGreaterThan(0, "тип {$type->value} не засеян");
+    }
+});
+
+it('keeps every seeded select value inside its option list', function () {
+    // Значение вне options — это вариант фильтра вехи 3.6,
+    // по которому ничего не находится.
+    $this->seed();
+
+    $invalid = CarAttributeValue::query()->with('attribute')->get()
+        ->reject(fn (CarAttributeValue $value): bool => $value->attribute->isValidValue($value->value));
+
+    expect($invalid)->toBeEmpty();
+});
+
+it('seeds cars both with and without attributes', function () {
+    // Сетка карточки должна проверяться и на пустом наборе,
+    // и такой случай обязан быть в демо-данных, а не на проде.
+    $this->seed();
+
+    expect(Car::query()->has('attributeValues')->count())->toBeGreaterThan(0)
+        ->and(Car::query()->doesntHave('attributeValues')->count())->toBeGreaterThan(0);
 });
