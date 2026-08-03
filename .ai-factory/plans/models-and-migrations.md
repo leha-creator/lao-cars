@@ -125,7 +125,7 @@ Enum-ы в `app/Enums/`: `CarStatus`, `EngineType`, `DriveType`, `ServiceCategor
 
 ### Фаза 3 — Услуги, заявки и контент
 
-- [ ] **6. Услуги и запчасти: миграция, модель, фабрика** *(зависит от 1)*
+- [x] **6. Услуги и запчасти: миграция, модель, фабрика** *(зависит от 1)*
   Миграция `create_services_table`: `id`, `category` (string, индекс), `title`, `slug` (unique), `description` (text nullable), `price` (`unsignedBigInteger` nullable — `null` даёт «цена по запросу»), `price_note` (string nullable — «от», «за колесо»), `is_published` (boolean, default true), `sort_order`, `timestamps`; составной индекс `(category, sort_order)`.
   `app/Models/Service.php`: каст `category => ServiceCategory::class`, скоупы `#[Scope] inCategory(ServiceCategory $category)`, `published()`, `ordered()`, связь `leads(): MorphMany`. Генерация `slug` из `title`.
   Единая сущность на все категории, включая запчасти — решение зафиксировано в `DESCRIPTION.md` и `ARCHITECTURE.md`. Отдельную модель `Part` не заводить ни при каких обстоятельствах: она появится вместе с витриной (артикулы, наличие, фильтры), которой в MVP нет.
@@ -133,7 +133,7 @@ Enum-ы в `app/Enums/`: `CarStatus`, `EngineType`, `DriveType`, `ServiceCategor
   Логирование: не требуется.
   Проверка: `Service::inCategory(ServiceCategory::Parts)->published()->ordered()->get()` возвращает только запчасти в заданном порядке.
 
-- [ ] **7. Заявки: миграции `leads` и `lead_comments`, модели, morph map** *(зависит от 3, 6)*
+- [x] **7. Заявки: миграции `leads` и `lead_comments`, модели, morph map** *(зависит от 3, 6)*
   Миграция `create_leads_table` — полная схема (решение зафиксировано выше): `name`, `phone` (32), `email` nullable, `message` (text) nullable, `contact_method` nullable, `preferred_time` nullable, `part_brand` nullable, `part_model` nullable, `part_vin` (17) nullable, `nullableMorphs('source')`, `status` (string, default `'new'`, индекс), `page_url` nullable, `timestamps`; индекс `(status, created_at)` — менеджер работает со списком «новые сверху».
   Миграция `create_lead_comments_table`: `lead_id` (`cascadeOnDelete`), `user_id` (`restrictOnDelete` — автор комментария не удаляется вместе с историей), `body` (text), `timestamps`.
   `app/Models/Lead.php`: касты `status => LeadStatus::class`, `contact_method => ContactMethod::class`, `preferred_time => PreferredTime::class`; связи `source(): MorphTo`, `comments(): HasMany`; скоуп `#[Scope] new()`; метод `sourceLabel(): string` — человекочитаемый источник для админки и Telegram-уведомлений (веха 3.7). `app/Models/LeadComment.php` — связи `lead()` и `author()`.
@@ -143,7 +143,7 @@ Enum-ы в `app/Enums/`: `CarStatus`, `EngineType`, `DriveType`, `ServiceCategor
   Логирование: не требуется в этой вехе. Канал `leads` уже настроен в `config/logging.php` и наполнится в 3.7.
   Проверка: в tinker создать лид с источником-авто и лид без источника; в `source_type` лежит `car`, а не FQCN; `sourceLabel()` возвращает «Авто: …» и «Общая форма».
 
-- [ ] **8. Команда и отзывы: миграции, модели, фабрики** *(зависит от 1)*
+- [x] **8. Команда и отзывы: миграции, модели, фабрики** *(зависит от 1)*
   Миграция `create_employees_table`: `name`, `position`, `bio` (text nullable), `photo_path` nullable, `is_published` (default true), `sort_order`, `timestamps`.
   Миграция `create_reviews_table`: `author_name`, `author_context` nullable («Клиент, импорт авто» — подпись из макета), `body` (text), `rating` (`unsignedTinyInteger` nullable, 1–5), `photo_path` nullable, `is_published` (**default false**), `published_at` (timestamp nullable), `sort_order`, `timestamps`; индекс `(is_published, published_at)`.
   Значение `is_published` по умолчанию именно `false`: ТЗ требует модерации публикации, и отзыв, попадающий на сайт до просмотра администратором, — это дефект, а не удобство.
@@ -151,7 +151,7 @@ Enum-ы в `app/Enums/`: `CarStatus`, `EngineType`, `DriveType`, `ServiceCategor
   Логирование: не требуется.
   Проверка: `Review::published()->get()` не содержит немодерированных записей.
 
-- [ ] **9. Настройки сайта: миграция, модель `Setting`, кеш** *(зависит от 1)*
+- [x] **9. Настройки сайта: миграция, модель `Setting`, кеш** *(зависит от 1)*
   Миграция `create_site_settings_table`: `id`, `key` (string, unique), `value` (`jsonb`, nullable), `group` (string, индекс), `timestamps`.
   `app/Models/Setting.php`: каст `value => 'array'`, статические `get(string $key, mixed $default = null): mixed`, `set(string $key, mixed $value, string $group): void`, `group(string $group): array`. Чтение идёт через кеш Redis (`Cache::rememberForever('site_settings', ...)` — одна выборка всех ключей на запрос, а не запрос на каждое обращение из шапки, подвала и главной). Сброс кеша — в событиях `saved` и `deleted` модели, иначе администратор сохраняет настройку и не видит изменений.
   Ключи именуются `<group>.<name>` (`contacts.phone`, `home.ticker`, `seo.default_title`) — группа дублируется в отдельной колонке ради выборки блока целиком и группировки на странице настроек Filament (веха 3.5).
