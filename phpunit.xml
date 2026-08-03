@@ -18,17 +18,42 @@
         </include>
     </source>
     <php>
+        <!--
+            Тесты ходят в реальные PostgreSQL и Redis, а не в SQLite и
+            array-драйверы.
+
+            Скелет Laravel задаёт здесь DB_CONNECTION=sqlite, DB_DATABASE=:memory:,
+            CACHE_STORE=array, QUEUE_CONNECTION=sync и SESSION_DRIVER=array —
+            действующими, а не закомментированными. Оставить их значит получить
+            зелёные тесты, которые не касаются ни PostgreSQL, ни Redis, то есть
+            не проверяют ровно то, ради чего smoke-тесты каркаса и написаны.
+
+            Отдельно про QUEUE_CONNECTION: при `sync` job выполняется сразу и
+            очередь всегда пуста, поэтому проверка реальной постановки задачи
+            (`Queue::size() > 0`) молча теряет смысл.
+
+            Хост, порт и учётные данные приходят из `.env` и здесь не дублируются —
+            иначе локальное смещение порта Redis пришлось бы держать в двух местах.
+        -->
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
-        <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <env name="CACHE_STORE" value="redis"/>
+        <env name="DB_CONNECTION" value="pgsql"/>
+        <env name="DB_DATABASE" value="laocars_testing"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
-        <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SESSION_DRIVER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="redis"/>
+        <env name="SESSION_DRIVER" value="redis"/>
+        <!--
+            Изоляция от рабочих данных на стороне Redis. `default` обслуживает
+            очередь и сессии, `cache` — кеш; у них разные номера баз, иначе
+            тестовый прогон писал бы в ту же базу, где лежит кеш разработки
+            (по умолчанию REDIS_CACHE_DB=1).
+        -->
+        <env name="REDIS_DB" value="1"/>
+        <env name="REDIS_CACHE_DB" value="2"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

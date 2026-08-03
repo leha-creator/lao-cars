@@ -98,17 +98,17 @@
 
 ### Фаза 3 — Тесты и CI
 
-- [ ] **7. Настроить Pest и тестовое окружение** *(зависит от 2, 3)*
+- [x] **7. Настроить Pest и тестовое окружение** *(зависит от 2, 3)*
   Pest + `pest-plugin-laravel` + `pest-plugin-livewire` (последний нужен для тестов Filament в вехах 3.4–3.5). Ставить в форме `composer require --dev "pestphp/pest:4.*" "pestphp/pest-plugin-laravel:4.*" "pestphp/pest-plugin-livewire:4.*"` — запись с `^` вырождается в точную версию (см. «Факты окружения»). Резолв проверен: Pest v4.7.7 и плагины 4.1.0 совместимы с PHPUnit 12.5 из скелета; `allow-plugins` уже разрешает `pestphp/pest-plugin`.
   **Ключевая правка — переопределение `phpunit.xml`.** Скелет Laravel 13 задаёт там `DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`, `CACHE_STORE=array`, `QUEUE_CONNECTION=sync`, `SESSION_DRIVER=array` — не закомментированными, а действующими. Просто дописать `DB_DATABASE=laocars_testing` недостаточно: при оставшемся `DB_CONNECTION=sqlite` это значение читается как путь к файлу SQLite, а `QUEUE_CONNECTION=sync` выполняет job синхронно и ломает проверку `Queue::size() > 0` из задачи 8. Итоговый набор: `DB_CONNECTION=pgsql`, `DB_DATABASE=laocars_testing`, `CACHE_STORE=redis`, `QUEUE_CONNECTION=redis`, `SESSION_DRIVER=redis`, `REDIS_DB=1`, `APP_ENV=testing`, `MAIL_MAILER=array`; `DB_URL` оставить пустым. Хост и порт БД приходят из `.env` и здесь не дублируются.
   Подключить `RefreshDatabase` для Feature-тестов.
   Проверка: `php artisan test` проходит, повторный запуск не падает из-за незачищенной БД. Отдельно убедиться, что тесты действительно идут в PostgreSQL: `database/database.sqlite` после прогона не появляется, а в `laocars_testing` видны таблицы миграций.
 
-- [ ] **8. Написать smoke-тесты каркаса** *(зависит от 4, 6, 7)*
+- [x] **8. Написать smoke-тесты каркаса** *(зависит от 4, 6, 7)*
   `tests/Feature/InfrastructureTest.php` — живое PDO-соединение с PostgreSQL, `Redis::ping()`, кеш через Redis, реальная постановка job в очередь (`Queue::size() > 0`, без `Queue::fake()`). `tests/Feature/SmokeTest.php` — `GET /` отдаёт 200. `tests/Feature/Filament/AdminPanelTest.php` — вход, дашборд, редирект неавторизованного. Именование по `rules/base.md`.
   Проверка: все тесты зелёные; при `docker compose down` падают с внятной ошибкой соединения — это подтверждает, что они действительно ходят в реальную инфраструктуру.
 
-- [ ] **9. Собрать базовый CI на GitHub Actions** *(зависит от 8)*
+- [x] **9. Собрать базовый CI на GitHub Actions** *(зависит от 8)*
   `.github/workflows/ci.yml`: триггеры на push в `master` и pull request; services `postgres:17` и `redis:7` тех же версий, что в локальном `compose.yml`; `setup-php` с той же версией PHP, что зафиксирована в задаче 1; шаги `composer install` → `cp .env.example .env` → `key:generate` → `npm ci` → `npm run build` → `pint --test` → `php artisan test`. Каждый шаг отдельным `run`, без склейки через `&&` (правило из AGENTS.md).
   Сервисы GitHub Actions публикуются на штатных портах, поэтому `.env.example` обязан хранить 5432 и 6379 — локальное смещение Redis на 56379 остаётся только в `.env`. Иначе `cp .env.example .env` уводит CI на несуществующий порт.
   `REDIS_CLIENT=predis` выставить и в CI: в образах `setup-php` расширения phpredis по умолчанию тоже нет, а несоответствие клиента даст `Class "Redis" not found` уже после зелёной локальной сборки.

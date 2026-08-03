@@ -1,0 +1,113 @@
+# Базовый CI: линтер и тесты.
+#
+# Статический анализ (Larastan) сюда намеренно не входит — на проекте без
+# прикладного кода он даёт шум вместо пользы. Добавляется отдельно, когда
+# появятся модели и сервисы.
+#
+# Версии образов и PHP взяты из локального окружения (compose.yml и Herd), а не
+# подобраны заново: расхождение локалки и CI — самый скучный способ получить
+# зелёные тесты локально и красные в PR.
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Новый пуш в ту же ветку отменяет предыдущий прогон — незачем занимать раннеры
+# проверкой заведомо устаревшего коммита.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Линтер и тесты
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: laocars
+          POSTGRES_USER: laocars
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U laocars -d laocars"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      # Сервисы GitHub Actions публикуются на штатных портах, поэтому здесь 6379,
+      # а не локальные 56379. Ровно за этим `.env.example` и хранит канонический
+      # порт: CI собирается из него через `cp .env.example .env`.
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v4
+
+      - name: Установить PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          # phpredis в образах setup-php по умолчанию нет — клиент Redis в
+          # проекте predis, он ставится composer'ом. Несоответствие клиента дало
+          # бы «Class "Redis" not found» уже после зелёной локальной сборки.
+          extensions: mbstring, intl, bcmath, zip, pdo_pgsql, pgsql
+          coverage: none
+
+      - name: Установить Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Кеш зависимостей Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-php8.5-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php8.5-
+
+      - name: Установить зависимости PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Подготовить окружение
+        run: cp .env.example .env
+
+      - name: Сгенерировать ключ приложения
+        run: php artisan key:generate
+
+      # Сервис Postgres создаёт только базу из POSTGRES_DB. Тесты работают в
+      # отдельной базе (см. phpunit.xml), локально её создаёт init-скрипт из
+      # docker/postgres/init — здесь эквивалент этого шага.
+      - name: Создать тестовую базу
+        run: psql -h 127.0.0.1 -U laocars -d laocars -c 'CREATE DATABASE laocars_testing;'
+        env:
+          PGPASSWORD: secret
+
+      - name: Установить зависимости Node
+        run: npm ci
+
+      # Сборка обязана идти до тестов: smoke-тест главной страницы читает
+      # манифест Vite, и без него @vite падает.
+      - name: Собрать фронтенд
+        run: npm run build
+
+      - name: Проверить форматирование
+        run: php vendor/bin/pint --test
+
+      - name: Прогнать тесты
+        run: php artisan test
