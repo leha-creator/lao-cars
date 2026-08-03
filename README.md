@@ -1,58 +1,115 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ЛАО КАРС
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> Сайт импорта автомобилей и автосервиса: каталог, услуги и единый поток заявок в админке.
 
-## About Laravel
+Компания работает по двум направлениям — импорт автомобилей (Китай, Европа и другие страны) и автосервис (ТО, ремонт, шиномонтаж, детейлинг). Сайт закрывает обе линейки и служит основным каналом получения заявок: карточка автомобиля ведёт к заявке на конкретное авто, страница услуги — к записи на сервис, а все обращения сходятся в один список лидов.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**Текущее состояние:** собран каркас проекта (веха 3.1). Прикладные модели, ресурсы админки и публичные страницы — в работе, см. [роадмап](.ai-factory/ROADMAP.md).
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Требования
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Инструмент | Версия | Зачем |
+| :---- | :---- | :---- |
+| PHP | 8.3+ (разработка ведётся на 8.5) | Приложение |
+| Composer | 2.x | Зависимости PHP |
+| Node.js | 20.19+ или 22.12+ (разработка ведётся на 24) | Сборка фронтенда |
+| Docker | с Compose v2 | PostgreSQL и Redis |
 
-## Learning Laravel
+PHP и Node запускаются локально (например, через Herd). В Docker живут только базы данных: bind mount исходников в контейнер на Windows заметно бьёт по I/O на каждом запросе. Прод-образ приложения собирается отдельно.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Расширение `phpredis` не требуется — клиентом Redis работает `predis`.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Быстрый старт
 
 ```bash
-composer require laravel/boost --dev
+git clone https://github.com/leha-creator/lao-cars.git
+cd lao-cars
 
-php artisan boost:install
+cp .env.example .env
+docker compose up -d
+composer install
+npm ci
+php artisan key:generate
+php artisan migrate
+php artisan make:filament-user
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+**Важно:** в `.env` укажите `REDIS_PORT=56379`, если штатный порт 6379 занят локальной службой Redis (в `.env.example` он оставлен каноническим — из этого файла собирается CI).
 
-## Contributing
+Запуск разработки — одной командой (сервер, воркер очереди, логи и Vite параллельно):
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+composer dev
+```
 
-## Code of Conduct
+Либо по отдельности:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+php artisan serve        # http://localhost:8000
+npm run dev              # или npm run build
+php artisan queue:work   # обработка уведомлений о заявках
+```
 
-## Security Vulnerabilities
+Админ-панель — по адресу `/admin`.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Локальное окружение
 
-## License
+`compose.yml` поднимает две службы:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Служба | Образ | Порт на хосте |
+| :---- | :---- | :---- |
+| PostgreSQL | `postgres:17-alpine` | 5432 |
+| Redis | `redis:7-alpine` | 56379 |
+
+Redis смещён с 6379 намеренно: штатный порт на машине разработки занят нативной службой `redis-server`, которая поднимается заново после перезагрузки.
+
+При первой инициализации том Postgres получает две базы: рабочую `laocars` и тестовую `laocars_testing`. Init-скрипты выполняются **только на пустом томе** — если тестовой базы не оказалось, пересоздайте окружение:
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+## Тесты
+
+```bash
+php artisan test
+```
+
+Тесты идут в **реальные PostgreSQL и Redis**, а не в SQLite и array-драйверы — контейнеры должны быть подняты. Это осознанное решение: подмена драйверов скрыла бы ровно те ошибки сборки инфраструктуры, которые smoke-тесты и должны ловить. Изоляция от рабочих данных — через отдельную базу `laocars_testing` и отдельные номера баз Redis (см. `phpunit.xml`).
+
+Если при `docker compose down` тесты продолжают проходить — значит они проверяют не то, что заявлено.
+
+Форматирование кода:
+
+```bash
+php vendor/bin/pint          # исправить
+php vendor/bin/pint --test   # только проверить
+```
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) на каждый push в `master` и каждый pull request поднимает PostgreSQL 17 и Redis 7 тех же версий, что и локально, и прогоняет: `composer install` → `npm ci` → `npm run build` → `pint --test` → `php artisan test`.
+
+Статический анализ в базовый CI не входит — он добавится, когда появится прикладной код.
+
+## Стек
+
+- **Backend:** PHP 8.3+, Laravel 13, PostgreSQL 17, Eloquent
+- **Админ-панель:** Filament 5 на Livewire 4
+- **Frontend:** Blade + Alpine.js 3 + Tailwind CSS 4, сборка Vite
+- **Очереди и кеш:** Redis 7 (`predis`)
+- **Тесты:** Pest 4
+
+Серверный рендер выбран ради SEO каталога: списки и карточки должны индексироваться, а фильтры — оставаться обычными GET-параметрами. Alpine отвечает только за локальную интерактивность.
+
+## Документация
+
+| Документ | Путь | Описание |
+| :---- | :---- | :---- |
+| Техническое задание | [ТЗ_ЛАО_КАРС.md](ТЗ_ЛАО_КАРС.md) | Первоисточник требований заказчика |
+| Спецификация | [.ai-factory/DESCRIPTION.md](.ai-factory/DESCRIPTION.md) | Стек, принятые решения, границы MVP |
+| Архитектура | [.ai-factory/ARCHITECTURE.md](.ai-factory/ARCHITECTURE.md) | Слои, правила зависимостей, антипаттерны |
+| Роадмап | [.ai-factory/ROADMAP.md](.ai-factory/ROADMAP.md) | Вехи по этапам и что уже закрыто |
+| Конвенции кода | [.ai-factory/rules/base.md](.ai-factory/rules/base.md) | Именование, структура, ошибки, логирование |
+| Карта проекта | [AGENTS.md](AGENTS.md) | Структура репозитория и правила для агентов |
