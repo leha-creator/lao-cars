@@ -91,7 +91,7 @@ Enum `app/Enums/CarAttributeType`: `text`, `number`, `boolean`, `select`.
 
 ### Фаза 2 — Значения и чтение из карточки автомобиля
 
-- [ ] **3. Значения характеристик: миграция, модель, фабрика** *(зависит от 2)*
+- [x] **3. Значения характеристик: миграция, модель, фабрика** *(зависит от 2)*
   Миграция `create_car_attribute_values_table`: `id`, `car_id` (`constrained()->cascadeOnDelete()`), `car_attribute_id` (`constrained()->cascadeOnDelete()`), `value` (`text`), `timestamps`.
   Индексы: `unique(['car_id', 'car_attribute_id'])` — одна характеристика на автомобиль имеет ровно одно значение; `index('car_attribute_id')` — покрытие внешнего ключа (PostgreSQL не создаёт его сам) и вход для фильтра каталога вехи 3.6. Порядок колонок в уникальном индексе значим: он покрывает выборку «все характеристики авто» префиксом `car_id`. Третьего индекса не нужно.
   `value` — `text`, а не `string`: свободная «Комплектация» может быть длиннее 255 символов, а в PostgreSQL `text` и `varchar` по производительности не различаются.
@@ -101,7 +101,7 @@ Enum `app/Enums/CarAttributeType`: `text`, `number`, `boolean`, `select`.
   Логирование: не требуется — слой данных.
   Проверка: `php artisan migrate`; в tinker повторная вставка той же пары `(car_id, car_attribute_id)` падает на уникальном индексе; удаление автомобиля и удаление характеристики уносят значения.
 
-- [ ] **4. Подключить характеристики к модели `Car`** *(зависит от 3)*
+- [x] **4. Подключить характеристики к модели `Car`** *(зависит от 3)*
   В `app/Models/Car.php` добавить:
   - `attributeValues(): HasMany` на `CarAttributeValue`.
   - `cardAttributes(): Collection` — характеристики для сетки карточки: берёт `$this->attributeValues`, отбрасывает те, у чьей характеристики `show_in_card = false`, сортирует по `attribute.sort_order`, группирует по `attribute.group`. Метод работает поверх **уже загруженной** коллекции и сам запросов не делает; порядок групп определяется минимальным `sort_order` внутри группы. Контроллер карточки (веха 4.3) обязан грузить `with('attributeValues.attribute')`.
