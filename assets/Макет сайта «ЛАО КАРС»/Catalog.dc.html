@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:oklch(0.13 0.004 60);}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#f9c227;color:oklch(0.13 0.004 60)}
+  select{appearance:none}
+</style>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<div style="font-family:'Manrope',sans-serif;background:oklch(0.13 0.004 60);color:oklch(0.97 0.003 60);min-height:100vh;">
+
+  <header style="position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 32px;background:oklch(0.13 0.004 60 / 0.88);backdrop-filter:blur(14px);border-bottom:1px solid oklch(1 0 0 / 0.08);">
+    <a href="Home.dc.html" style="flex-shrink:0;display:flex;align-items:center;"><img src="logo-white.png" alt="ЛАО КАРС" style="height:30px;width:auto;display:block;"/></a>
+    <nav style="display:flex;align-items:center;gap:26px;font-size:14px;letter-spacing:0.01em;white-space:nowrap;flex-shrink:1;min-width:0;">
+      <a href="Catalog.dc.html" style="opacity:1;color:#f9c227">Каталог</a>
+      <a href="#" style="opacity:0.85" style-hover="opacity:1">Услуги</a>
+      <a href="#" style="opacity:0.85" style-hover="opacity:1">Блог</a>
+      <a href="#" style="opacity:0.85" style-hover="opacity:1">Контакты</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:18px;flex-shrink:0;">
+      <a href="tel:+74951234567" style="font-size:14px;opacity:0.9;white-space:nowrap;">+7 495 123-45-67</a>
+      <a href="Home.dc.html#lead-form" style="background:#f9c227;color:oklch(0.13 0.004 60);padding:11px 22px;font-size:13px;font-weight:600;letter-spacing:0.01em;white-space:nowrap;border-radius:999px;transition:transform .2s,background .2s;display:inline-block;" style-hover="background:#fbd04f;transform:translateY(-1px)">Оставить заявку</a>
+    </div>
+  </header>
+
+  <section style="padding:72px 64px 48px;border-bottom:1px solid oklch(1 0 0 / 0.08);">
+    <div style="font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f9c227;margin-bottom:18px;">Каталог</div>
+    <h1 style="font-family:'Unbounded',sans-serif;font-size:40px;font-weight:600;margin:0;">Автомобили в наличии и <span style="color:#f9c227">под заказ</span></h1>
+  </section>
+
+  <section style="padding:40px 64px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;border-bottom:1px solid oklch(1 0 0 / 0.08);">
+    <select style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:13px 20px;font-size:14px;font-family:inherit;border-radius:10px;">
+      <option>Марка: все</option>
+    </select>
+    <select style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:13px 20px;font-size:14px;font-family:inherit;border-radius:10px;">
+      <option>Тип двигателя: все</option>
+    </select>
+    <select style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:13px 20px;font-size:14px;font-family:inherit;border-radius:10px;">
+      <option>Год: все</option>
+    </select>
+    <select style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:13px 20px;font-size:14px;font-family:inherit;border-radius:10px;">
+      <option>Цена: любая</option>
+    </select>
+    <div style="display:flex;gap:10px;margin-left:auto;">
+      <div style="border:1px solid rgba(249,194,39,0.5);color:#f9c227;padding:12px 22px;font-size:14px;border-radius:999px;">Все</div>
+      <div style="border:1px solid oklch(1 0 0 / 0.15);padding:12px 22px;font-size:14px;color:oklch(0.65 0.01 60);border-radius:999px;">В наличии</div>
+      <div style="border:1px solid oklch(1 0 0 / 0.15);padding:12px 22px;font-size:14px;color:oklch(0.65 0.01 60);border-radius:999px;">Под заказ</div>
+    </div>
+  </section>
+
+  <section style="padding:64px 64px 40px;display:grid;grid-template-columns:repeat(3,1fr);gap:32px;">
+
+    <a href="CarDetail.dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-6px);box-shadow:0 20px 40px oklch(0 0 0 / 0.35);border-color:rgba(249,194,39,0.35)">
+      <div style="aspect-ratio:16/9;position:relative;background:oklch(0.87 0.01 60);">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="cat-car-1" shape="rect" style="width:100%;height:100%" placeholder="Фото: седан, 3/4 спереди" hint-size="100%,203px"></x-import>
+      </div>
+      <div style="padding:26px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div style="font-size:19px;font-weight:600;">Модель А1, 2024</div>
+          <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#f9c227;border:1px solid rgba(249,194,39,0.4);padding:4px 10px;">В наличии</div>
+        </div>
+        <div style="font-size:14px;color:oklch(0.6 0.01 60);margin-bottom:16px;">Гибрид · Полный привод · 12 000 км</div>
+        <div style="font-size:22px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">4 200 000 ₽</div>
+      </div>
+    </a>
+
+    <a href="CarDetail.dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-6px);box-shadow:0 20px 40px oklch(0 0 0 / 0.35);border-color:rgba(249,194,39,0.35)">
+      <div style="aspect-ratio:16/9;position:relative;background:oklch(0.87 0.01 60);">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="cat-car-2" shape="rect" style="width:100%;height:100%" placeholder="Фото: кроссовер, вид сбоку" hint-size="100%,203px"></x-import>
+      </div>
+      <div style="padding:26px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div style="font-size:19px;font-weight:600;">Модель B3, 2023</div>
+          <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:oklch(0.7 0.01 60);border:1px solid oklch(1 0 0 / 0.2);padding:4px 10px;">Под заказ</div>
+        </div>
+        <div style="font-size:14px;color:oklch(0.6 0.01 60);margin-bottom:16px;">Бензин · Передний привод · Новый</div>
+        <div style="font-size:22px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">3 650 000 ₽</div>
+      </div>
+    </a>
+
+    <a href="CarDetail.dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-6px);box-shadow:0 20px 40px oklch(0 0 0 / 0.35);border-color:rgba(249,194,39,0.35)">
+      <div style="aspect-ratio:16/9;position:relative;background:oklch(0.87 0.01 60);">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="cat-car-3" shape="rect" style="width:100%;height:100%" placeholder="Фото: электромобиль в студии" hint-size="100%,203px"></x-import>
+      </div>
+      <div style="padding:26px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div style="font-size:19px;font-weight:600;">Модель C5, 2024</div>
+          <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#f9c227;border:1px solid rgba(249,194,39,0.4);padding:4px 10px;">В наличии</div>
+        </div>
+        <div style="font-size:14px;color:oklch(0.6 0.01 60);margin-bottom:16px;">Электро · Полный привод · 5 000 км</div>
+        <div style="font-size:22px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">5 100 000 ₽</div>
+      </div>
+    </a>
+
+    <a href="CarDetail.dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-6px);box-shadow:0 20px 40px oklch(0 0 0 / 0.35);border-color:rgba(249,194,39,0.35)">
+      <div style="aspect-ratio:16/9;position:relative;background:oklch(0.87 0.01 60);">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="cat-car-4" shape="rect" style="width:100%;height:100%" placeholder="Фото: универсал, вид сзади" hint-size="100%,203px"></x-import>
+      </div>
+      <div style="padding:26px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div style="font-size:19px;font-weight:600;">Модель D2, 2022</div>
+          <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#f9c227;border:1px solid rgba(249,194,39,0.4);padding:4px 10px;">В наличии</div>
+        </div>
+        <div style="font-size:14px;color:oklch(0.6 0.01 60);margin-bottom:16px;">Дизель · Полный привод · 38 000 км</div>
+        <div style="font-size:22px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">2 980 000 ₽</div>
+      </div>
+    </a>
+
+    <a href="CarDetail.dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-6px);box-shadow:0 20px 40px oklch(0 0 0 / 0.35);border-color:rgba(249,194,39,0.35)">
+      <div style="aspect-ratio:16/9;position:relative;background:oklch(0.87 0.01 60);">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="cat-car-5" shape="rect" style="width:100%;height:100%" placeholder="Фото: спорткупе, вид спереди" hint-size="100%,203px"></x-import>
+      </div>
+      <div style="padding:26px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div style="font-size:19px;font-weight:600;">Модель E7, 2025</div>
+          <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:oklch(0.7 0.01 60);border:1px solid oklch(1 0 0 / 0.2);padding:4px 10px;">Под заказ</div>
+        </div>
+        <div style="font-size:14px;color:oklch(0.6 0.01 60);margin-bottom:16px;">Бензин · Задний привод · Новый</div>
+        <div style="font-size:22px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">6 890 000 ₽</div>
+      </div>
+    </a>
+
+    <a href="CarDetail.dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-6px);box-shadow:0 20px 40px oklch(0 0 0 / 0.35);border-color:rgba(249,194,39,0.35)">
+      <div style="aspect-ratio:16/9;position:relative;background:oklch(0.87 0.01 60);">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="cat-car-6" shape="rect" style="width:100%;height:100%" placeholder="Фото: минивэн, 3/4 сзади" hint-size="100%,203px"></x-import>
+      </div>
+      <div style="padding:26px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div style="font-size:19px;font-weight:600;">Модель F1, 2023</div>
+          <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#f9c227;border:1px solid rgba(249,194,39,0.4);padding:4px 10px;">В наличии</div>
+        </div>
+        <div style="font-size:14px;color:oklch(0.6 0.01 60);margin-bottom:16px;">Гибрид · Полный привод · 18 500 км</div>
+        <div style="font-size:22px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">4 750 000 ₽</div>
+      </div>
+    </a>
+
+  </section>
+
+  <section style="padding:20px 64px 100px;display:flex;justify-content:center;gap:10px;">
+    <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f9c227;color:oklch(0.13 0.004 60);font-size:14px;font-weight:600;">1</div>
+    <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(1 0 0 / 0.15);font-size:14px;color:oklch(0.65 0.01 60);">2</div>
+    <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(1 0 0 / 0.15);font-size:14px;color:oklch(0.65 0.01 60);">3</div>
+    <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:1px solid oklch(1 0 0 / 0.15);font-size:14px;color:oklch(0.65 0.01 60);">→</div>
+  </section>
+
+  <footer style="padding:72px 64px 40px;border-top:1px solid oklch(1 0 0 / 0.08);">
+    <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1.1fr;gap:40px;margin-bottom:56px;align-items:start;">
+      <div>
+        <img src="logo-white.png" alt="ЛАО КАРС" style="height:26px;width:auto;display:block;margin-bottom:20px;"/>
+        <div style="font-size:14px;line-height:1.7;color:oklch(0.6 0.01 60);max-width:280px;">Импорт автомобилей и полный цикл автосервиса. Москва, ул. Осенняя, 17, корп. 1.</div>
+      </div>
+      <div>
+        <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:20px;">Навигация</div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;">
+          <a href="Catalog.dc.html" style-hover="color:#f9c227">Каталог</a>
+          <a href="#" style-hover="color:#f9c227">Услуги</a>
+          <a href="About.dc.html" style-hover="color:#f9c227">О компании</a>
+          <a href="#" style-hover="color:#f9c227">Блог</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:20px;">Контакты</div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;color:oklch(0.75 0.01 60);">
+          <a href="tel:+74951234567" style-hover="color:#f9c227">+7 495 123-45-67</a>
+          <a href="mailto:info@laocars.ru" style-hover="color:#f9c227">info@laocars.ru</a>
+          <div>Пн–Вс, 9:00–21:00</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:20px;">Соцсети</div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;">
+          <a href="#" style-hover="color:#f9c227">Telegram</a>
+          <a href="#" style-hover="color:#f9c227">WhatsApp</a>
+          <a href="#" style-hover="color:#f9c227">VK</a>
+        </div>
+      </div>
+      <div style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.08);border-radius:16px;padding:22px;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Гарантия 30 дней</div>
+        <div style="font-size:13px;line-height:1.6;color:oklch(0.6 0.01 60);margin-bottom:14px;">На каждый автомобиль — с момента получения.</div>
+        <a href="About.dc.html" style="font-size:13px;color:#f9c227;font-weight:600;">Подробнее об условиях →</a>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding-top:32px;border-top:1px solid oklch(1 0 0 / 0.08);font-size:13px;color:oklch(0.5 0.01 60);">
+      <div>© 2026 ЛАО КАРС. Все права защищены.</div>
+      <div>Политика конфиденциальности</div>
+    </div>
+  </footer>
+
+</div>
+
+</x-dc>
+</body>
+</html>

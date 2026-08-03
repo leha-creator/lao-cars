@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:oklch(0.13 0.004 60);}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#f9c227;color:oklch(0.13 0.004 60)}
+  @keyframes marqueeScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+</style>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<div style="font-family:'Manrope',sans-serif;background:oklch(0.13 0.004 60);color:oklch(0.97 0.003 60);min-height:100vh;">
+
+  <div style="overflow:hidden;background:oklch(0.1 0.004 60);border-bottom:1px solid oklch(1 0 0 / 0.06);padding:9px 0;">
+    <div style="display:flex;width:max-content;animation:marqueeScroll 32s linear infinite;gap:56px;">
+      <div style="display:flex;gap:56px;padding-right:56px;">
+        <span style="font-size:12.5px;letter-spacing:0.04em;color:#f9c227;white-space:nowrap;">★ Более 8 лет на рынке импорта авто</span>
+        <span style="font-size:12.5px;letter-spacing:0.04em;color:oklch(0.65 0.01 60);white-space:nowrap;">Прямые поставки из Китая и Европы</span>
+        <span style="font-size:12.5px;letter-spacing:0.04em;color:#f9c227;white-space:nowrap;">★ Собственный автосервис и детейлинг</span>
+        <span style="font-size:12.5px;letter-spacing:0.04em;color:oklch(0.65 0.01 60);white-space:nowrap;">Полное юридическое сопровождение сделки</span>
+      </div>
+      <div style="display:flex;gap:56px;padding-right:56px;">
+        <span style="font-size:12.5px;letter-spacing:0.04em;color:#f9c227;white-space:nowrap;">★ Более 8 лет на рынке импорта авто</span>
+        <span style="font-size:12.5px;letter-spacing:0.04em;color:oklch(0.65 0.01 60);white-space:nowrap;">Прямые поставки из Китая и Европы</span>
+        <span style="font-size:12.5px;letter-spacing:0.04em;color:#f9c227;white-space:nowrap;">★ Собственный автосервис и детейлинг</span>
+        <span style="font-size:12.5px;letter-spacing:0.04em;color:oklch(0.65 0.01 60);white-space:nowrap;">Полное юридическое сопровождение сделки</span>
+      </div>
+    </div>
+  </div>
+
+  <section style="position:relative;height:88vh;min-height:640px;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="position:absolute;inset:0;">
+      <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="hero-main" shape="rect" src="uploads/background laocars.png" style="width:100%;height:100%" placeholder="Hero: премиальный автомобиль на фоне ночного города" hint-size="100%,100%"></x-import>
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg, oklch(0.13 0.004 60 / 0.1) 0%, oklch(0.13 0.004 60 / 0.55) 55%, oklch(0.13 0.004 60 / 0.96) 100%);pointer-events:none;"></div>
+    </div>
+
+    <header style="position:relative;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 32px;background:linear-gradient(180deg, oklch(0.13 0.004 60 / 0.92) 0%, oklch(0.13 0.004 60 / 0.4) 100%);">
+      <a href="Home.dc.html" style="flex-shrink:0;display:flex;align-items:center;">
+        <img src="logo-white.png" alt="ЛАО КАРС" style="height:30px;width:auto;display:block;"/>
+      </a>
+      <nav style="display:flex;align-items:center;gap:26px;font-size:14px;letter-spacing:0.01em;white-space:nowrap;flex-shrink:1;min-width:0;">
+        <a href="Catalog.dc.html" style="opacity:0.85;transition:opacity .2s" style-hover="opacity:1">Каталог</a>
+        <a href="#" style="opacity:0.85;transition:opacity .2s" style-hover="opacity:1">Услуги</a>
+        <a href="#" style="opacity:0.85;transition:opacity .2s" style-hover="opacity:1">Блог</a>
+        <a href="#" style="opacity:0.85;transition:opacity .2s" style-hover="opacity:1">Контакты</a>
+      </nav>
+      <div style="display:flex;align-items:center;gap:18px;flex-shrink:0;">
+        <a href="tel:+74951234567" style="font-size:14px;opacity:0.9;white-space:nowrap;">+7 495 123-45-67</a>
+        <a href="#lead-form" style="background:#f9c227;color:oklch(0.13 0.004 60);padding:12px 26px;font-size:14px;font-weight:600;letter-spacing:0.02em;border-radius:999px;transition:transform .2s,background .2s;display:inline-block;" style-hover="background:#fbd04f;transform:translateY(-1px)">Оставить заявку</a>
+      </div>
+    </header>
+
+    <div style="position:relative;z-index:2;flex:1;display:flex;align-items:flex-end;padding:0 64px 88px;">
+    <div style="max-width:900px;animation:fadeUp .7s ease both;">
+      <div style="font-size:13px;letter-spacing:0.22em;text-transform:uppercase;color:#f9c227;margin-bottom:22px;">Импорт · Сервис · Экспертиза</div>
+      <h1 style="font-family:'Unbounded',sans-serif;font-size:56px;line-height:1.14;font-weight:600;margin:0 0 26px;text-wrap:pretty;">Автомобили из <span style="color:#f9c227">Китая<br/>и Европы</span>. Под ключ.</h1>
+      <p style="font-size:18px;line-height:1.6;color:oklch(0.8 0.01 60);max-width:560px;margin:0 0 40px;">Подбор, растаможка и доставка автомобиля любой сложности — и полный автосервис для вашего парка. Один партнёр от заказа до обслуживания.</p>
+      <div style="display:flex;gap:20px;">
+        <a href="Catalog.dc.html" style="background:#f9c227;color:oklch(0.13 0.004 60);padding:18px 38px;font-size:15px;font-weight:600;letter-spacing:0.02em;border-radius:999px;transition:transform .2s,background .2s;" style-hover="background:#fbd04f;transform:translateY(-2px)">Подобрать авто</a>
+        <a href="#lead-form" style="border:1px solid oklch(1 0 0 / 0.35);padding:18px 38px;font-size:15px;font-weight:600;letter-spacing:0.02em;border-radius:999px;transition:border-color .2s,transform .2s;" style-hover="border-color:oklch(1 0 0 / 0.7);transform:translateY(-2px)">Оставить заявку</a>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <section style="padding:56px 64px;">
+    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:28px 36px;border:1px solid oklch(1 0 0 / 0.1);border-radius:20px;background:oklch(0.16 0.005 60);">
+      <div style="width:44px;height:44px;border-radius:50%;background:#f9c227;color:oklch(0.13 0.004 60);display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-weight:700;font-size:16px;flex-shrink:0;">%</div>
+      <div style="flex:1;min-width:240px;">
+        <div style="font-size:16px;font-weight:600;margin-bottom:4px;">Ограниченная партия авто под заказ с фиксированной ценой</div>
+        <div style="font-size:14px;color:oklch(0.6 0.01 60);">Курс и пошлины зафиксированы до конца квартала — успейте оформить заявку.</div>
+      </div>
+      <a href="Catalog.dc.html" style="flex-shrink:0;border:1px solid rgba(249,194,39,0.5);color:#f9c227;padding:12px 24px;border-radius:999px;font-size:14px;font-weight:600;transition:background .2s,transform .2s;" style-hover="background:rgba(249,194,39,0.12);transform:translateY(-1px)">Смотреть каталог →</a>
+    </div>
+  </section>
+
+  <section style="padding:64px 64px 120px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:56px;">
+      <div>
+        <div style="font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f9c227;margin-bottom:16px;">Каталог</div>
+        <h2 style="font-family:'Unbounded',sans-serif;font-size:34px;font-weight:600;margin:0;">Рекомендуемые <span style="color:#f9c227">автомобили</span></h2>
+      </div>
+      <a href="Catalog.dc.html" style="font-size:15px;border-bottom:1px solid oklch(1 0 0 / 0.4);padding-bottom:4px;transition:border-color .2s,color .2s;" style-hover="border-color:#f9c227;color:#f9c227">Весь каталог →</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;">
+      <a href="CarDetail.dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-6px);box-shadow:0 20px 40px oklch(0 0 0 / 0.35);border-color:rgba(249,194,39,0.35)">
+        <div style="aspect-ratio:16/9;position:relative;background:oklch(0.87 0.01 60);">
+          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="home-car-1" shape="rect" style="width:100%;height:100%" placeholder="Фото: седан бизнес-класса, 3/4 спереди" hint-size="100%,203px"></x-import>
+        </div>
+        <div style="padding:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+            <div style="font-size:19px;font-weight:600;">Модель А1, 2024</div>
+            <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#f9c227;border:1px solid rgba(249,194,39,0.4);padding:4px 10px;border-radius:999px;">В наличии</div>
+          </div>
+          <div style="font-size:14px;color:oklch(0.6 0.01 60);margin-bottom:18px;">Гибрид · Полный привод · 12 000 км</div>
+          <div style="font-size:22px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">от 4 200 000 ₽</div>
+        </div>
+      </a>
+      <a href="CarDetail.dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-6px);box-shadow:0 20px 40px oklch(0 0 0 / 0.35);border-color:rgba(249,194,39,0.35)">
+        <div style="aspect-ratio:16/9;position:relative;background:oklch(0.87 0.01 60);">
+          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="home-car-2" shape="rect" style="width:100%;height:100%" placeholder="Фото: кроссовер, вид сбоку" hint-size="100%,203px"></x-import>
+        </div>
+        <div style="padding:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+            <div style="font-size:19px;font-weight:600;">Модель B3, 2023</div>
+            <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:oklch(0.7 0.01 60);border:1px solid oklch(1 0 0 / 0.2);padding:4px 10px;border-radius:999px;">Под заказ</div>
+          </div>
+          <div style="font-size:14px;color:oklch(0.6 0.01 60);margin-bottom:18px;">Бензин · Передний привод · Новый</div>
+          <div style="font-size:22px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">от 3 650 000 ₽</div>
+        </div>
+      </a>
+      <a href="CarDetail.dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s;" style-hover="transform:translateY(-6px);box-shadow:0 20px 40px oklch(0 0 0 / 0.35);border-color:rgba(249,194,39,0.35)">
+        <div style="aspect-ratio:16/9;position:relative;background:oklch(0.87 0.01 60);">
+          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="home-car-3" shape="rect" style="width:100%;height:100%" placeholder="Фото: электромобиль, вид спереди в студии" hint-size="100%,203px"></x-import>
+        </div>
+        <div style="padding:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+            <div style="font-size:19px;font-weight:600;">Модель C5, 2024</div>
+            <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#f9c227;border:1px solid rgba(249,194,39,0.4);padding:4px 10px;border-radius:999px;">В наличии</div>
+          </div>
+          <div style="font-size:14px;color:oklch(0.6 0.01 60);margin-bottom:18px;">Электро · Полный привод · 5 000 км</div>
+          <div style="font-size:22px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">от 5 100 000 ₽</div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section style="padding:120px 64px;background:oklch(0.16 0.005 60);">
+    <div style="font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f9c227;margin-bottom:16px;">Почему мы</div>
+    <h2 style="font-family:'Unbounded',sans-serif;font-size:34px;font-weight:600;margin:0 0 64px;max-width:640px;">Преимущества, за которые нас выбирают <span style="color:#f9c227">клиенты</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px;">
+      <div style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;padding:36px 28px;transition:transform .25s,border-color .25s;" style-hover="transform:translateY(-4px);border-color:rgba(249,194,39,0.3)">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(249,194,39,0.14);color:#f9c227;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-weight:700;font-size:15px;margin-bottom:22px;">01</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:12px;">Прямые контракты</div>
+        <div style="font-size:14px;line-height:1.6;color:oklch(0.65 0.01 60);">Работаем напрямую с заводами и дилерами в Китае и Европе — без посредников и переплат.</div>
+      </div>
+      <div style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;padding:36px 28px;transition:transform .25s,border-color .25s;" style-hover="transform:translateY(-4px);border-color:rgba(249,194,39,0.3)">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(249,194,39,0.14);color:#f9c227;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-weight:700;font-size:15px;margin-bottom:22px;">02</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:12px;">Юридическое сопровождение</div>
+        <div style="font-size:14px;line-height:1.6;color:oklch(0.65 0.01 60);">Растаможка, сертификация и постановка на учёт — берём на себя все формальности.</div>
+      </div>
+      <div style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;padding:36px 28px;transition:transform .25s,border-color .25s;" style-hover="transform:translateY(-4px);border-color:rgba(249,194,39,0.3)">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(249,194,39,0.14);color:#f9c227;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-weight:700;font-size:15px;margin-bottom:22px;">03</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:12px;">Полная история</div>
+        <div style="font-size:14px;line-height:1.6;color:oklch(0.65 0.01 60);">Каждый автомобиль проверяется и сопровождается подробным отчётом о состоянии.</div>
+      </div>
+      <div style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;padding:36px 28px;transition:transform .25s,border-color .25s;" style-hover="transform:translateY(-4px);border-color:rgba(249,194,39,0.3)">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(249,194,39,0.14);color:#f9c227;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-weight:700;font-size:15px;margin-bottom:22px;">04</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:12px;">Сервис после покупки</div>
+        <div style="font-size:14px;line-height:1.6;color:oklch(0.65 0.01 60);">Собственный автосервис для ТО, ремонта и детейлинга — весь цикл владения в одном месте.</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:120px 64px;">
+    <div style="font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f9c227;margin-bottom:16px;">Автосервис</div>
+    <h2 style="font-family:'Unbounded',sans-serif;font-size:34px;font-weight:600;margin:0 0 56px;max-width:640px;">Дополнительные <span style="color:#f9c227">услуги</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;">
+      <a href="#" style="display:block;padding:44px 32px;border:1px solid oklch(1 0 0 / 0.1);border-radius:18px;transition:transform .25s,border-color .25s,background .25s;" style-hover="border-color:rgba(249,194,39,0.5);transform:translateY(-4px);background:oklch(0.185 0.006 60)">
+        <div style="width:48px;height:48px;border-radius:12px;background:rgba(249,194,39,0.14);color:#f9c227;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-weight:700;font-size:18px;margin-bottom:20px;">A</div>
+        <div style="font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-bottom:16px;">Автосервис</div>
+        <div style="font-size:14px;line-height:1.6;color:oklch(0.65 0.01 60);margin-bottom:24px;">ТО, диагностика и ремонт для всех марок — своя мастерская и оригинальные запчасти.</div>
+        <div style="font-size:14px;color:#f9c227;">Подробнее →</div>
+      </a>
+      <a href="#" style="display:block;padding:44px 32px;border:1px solid oklch(1 0 0 / 0.1);border-radius:18px;transition:transform .25s,border-color .25s,background .25s;" style-hover="border-color:rgba(249,194,39,0.5);transform:translateY(-4px);background:oklch(0.185 0.006 60)">
+        <div style="width:48px;height:48px;border-radius:12px;background:rgba(249,194,39,0.14);color:#f9c227;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-weight:700;font-size:18px;margin-bottom:20px;">Д</div>
+        <div style="font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-bottom:16px;">Детейлинг</div>
+        <div style="font-size:14px;line-height:1.6;color:oklch(0.65 0.01 60);margin-bottom:24px;">Полировка, керамика, химчистка салона и бронирование кузова плёнкой.</div>
+        <div style="font-size:14px;color:#f9c227;">Подробнее →</div>
+      </a>
+      <a href="#" style="display:block;padding:44px 32px;border:1px solid oklch(1 0 0 / 0.1);border-radius:18px;transition:transform .25s,border-color .25s,background .25s;" style-hover="border-color:rgba(249,194,39,0.5);transform:translateY(-4px);background:oklch(0.185 0.006 60)">
+        <div style="width:48px;height:48px;border-radius:12px;background:rgba(249,194,39,0.14);color:#f9c227;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;font-weight:700;font-size:18px;margin-bottom:20px;">С</div>
+        <div style="font-family:'Unbounded',sans-serif;font-size:20px;font-weight:600;margin-bottom:16px;">Доп. сервисы</div>
+        <div style="font-size:14px;line-height:1.6;color:oklch(0.65 0.01 60);margin-bottom:24px;">Шиномонтаж, страхование, эвакуация и подменный автомобиль на время ремонта.</div>
+        <div style="font-size:14px;color:#f9c227;">Подробнее →</div>
+      </a>
+    </div>
+  </section>
+
+  <section id="lead-form" style="position:relative;padding:120px 64px;background:oklch(0.16 0.005 60);display:grid;grid-template-columns:1fr 1fr;gap:80px;overflow:hidden;">
+    <img src="uploads/Honqi H9 laocars.jpg" alt="" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;"/>
+    <div style="position:absolute;inset:0;z-index:1;background:linear-gradient(90deg, oklch(0.16 0.005 60 / 0.62) 0%, oklch(0.16 0.005 60 / 0.42) 45%, oklch(0.16 0.005 60 / 0.28) 100%);"></div>
+    <div style="position:relative;z-index:2;display:flex;flex-direction:column;justify-content:flex-start;">
+      <div style="font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f9c227;margin-bottom:16px;">Заявка</div>
+      <h2 style="font-family:'Unbounded',sans-serif;font-size:34px;font-weight:600;margin:0 0 24px;max-width:480px;text-shadow:0 2px 24px oklch(0.1 0.005 60 / 0.85);">Оставьте заявку — <span style="color:#f9c227">подберём авто</span> или запишем на сервис</h2>
+      <p style="font-size:15px;line-height:1.7;color:oklch(0.82 0.01 60);max-width:440px;margin:0;text-shadow:0 1px 16px oklch(0.1 0.005 60 / 0.8);">Перезвоним в течение 15 минут в рабочее время. Все данные передаются менеджеру напрямую.</p>
+    </div>
+    <form style="display:flex;flex-direction:column;gap:16px;padding:36px;border:1px solid oklch(1 0 0 / 0.08);border-radius:20px;background:oklch(0.13 0.004 60 / 0.5);position:relative;z-index:2;" onsubmit="return false">
+      <input placeholder="Имя" style="background:oklch(0.13 0.004 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:16px 18px;font-size:15px;font-family:inherit;border-radius:10px;transition:border-color .2s;" style-focus="border-color:oklch(0.79 0.14 83 / 0.7)"/>
+      <input placeholder="Телефон" style="background:oklch(0.13 0.004 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:16px 18px;font-size:15px;font-family:inherit;border-radius:10px;transition:border-color .2s;" style-focus="border-color:oklch(0.79 0.14 83 / 0.7)"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <select style="background:oklch(0.13 0.004 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:16px 18px;font-size:15px;font-family:inherit;border-radius:10px;">
+          <option>Способ связи: телефон</option>
+          <option>Способ связи: WhatsApp</option>
+          <option>Способ связи: Telegram</option>
+        </select>
+        <select style="background:oklch(0.13 0.004 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:16px 18px;font-size:15px;font-family:inherit;border-radius:10px;">
+          <option>Удобное время: утро</option>
+          <option>Удобное время: день</option>
+          <option>Удобное время: вечер</option>
+        </select>
+      </div>
+      <textarea placeholder="Комментарий (например: интересует модель B3)" rows="3" style="background:oklch(0.13 0.004 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:16px 18px;font-size:15px;font-family:inherit;resize:vertical;border-radius:10px;"></textarea>
+      <button style="background:#f9c227;color:oklch(0.13 0.004 60);border:none;padding:18px;font-size:15px;font-weight:600;letter-spacing:0.02em;cursor:pointer;margin-top:6px;border-radius:999px;transition:transform .2s,background .2s;" style-hover="background:#fbd04f;transform:translateY(-2px)">Отправить заявку</button>
+    </form>
+  </section>
+
+  <footer style="padding:72px 64px 40px;border-top:1px solid oklch(1 0 0 / 0.08);">
+    <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1.1fr;gap:40px;margin-bottom:56px;align-items:start;">
+      <div>
+        <img src="logo-white.png" alt="ЛАО КАРС" style="height:26px;width:auto;display:block;margin-bottom:20px;"/>
+        <div style="font-size:14px;line-height:1.7;color:oklch(0.6 0.01 60);max-width:260px;">Импорт автомобилей и полный цикл автосервиса. Москва, ул. Осенняя, 17, корп. 1.</div>
+      </div>
+      <div>
+        <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:20px;">Навигация</div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;">
+          <a href="Catalog.dc.html" style-hover="color:#f9c227">Каталог</a>
+          <a href="#" style-hover="color:#f9c227">Услуги</a>
+          <a href="About.dc.html" style-hover="color:#f9c227">О компании</a>
+          <a href="#" style-hover="color:#f9c227">Блог</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:20px;">Контакты</div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;color:oklch(0.75 0.01 60);">
+          <a href="tel:+74951234567" style-hover="color:#f9c227">+7 495 123-45-67</a>
+          <a href="mailto:info@laocars.ru" style-hover="color:#f9c227">info@laocars.ru</a>
+          <div>Пн–Вс, 9:00–21:00</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:20px;">Соцсети</div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;">
+          <a href="#" style-hover="color:#f9c227">Telegram</a>
+          <a href="#" style-hover="color:#f9c227">WhatsApp</a>
+          <a href="#" style-hover="color:#f9c227">VK</a>
+        </div>
+      </div>
+      <div style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.08);border-radius:16px;padding:22px;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Гарантия 30 дней</div>
+        <div style="font-size:13px;line-height:1.6;color:oklch(0.6 0.01 60);margin-bottom:14px;">На каждый автомобиль — с момента получения.</div>
+        <a href="About.dc.html" style="font-size:13px;color:#f9c227;font-weight:600;">Подробнее об условиях →</a>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding-top:32px;border-top:1px solid oklch(1 0 0 / 0.08);font-size:13px;color:oklch(0.5 0.01 60);">
+      <div>© 2026 ЛАО КАРС. Все права защищены.</div>
+      <div>Политика конфиденциальности</div>
+    </div>
+  </footer>
+
+</div>
+
+</x-dc>
+</body>
+</html>

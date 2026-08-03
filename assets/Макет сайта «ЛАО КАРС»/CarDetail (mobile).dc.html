@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:linear-gradient(165deg,oklch(0.1 0.008 60),oklch(0.055 0.004 60)) fixed;}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#f9c227;color:oklch(0.13 0.004 60)}
+  select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='12'%20height='8'%3E%3Cpath%20d='M1%201.5%206%206.5%2011%201.5'%20stroke='%23f9c227'%20stroke-width='1.6'%20fill='none'/%3E%3C/svg%3E") !important;background-repeat:no-repeat !important;background-position:right 16px center !important;padding-right:40px !important}
+  ::-webkit-scrollbar{width:0;height:0;background:transparent}
+  *{scrollbar-width:none}
+</style>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<div style="min-height:100vh;background:linear-gradient(165deg,oklch(0.1 0.008 60),oklch(0.055 0.004 60));display:flex;justify-content:center;padding:0 28px 40px;box-sizing:border-box;">
+  <div style="width:390px;border-radius:34px;overflow:hidden;box-shadow:0 0 0 1px oklch(1 0 0 / 0.09),0 40px 100px oklch(0 0 0 / 0.6);position:relative;">
+  <div style="font-family:'Manrope',sans-serif;background:oklch(0.13 0.004 60);color:oklch(0.97 0.003 60);width:390px;min-height:100vh;overflow-x:hidden;position:relative;padding-bottom:76px;">
+
+  <header style="position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:13px 20px;background:oklch(0.13 0.004 60 / 0.92);backdrop-filter:blur(14px);border-bottom:1px solid oklch(1 0 0 / 0.08);">
+    <a href="Home (mobile).dc.html" style="display:flex;align-items:center;"><img src="logo-white.png" alt="ЛАО КАРС" style="height:26px;width:auto;display:block;"/></a>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <a href="tel:+74951234567" style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:oklch(1 0 0 / 0.06);border:1px solid oklch(1 0 0 / 0.1);border-radius:10px;font-size:17px;">☎</a>
+      <button onClick="{{ toggleMenu }}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:42px;height:42px;background:#f9c227;border:none;border-radius:10px;cursor:pointer;padding:0;">
+        <span style="display:block;width:17px;height:2px;background:oklch(0.13 0.004 60);border-radius:2px;"></span>
+        <span style="display:block;width:17px;height:2px;background:oklch(0.13 0.004 60);border-radius:2px;"></span>
+        <span style="display:block;width:17px;height:2px;background:oklch(0.13 0.004 60);border-radius:2px;"></span>
+      </button>
+    </div>
+  </header>
+
+  <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:100;background:oklch(0.11 0.004 60 / 0.99);backdrop-filter:blur(10px);display:flex;flex-direction:column;padding:20px;width:390px;margin:0 auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:44px;">
+        <img src="logo-white.png" alt="ЛАО КАРС" style="height:26px;width:auto;display:block;"/>
+        <button onClick="{{ closeMenu }}" style="width:42px;height:42px;background:oklch(1 0 0 / 0.06);border:1px solid oklch(1 0 0 / 0.1);border-radius:10px;color:oklch(0.97 0.003 60);font-size:20px;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <nav style="display:flex;flex-direction:column;gap:4px;">
+        <a href="Catalog (mobile).dc.html" onClick="{{ closeMenu }}" style="font-family:'Unbounded',sans-serif;font-size:26px;font-weight:500;padding:14px 0;border-bottom:1px solid oklch(1 0 0 / 0.08);">Каталог</a>
+        <a href="#" onClick="{{ closeMenu }}" style="font-family:'Unbounded',sans-serif;font-size:26px;font-weight:500;padding:14px 0;border-bottom:1px solid oklch(1 0 0 / 0.08);">Услуги</a>
+        <a href="About (mobile).dc.html" onClick="{{ closeMenu }}" style="font-family:'Unbounded',sans-serif;font-size:26px;font-weight:500;padding:14px 0;border-bottom:1px solid oklch(1 0 0 / 0.08);">О компании</a>
+        <a href="#" onClick="{{ closeMenu }}" style="font-family:'Unbounded',sans-serif;font-size:26px;font-weight:500;padding:14px 0;border-bottom:1px solid oklch(1 0 0 / 0.08);">Блог</a>
+        <a href="#" onClick="{{ closeMenu }}" style="font-family:'Unbounded',sans-serif;font-size:26px;font-weight:500;padding:14px 0;">Контакты</a>
+      </nav>
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:14px;">
+        <a href="tel:+74951234567" style="font-size:20px;font-family:'Unbounded',sans-serif;color:#f9c227;">+7 495 123-45-67</a>
+        <a href="#lead-form" onClick="{{ closeMenu }}" style="background:#f9c227;color:oklch(0.13 0.004 60);padding:17px;text-align:center;font-size:15px;font-weight:600;border-radius:999px;">Оставить заявку</a>
+      </div>
+    </div>
+  </sc-if>
+
+  <section style="padding:20px 20px 0;font-size:12.5px;color:oklch(0.55 0.01 60);">
+    <a href="Catalog (mobile).dc.html" style-hover="color:#f9c227">Каталог</a> / Модель А1, 2024
+  </section>
+
+  <section style="padding:18px 20px 0;">
+    <div style="aspect-ratio:16/10;position:relative;margin-bottom:12px;background:oklch(0.87 0.01 60);border-radius:16px;overflow:hidden;">
+      <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="detail-main-m" shape="rect" style="width:100%;height:100%" placeholder="Главное фото: 3/4 спереди, студия" hint-size="100%,219px"></x-import>
+      <div style="position:absolute;top:12px;right:12px;z-index:3;background:oklch(0.11 0.004 60 / 0.82);backdrop-filter:blur(6px);color:oklch(0.97 0.003 60);font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;pointer-events:none;">{{ counter }}</div>
+      <button onClick="{{ prev }}" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:3;width:40px;height:40px;border-radius:50%;border:none;background:oklch(0.11 0.004 60 / 0.72);backdrop-filter:blur(6px);color:oklch(0.97 0.003 60);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">‹</button>
+      <button onClick="{{ next }}" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:3;width:40px;height:40px;border-radius:50%;border:none;background:oklch(0.11 0.004 60 / 0.72);backdrop-filter:blur(6px);color:oklch(0.97 0.003 60);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+      <div onClick="{{ sel0 }}" style="aspect-ratio:16/10;position:relative;background:oklch(0.87 0.01 60);border-radius:10px;overflow:hidden;cursor:pointer;box-shadow:0 0 0 2px {{ ring0 }};transition:box-shadow .15s;">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="detail-thumb-1-m" shape="rect" style="width:100%;height:100%" placeholder="Салон" hint-size="62px,39px"></x-import>
+      </div>
+      <div onClick="{{ sel1 }}" style="aspect-ratio:16/10;position:relative;background:oklch(0.87 0.01 60);border-radius:10px;overflow:hidden;cursor:pointer;box-shadow:0 0 0 2px {{ ring1 }};transition:box-shadow .15s;">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="detail-thumb-2-m" shape="rect" style="width:100%;height:100%" placeholder="Вид сзади" hint-size="62px,39px"></x-import>
+      </div>
+      <div onClick="{{ sel2 }}" style="aspect-ratio:16/10;position:relative;background:oklch(0.87 0.01 60);border-radius:10px;overflow:hidden;cursor:pointer;box-shadow:0 0 0 2px {{ ring2 }};transition:box-shadow .15s;">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="detail-thumb-3-m" shape="rect" style="width:100%;height:100%" placeholder="Двигатель" hint-size="62px,39px"></x-import>
+      </div>
+      <div onClick="{{ sel3 }}" style="aspect-ratio:16/10;position:relative;background:oklch(0.87 0.01 60);border-radius:10px;overflow:hidden;cursor:pointer;box-shadow:0 0 0 2px {{ ring3 }};transition:box-shadow .15s;">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="detail-thumb-4-m" shape="rect" style="width:100%;height:100%" placeholder="Панель" hint-size="62px,39px"></x-import>
+      </div>
+      <div onClick="{{ sel4 }}" style="aspect-ratio:16/10;position:relative;background:oklch(0.87 0.01 60);border-radius:10px;overflow:hidden;cursor:pointer;box-shadow:0 0 0 2px {{ ring4 }};transition:box-shadow .15s;">
+        <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="detail-thumb-5-m" shape="rect" style="width:100%;height:100%" placeholder="Диск" hint-size="62px,39px"></x-import>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:28px 20px 0;">
+    <div style="font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:#f9c227;border:1px solid rgba(249,194,39,0.4);padding:5px 11px;display:inline-block;margin-bottom:16px;">В наличии</div>
+    <h1 style="font-family:'Unbounded',sans-serif;font-size:28px;font-weight:600;margin:0 0 12px;">Модель А1, 2024</h1>
+    <div style="font-size:28px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;margin-bottom:28px;">4 200 000 ₽</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:24px 0;border-top:1px solid oklch(1 0 0 / 0.1);border-bottom:1px solid oklch(1 0 0 / 0.1);margin-bottom:28px;">
+      <div>
+        <div style="font-size:11.5px;color:oklch(0.55 0.01 60);margin-bottom:5px;">Марка / модель</div>
+        <div style="font-size:14.5px;">Модель А1</div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:oklch(0.55 0.01 60);margin-bottom:5px;">Год выпуска</div>
+        <div style="font-size:14.5px;">2024</div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:oklch(0.55 0.01 60);margin-bottom:5px;">Двигатель</div>
+        <div style="font-size:14.5px;">Гибрид, 2.0 л, 211 л.с.</div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:oklch(0.55 0.01 60);margin-bottom:5px;">Привод</div>
+        <div style="font-size:14.5px;">Полный</div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:oklch(0.55 0.01 60);margin-bottom:5px;">Пробег</div>
+        <div style="font-size:14.5px;">12 000 км</div>
+      </div>
+      <div>
+        <div style="font-size:11.5px;color:oklch(0.55 0.01 60);margin-bottom:5px;">Кузов</div>
+        <div style="font-size:14.5px;">Седан, 4 двери</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:32px;">
+      <div style="font-size:15px;font-weight:600;margin-bottom:10px;">История автомобиля</div>
+      <div style="font-size:14px;line-height:1.7;color:oklch(0.65 0.01 60);">Один владелец, без ДТП. Импортирован напрямую с завода, полное сервисное обслуживание у официального дилера. Комплект документов и отчёт о техническом состоянии предоставляются при покупке.</div>
+    </div>
+
+    <form id="lead-form" style="display:flex;flex-direction:column;gap:14px;padding:24px 20px;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.08);border-radius:18px;" onsubmit="return false">
+      <div style="font-size:16px;font-weight:600;margin-bottom:2px;">Заявка на этот автомобиль</div>
+      <input placeholder="Имя" style="background:oklch(0.13 0.004 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:15px 16px;font-size:15px;font-family:inherit;border-radius:10px;"/>
+      <input placeholder="Телефон" style="background:oklch(0.13 0.004 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:15px 16px;font-size:15px;font-family:inherit;border-radius:10px;"/>
+      <select style="background:oklch(0.13 0.004 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:15px 16px;font-size:15px;font-family:inherit;border-radius:10px;">
+        <option>Способ связи: телефон</option>
+        <option>Способ связи: WhatsApp</option>
+        <option>Способ связи: Telegram</option>
+      </select>
+      <select style="background:oklch(0.13 0.004 60);border:1px solid oklch(1 0 0 / 0.15);color:oklch(0.97 0.003 60);padding:15px 16px;font-size:15px;font-family:inherit;border-radius:10px;">
+        <option>Удобное время звонка: утро</option>
+        <option>Удобное время звонка: день</option>
+        <option>Удобное время звонка: вечер</option>
+      </select>
+      <button style="background:#f9c227;color:oklch(0.13 0.004 60);border:none;padding:16px;font-size:15px;font-weight:600;cursor:pointer;border-radius:999px;">Отправить заявку</button>
+    </form>
+  </section>
+
+  <section style="padding:64px 20px 40px;">
+    <h2 style="font-family:'Unbounded',sans-serif;font-size:24px;font-weight:600;margin:0 0 28px;">Похожие <span style="color:#f9c227">авто</span></h2>
+    <div style="display:flex;flex-direction:column;gap:18px;">
+      <a href="CarDetail (mobile).dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;">
+        <div style="aspect-ratio:16/10;position:relative;background:oklch(0.87 0.01 60);">
+          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="similar-1-m" shape="rect" style="width:100%;height:100%" placeholder="Фото: кроссовер" hint-size="100%,219px"></x-import>
+        </div>
+        <div style="padding:20px;">
+          <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Модель B3, 2023</div>
+          <div style="font-size:18px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">3 650 000 ₽</div>
+        </div>
+      </a>
+      <a href="CarDetail (mobile).dc.html" style="display:block;background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.07);border-radius:18px;overflow:hidden;">
+        <div style="aspect-ratio:16/10;position:relative;background:oklch(0.87 0.01 60);">
+          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="similar-2-m" shape="rect" style="width:100%;height:100%" placeholder="Фото: электромобиль" hint-size="100%,219px"></x-import>
+        </div>
+        <div style="padding:20px;">
+          <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Модель C5, 2024</div>
+          <div style="font-size:18px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">5 100 000 ₽</div>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <footer style="padding:48px 20px 32px;border-top:1px solid oklch(1 0 0 / 0.08);">
+    <img src="logo-white.png" alt="ЛАО КАРС" style="height:24px;width:auto;display:block;margin-bottom:16px;"/>
+    <div style="font-size:13.5px;line-height:1.7;color:oklch(0.6 0.01 60);margin-bottom:32px;">Импорт автомобилей и полный цикл автосервиса. Москва, ул. Осенняя, 17, корп. 1.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px 20px;margin-bottom:32px;">
+      <div>
+        <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:14px;">Навигация</div>
+        <div style="display:flex;flex-direction:column;gap:11px;font-size:14px;">
+          <a href="Catalog (mobile).dc.html" style-hover="color:#f9c227">Каталог</a>
+          <a href="#" style-hover="color:#f9c227">Услуги</a>
+          <a href="About (mobile).dc.html" style-hover="color:#f9c227">О компании</a>
+          <a href="#" style-hover="color:#f9c227">Блог</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:14px;">Контакты</div>
+        <div style="display:flex;flex-direction:column;gap:11px;font-size:14px;color:oklch(0.75 0.01 60);">
+          <a href="tel:+74951234567" style-hover="color:#f9c227">+7 495 123-45-67</a>
+          <a href="mailto:info@laocars.ru" style-hover="color:#f9c227">info@laocars.ru</a>
+          <div>Пн–Вс, 9:00–21:00</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding-top:24px;border-top:1px solid oklch(1 0 0 / 0.08);font-size:12.5px;color:oklch(0.5 0.01 60);">
+      <div>© 2026 ЛАО КАРС. Все права защищены.</div>
+      <div>Политика конфиденциальности</div>
+    </div>
+  </footer>
+
+  <div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:390px;z-index:60;display:flex;gap:12px;align-items:center;padding:12px 20px;background:oklch(0.11 0.004 60 / 0.96);backdrop-filter:blur(14px);border-top:1px solid oklch(1 0 0 / 0.1);">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:11px;color:oklch(0.55 0.01 60);">Модель А1, 2024</div>
+      <div style="font-size:17px;font-family:'Unbounded',sans-serif;font-weight:600;color:#f9c227;">4 200 000 ₽</div>
+    </div>
+    <a href="#lead-form" style="background:#f9c227;color:oklch(0.13 0.004 60);padding:14px 24px;font-size:14px;font-weight:600;border-radius:999px;white-space:nowrap;">Оставить заявку</a>
+  </div>
+
+  </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:446,&quot;height&quot;:844}}">
+class Component extends DCLogic {
+  state = { menuOpen: false, active: 0 };
+  renderVals() {
+    const a = this.state.active;
+    const ring = i => (i === a ? '#f9c227' : 'transparent');
+    const set = i => () => this.setState({ active: i });
+    return {
+      menuOpen: this.state.menuOpen,
+      toggleMenu: () => this.setState(s => ({ menuOpen: !s.menuOpen })),
+      closeMenu: () => this.setState({ menuOpen: false }),
+      active: a,
+      counter: (a + 1) + ' / 5',
+      prev: () => this.setState(s => ({ active: (s.active + 4) % 5 })),
+      next: () => this.setState(s => ({ active: (s.active + 1) % 5 })),
+      sel0: set(0), sel1: set(1), sel2: set(2), sel3: set(3), sel4: set(4),
+      ring0: ring(0), ring1: ring(1), ring2: ring(2), ring3: ring(3), ring4: ring(4),
+    };
+  }
+}
+</script>
+</body>
+</html>

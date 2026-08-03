@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:oklch(0.13 0.004 60);}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#f9c227;color:oklch(0.13 0.004 60)}
+</style>
+<script src="./image-slot.js"></script>
+</helmet>
+
+<div style="font-family:'Manrope',sans-serif;background:oklch(0.13 0.004 60);color:oklch(0.97 0.003 60);min-height:100vh;">
+
+  <header style="position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 32px;background:oklch(0.13 0.004 60 / 0.88);backdrop-filter:blur(14px);border-bottom:1px solid oklch(1 0 0 / 0.08);">
+    <a href="Home.dc.html" style="flex-shrink:0;display:flex;align-items:center;"><img src="logo-white.png" alt="ЛАО КАРС" style="height:30px;width:auto;display:block;"/></a>
+    <nav style="display:flex;align-items:center;gap:26px;font-size:14px;letter-spacing:0.01em;white-space:nowrap;flex-shrink:1;min-width:0;">
+      <a href="Catalog.dc.html" style="opacity:0.85" style-hover="opacity:1">Каталог</a>
+      <a href="#" style="opacity:0.85" style-hover="opacity:1">Услуги</a>
+      <a href="#" style="opacity:0.85" style-hover="opacity:1">Блог</a>
+      <a href="#" style="opacity:0.85" style-hover="opacity:1">Контакты</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:18px;flex-shrink:0;">
+      <a href="tel:+74951234567" style="font-size:14px;opacity:0.9;white-space:nowrap;">+7 495 123-45-67</a>
+      <a href="Home.dc.html#lead-form" style="background:#f9c227;color:oklch(0.13 0.004 60);padding:11px 22px;font-size:13px;font-weight:600;letter-spacing:0.01em;white-space:nowrap;border-radius:999px;transition:transform .2s,background .2s;display:inline-block;" style-hover="background:#fbd04f;transform:translateY(-1px)">Оставить заявку</a>
+    </div>
+  </header>
+
+  <section style="position:relative;height:52vh;min-height:400px;display:flex;align-items:flex-end;overflow:hidden;">
+    <div style="position:absolute;inset:0;">
+      <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="about-hero" shape="rect" style="width:100%;height:100%" placeholder="Фото: команда или шоурум компании" hint-size="100%,100%"></x-import>
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg, oklch(0.13 0.004 60 / 0.15) 0%, oklch(0.13 0.004 60 / 0.6) 55%, oklch(0.13 0.004 60 / 0.98) 100%);pointer-events:none;"></div>
+    </div>
+    <div style="position:relative;z-index:2;padding:0 64px 64px;">
+      <div style="font-size:13px;letter-spacing:0.22em;text-transform:uppercase;color:#f9c227;margin-bottom:20px;">О компании</div>
+      <h1 style="font-family:'Unbounded',sans-serif;font-size:44px;font-weight:600;margin:0;max-width:760px;">История, миссия и <span style="color:#f9c227">люди</span> «ЛАО КАРС»</h1>
+    </div>
+  </section>
+
+  <section style="padding:100px 64px;display:grid;grid-template-columns:1fr 1fr;gap:80px;">
+    <div>
+      <div style="font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f9c227;margin-bottom:16px;">Наша история</div>
+      <h2 style="font-family:'Unbounded',sans-serif;font-size:28px;font-weight:600;margin:0 0 24px;">От первых поставок до полного цикла владения</h2>
+      <p style="font-size:15px;line-height:1.8;color:oklch(0.68 0.01 60);margin:0 0 18px;">Компания начиналась с прямых поставок автомобилей из Китая для частных клиентов. Со временем география расширилась на Европу, а к импорту добавился собственный автосервис — чтобы клиент оставался с нами на весь срок владения автомобилем.</p>
+      <p style="font-size:15px;line-height:1.8;color:oklch(0.68 0.01 60);margin:0;">Сегодня «ЛАО КАРС» — это команда специалистов по подбору, логистике, растаможке и обслуживанию, работающая по единым стандартам качества на каждом этапе.</p>
+    </div>
+    <div>
+      <div style="font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f9c227;margin-bottom:16px;">Миссия</div>
+      <h2 style="font-family:'Unbounded',sans-serif;font-size:28px;font-weight:600;margin:0 0 24px;">Автомобиль без компромиссов и забот</h2>
+      <p style="font-size:15px;line-height:1.8;color:oklch(0.68 0.01 60);margin:0;">Мы берём на себя весь путь — от выбора и импорта до сервиса и детейлинга, — чтобы клиент получал прозрачные условия, честную историю автомобиля и предсказуемый результат на каждом этапе.</p>
+    </div>
+  </section>
+
+  <section style="padding:100px 64px;background:oklch(0.16 0.005 60);">
+    <div style="font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f9c227;margin-bottom:16px;">Команда</div>
+    <h2 style="font-family:'Unbounded',sans-serif;font-size:32px;font-weight:600;margin:0 0 56px;">Специалисты, которые ведут <span style="color:#f9c227">вашу сделку</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:32px;">
+      <div>
+        <div style="height:280px;position:relative;margin-bottom:20px;background:oklch(0.87 0.01 60);border-radius:14px;overflow:hidden;">
+          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="team-1" shape="rect" style="width:100%;height:100%" placeholder="Портрет: руководитель отдела импорта" hint-size="100%,280px"></x-import>
+        </div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:4px;">Андрей Волков</div>
+        <div style="font-size:13px;color:oklch(0.6 0.01 60);">Руководитель отдела импорта</div>
+      </div>
+      <div>
+        <div style="height:280px;position:relative;margin-bottom:20px;background:oklch(0.87 0.01 60);border-radius:14px;overflow:hidden;">
+          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="team-2" shape="rect" style="width:100%;height:100%" placeholder="Портрет: менеджер по подбору авто" hint-size="100%,280px"></x-import>
+        </div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:4px;">Мария Соколова</div>
+        <div style="font-size:13px;color:oklch(0.6 0.01 60);">Менеджер по подбору автомобилей</div>
+      </div>
+      <div>
+        <div style="height:280px;position:relative;margin-bottom:20px;background:oklch(0.87 0.01 60);border-radius:14px;overflow:hidden;">
+          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="team-3" shape="rect" style="width:100%;height:100%" placeholder="Портрет: старший мастер автосервиса" hint-size="100%,280px"></x-import>
+        </div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:4px;">Игорь Ким</div>
+        <div style="font-size:13px;color:oklch(0.6 0.01 60);">Старший мастер автосервиса</div>
+      </div>
+      <div>
+        <div style="height:280px;position:relative;margin-bottom:20px;background:oklch(0.87 0.01 60);border-radius:14px;overflow:hidden;">
+          <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="team-4" shape="rect" style="width:100%;height:100%" placeholder="Портрет: специалист по детейлингу" hint-size="100%,280px"></x-import>
+        </div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:4px;">Елена Панова</div>
+        <div style="font-size:13px;color:oklch(0.6 0.01 60);">Специалист по детейлингу</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:100px 64px;">
+    <div style="font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:#f9c227;margin-bottom:16px;">Отзывы</div>
+    <h2 style="font-family:'Unbounded',sans-serif;font-size:32px;font-weight:600;margin:0 0 56px;">Что говорят <span style="color:#f9c227">клиенты</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;">
+      <div style="padding:36px;border:1px solid oklch(1 0 0 / 0.1);border-radius:18px;background:oklch(0.16 0.005 60);transition:transform .25s,border-color .25s;">
+        <div style="font-size:14px;color:#f9c227;letter-spacing:0.15em;margin-bottom:16px;">★★★★★</div>
+        <p style="font-size:15px;line-height:1.7;color:oklch(0.75 0.01 60);margin:0 0 24px;">Заказывал автомобиль из Китая — все этапы держали в курсе, никаких скрытых доплат. Получил машину раньше срока.</p>
+        <div style="font-size:14px;font-weight:600;">Сергей Морозов</div>
+        <div style="font-size:13px;color:oklch(0.55 0.01 60);">Клиент, импорт авто</div>
+      </div>
+      <div style="padding:36px;border:1px solid oklch(1 0 0 / 0.1);border-radius:18px;background:oklch(0.16 0.005 60);transition:transform .25s,border-color .25s;">
+        <div style="font-size:14px;color:#f9c227;letter-spacing:0.15em;margin-bottom:16px;">★★★★★</div>
+        <p style="font-size:15px;line-height:1.7;color:oklch(0.75 0.01 60);margin:0 0 24px;">Обслуживаю свой автомобиль здесь уже второй год — приятно, что сервис и продажа в одной компании, всегда есть история машины под рукой.</p>
+        <div style="font-size:14px;font-weight:600;">Наталья Ерёмина</div>
+        <div style="font-size:13px;color:oklch(0.55 0.01 60);">Клиент, автосервис</div>
+      </div>
+      <div style="padding:36px;border:1px solid oklch(1 0 0 / 0.1);border-radius:18px;background:oklch(0.16 0.005 60);transition:transform .25s,border-color .25s;">
+        <div style="font-size:14px;color:#f9c227;letter-spacing:0.15em;margin-bottom:16px;">★★★★★</div>
+        <p style="font-size:15px;line-height:1.7;color:oklch(0.75 0.01 60);margin:0 0 24px;">Делали детейлинг и бронирование плёнкой перед продажей — результат превзошёл ожидания, машину продали быстрее и дороже.</p>
+        <div style="font-size:14px;font-weight:600;">Дмитрий Лаптев</div>
+        <div style="font-size:13px;color:oklch(0.55 0.01 60);">Клиент, детейлинг</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:80px 64px 120px;text-align:center;">
+    <h2 style="font-family:'Unbounded',sans-serif;font-size:30px;font-weight:600;margin:0 0 32px;">Готовы обсудить ваш автомобиль?</h2>
+    <a href="Home.dc.html#lead-form" style="display:inline-block;background:#f9c227;color:oklch(0.13 0.004 60);padding:18px 44px;font-size:15px;font-weight:600;letter-spacing:0.02em;border-radius:999px;transition:transform .2s,background .2s;" style-hover="background:#fbd04f;transform:translateY(-2px)">Оставить заявку</a>
+  </section>
+
+  <footer style="padding:72px 64px 40px;border-top:1px solid oklch(1 0 0 / 0.08);">
+    <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1.1fr;gap:40px;margin-bottom:56px;align-items:start;">
+      <div>
+        <img src="logo-white.png" alt="ЛАО КАРС" style="height:26px;width:auto;display:block;margin-bottom:20px;"/>
+        <div style="font-size:14px;line-height:1.7;color:oklch(0.6 0.01 60);max-width:280px;">Импорт автомобилей и полный цикл автосервиса. Москва, ул. Осенняя, 17, корп. 1.</div>
+      </div>
+      <div>
+        <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:20px;">Навигация</div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;">
+          <a href="Catalog.dc.html" style-hover="color:#f9c227">Каталог</a>
+          <a href="#" style-hover="color:#f9c227">Услуги</a>
+          <a href="About.dc.html" style-hover="color:#f9c227">О компании</a>
+          <a href="#" style-hover="color:#f9c227">Блог</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:20px;">Контакты</div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;color:oklch(0.75 0.01 60);">
+          <a href="tel:+74951234567" style-hover="color:#f9c227">+7 495 123-45-67</a>
+          <a href="mailto:info@laocars.ru" style-hover="color:#f9c227">info@laocars.ru</a>
+          <div>Пн–Вс, 9:00–21:00</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:oklch(0.6 0.01 60);margin-bottom:20px;">Соцсети</div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;">
+          <a href="#" style-hover="color:#f9c227">Telegram</a>
+          <a href="#" style-hover="color:#f9c227">WhatsApp</a>
+          <a href="#" style-hover="color:#f9c227">VK</a>
+        </div>
+      </div>
+      <div style="background:oklch(0.185 0.006 60);border:1px solid oklch(1 0 0 / 0.08);border-radius:16px;padding:22px;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Гарантия 30 дней</div>
+        <div style="font-size:13px;line-height:1.6;color:oklch(0.6 0.01 60);margin-bottom:14px;">На каждый автомобиль — с момента получения.</div>
+        <a href="About.dc.html" style="font-size:13px;color:#f9c227;font-weight:600;">Подробнее об условиях →</a>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding-top:32px;border-top:1px solid oklch(1 0 0 / 0.08);font-size:13px;color:oklch(0.5 0.01 60);">
+      <div>© 2026 ЛАО КАРС. Все права защищены.</div>
+      <div>Политика конфиденциальности</div>
+    </div>
+  </footer>
+
+</div>
+
+</x-dc>
+</body>
+</html>
