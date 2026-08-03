@@ -11,7 +11,7 @@
 ## Обоснование решения
 
 - **Тип проекта:** контентный сайт с каталогом и приёмом заявок (MVP), см. `.ai-factory/DESCRIPTION.md`
-- **Стек:** PHP 8.3+, Laravel 11+, PostgreSQL, Eloquent, Filament, Blade + Alpine + Tailwind
+- **Стек:** PHP 8.3+ (локально 8.5), Laravel 13, PostgreSQL 17, Eloquent, Filament 5, Blade + Alpine 3 + Tailwind 4
 - **Команда:** один full-stack разработчик
 - **Срок:** 5–7 недель при полной занятости
 - **Ключевой фактор:** по матрице решений проект однозначно попадает в Layered — команда 1 человек, домен низкой сложности, нагрузка низкая, преимущественно CRUD. Layered даёт максимальную начальную скорость и минимальный порог входа, что решает при таком сроке.
@@ -51,6 +51,8 @@ laocars/
 │   │   ├── Employee.php
 │   │   └── Review.php
 │   ├── Policies/                       # Права: администратор vs менеджер
+│   ├── Providers/
+│   │   └── Filament/                   # AdminPanelProvider: путь панели, брендинг
 │   ├── Services/                       # ── BUSINESS LOGIC ──
 │   │   ├── LeadService.php             # приём заявки: запись + постановка уведомления
 │   │   ├── CatalogFilter.php           # сборка запроса каталога по фильтрам
