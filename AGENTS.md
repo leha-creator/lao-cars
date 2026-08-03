@@ -8,7 +8,7 @@
 
 **Разделы сайта:** Каталог · Автосервис · Запчасти · Контакты (закреплены в меню) плюс «О компании». **Блога в проекте нет** — раздел 3.5 ТЗ исключён, модель статей и WYSIWYG не заводятся. Детейлинг и доп. сервисы — блоки внутри страницы автосервиса, отдельных URL у них нет.
 
-**Текущее состояние: собраны каркас (веха 3.1) и схема данных (веха 3.2).** Laravel поднят, подключены PostgreSQL и Redis, работает админ-панель Filament, настроены сборка фронтенда, тесты и CI. Заведены модели, миграции, фабрики и сиды: каталог с фотографиями, услуги и запчасти, заявки, команда, отзывы, настройки сайта. Ресурсов админки и публичных страниц ещё нет — это вехи 3.4 и далее.
+**Текущее состояние: собраны каркас (веха 3.1), схема данных (веха 3.2) и динамические характеристики авто (веха 3.3).** Laravel поднят, подключены PostgreSQL и Redis, работает админ-панель Filament, настроены сборка фронтенда, тесты и CI. Заведены модели, миграции, фабрики и сиды: каталог с фотографиями, услуги и запчасти, заявки, команда, отзывы, настройки сайта. Схема данных закрыта целиком: поверх фиксированных колонок `cars` работает справочник характеристик (`CarAttribute`) и их значения (`CarAttributeValue`). Ресурсов админки и публичных страниц ещё нет — это вехи 3.4 и далее.
 
 Подробности — в [.ai-factory/DESCRIPTION.md](.ai-factory/DESCRIPTION.md), планы вех — в [.ai-factory/plans/](.ai-factory/plans/).
 
@@ -72,10 +72,12 @@ laocars/
 │   └── skills/               # Скиллы: встроенные aif-* + установленные под стек
 ├── .github/workflows/ci.yml  # CI: Pint и тесты на PostgreSQL и Redis
 ├── app/
-│   ├── Enums/                # CarStatus, EngineType, DriveType, ServiceCategory,
-│   │   └── Concerns/         # LeadStatus, ContactMethod, PreferredTime + HasLabels
-│   ├── Models/               # Brand, Car, CarPhoto, Service, Lead, LeadComment,
-│   │   └── Concerns/         # Employee, Review, Setting, User + HasSlug
+│   ├── Enums/                # CarStatus, EngineType, DriveType, CarAttributeType,
+│   │   └── Concerns/         # ServiceCategory, LeadStatus, ContactMethod,
+│   │                         # PreferredTime + HasLabels
+│   ├── Models/               # Brand, Car, CarPhoto, CarAttribute,
+│   │   └── Concerns/         # CarAttributeValue, Service, Lead, LeadComment,
+│   │                         # Employee, Review, Setting, User + HasSlug
 │   ├── Providers/            # AppServiceProvider: morph map источников заявки
 │   └── Providers/Filament/   # AdminPanelProvider: панель /admin, брендинг, локаль
 ├── config/logging.php        # Канал `leads` — отдельный лог пути заявки
@@ -112,6 +114,7 @@ laocars/
 | .ai-factory/config.yaml | Конфиг AI Factory: языки, пути, git |
 | routes/web.php | Публичные маршруты |
 | app/Models/Lead.php | Заявка со всех форм: полиморфный источник, статусы, комментарии |
+| app/Models/CarAttribute.php | Справочник динамических характеристик: тип, единица, группа, флаги вывода |
 | app/Models/Setting.php | Настройки сайта: key-value с jsonb и кешем в Redis |
 | app/Providers/AppServiceProvider.php | Morph map источников заявки (`car`, `service`) |
 | app/Providers/Filament/AdminPanelProvider.php | Конфигурация админ-панели: путь, брендинг, ресурсы |
@@ -166,6 +169,8 @@ laocars/
 - **Внешние шрифты с CDN не подключать** — блок `bunny()` из скелета убран осознанно.
 - **Ассеты Filament (`public/css|js|fonts/filament`) в git не попадают** — их публикует `filament:upgrade` на каждом `composer install`.
 - **Модели пишутся на атрибутах Laravel 13** — `#[Fillable([...])]`, `#[Scope]` над методом, `#[RouteKey('slug')]`, а не `protected $fillable` и префикс `scopeXxx`. Так написан весь `app/Models/`. Скилл `laocars-leads` показывает код в до-13-м стиле — он источник доменных решений, а не синтаксиса.
+- **`key` характеристики — публичный контракт.** По нему строятся GET-параметры фильтра каталога (`?attr[body_type]=Седан`, веха 3.6) и обращения из шаблонов карточки и микроразметки Vehicle (веха 4.3). Свободно правится подпись (`label`), а не ключ: смена `key` ломает сохранённые ссылки на фильтр и код шаблонов.
+- **Список значений `select` живёт в `options` справочника**, а не собирается `DISTINCT`-ом по колонке значений: собранный `DISTINCT`-ом список наполняется опечатками наполнителя — «Кроссовер», «кроссовер» и «Кросовер» станут тремя разными кузовами в фильтре. Единственный путь записи значений — `Car::syncAttributeValues()`: там проверка по `options`, нормализация и удаление пустых.
 - **Схема `leads` уже содержит поля вехи 3.7** — способ связи, удобное время, марка/модель/VIN для подбора запчасти. Не заводите под них отдельную миграцию: в 3.7 остаётся логика приёма и уведомлений.
 - **`WithoutModelEvents` в сидах не возвращать.** Трейт оборачивает прогон в `Model::withoutEvents()`, а на событиях держится генерация slug (иначе NOT NULL на `cars.slug`) и сброс кеша настроек.
 - **`fake()->realText()` не использовать.** В локали `ru_RU` он строит цепочку Маркова по большому корпусу и выедает лимит памяти на прогоне тестов. Нужен текст — `fake()->text()`.

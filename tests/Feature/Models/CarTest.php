@@ -178,7 +178,7 @@ it('groups card attributes by group, ungrouped last', function () {
     // настоящий null ключом быть не может, PHP приводит его к ''.
     expect($groups->keys()->all())->toBe(['Импорт', 'Кузов и салон', ''])
         ->and($groups->get('Кузов и салон')->pluck('attribute.label')->all())
-            ->toBe(['Кузов', 'Клиренс'])
+        ->toBe(['Кузов', 'Клиренс'])
         ->and($groups->get('')->pluck('attribute.label')->all())->toBe(['Комплектация']);
 });
 
