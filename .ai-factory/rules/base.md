@@ -10,7 +10,7 @@
 - Таблицы БД: `snake_case` во множественном числе (`cars`, `service_categories`); колонки: `snake_case`; внешние ключи: `<entity>_id`.
 - Миграции: стандартный формат Laravel `YYYY_MM_DD_HHMMSS_verb_table.php`.
 - Blade-шаблоны и роуты: `kebab-case` (`resources/views/catalog/car-card.blade.php`, `/catalog/cars`).
-- Именованные роуты: точечная нотация по разделам (`catalog.index`, `catalog.show`, `services.show`, `leads.store`).
+- Именованные роуты: точечная нотация по разделам (`catalog.index`, `catalog.show`, `service.index`, `parts.index`, `leads.store`).
 - Переменные окружения: `SCREAMING_SNAKE_CASE`.
 - Доменные термины в коде — по-английски (`Car`, `Lead`, `Service`), русский остаётся в UI, переводах и контенте.
 
