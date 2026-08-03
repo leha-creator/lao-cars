@@ -23,7 +23,7 @@ class ServiceFactory extends Factory
         return [
             'category' => fake()->randomElement(ServiceCategory::cases()),
             'title' => fake()->unique()->sentence(3),
-            'description' => fake()->realText(200),
+            'description' => fake()->text(200),
             // Цены автосервиса кратны сотне — дробные рубли в прайсе
             // не встречаются.
             'price' => fake()->numberBetween(5, 400) * 100,

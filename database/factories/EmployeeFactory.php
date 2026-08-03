@@ -28,7 +28,7 @@ class EmployeeFactory extends Factory
                 'Специалист по детейлингу',
                 'Специалист по подбору запчастей',
             ]),
-            'bio' => fake()->realText(180),
+            'bio' => fake()->text(180),
             'photo_path' => null,
             'is_published' => true,
             'sort_order' => 0,

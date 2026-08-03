@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -20,3 +21,12 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
+
+/*
+ * Кеш настроек живёт в Redis и переживает откат транзакции: RefreshDatabase
+ * возвращает базу, но не кеш. Без сброса настройки, записанные одним тестом,
+ * протекают в следующий и делают падения неповторяемыми.
+ */
+pest()->beforeEach(function (): void {
+    Setting::flushCache();
+})->in('Feature');

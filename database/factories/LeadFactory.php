@@ -28,7 +28,7 @@ class LeadFactory extends Factory
             'name' => fake()->name(),
             'phone' => fake()->phoneNumber(),
             'email' => fake()->optional()->safeEmail(),
-            'message' => fake()->optional()->realText(150),
+            'message' => fake()->optional()->text(150),
             'contact_method' => fake()->randomElement(ContactMethod::cases()),
             'preferred_time' => fake()->randomElement(PreferredTime::cases()),
             'part_brand' => null,

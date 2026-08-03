@@ -24,7 +24,7 @@ class LeadCommentFactory extends Factory
         return [
             'lead_id' => Lead::factory(),
             'user_id' => User::factory(),
-            'body' => fake()->realText(120),
+            'body' => fake()->text(120),
         ];
     }
 }

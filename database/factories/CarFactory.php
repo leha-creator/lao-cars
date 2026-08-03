@@ -39,8 +39,11 @@ class CarFactory extends Factory
             'price' => fake()->numberBetween(15, 90) * 100_000,
             'status' => CarStatus::InStock,
             'show_on_homepage' => false,
-            'history' => fake()->realText(300),
-            'description' => fake()->realText(200),
+            // text(), а не realText(): в локали ru_RU realText строит
+            // цепочку Маркова по большому корпусу и на прогоне тестов
+            // выедает память целиком.
+            'history' => fake()->text(300),
+            'description' => fake()->text(200),
             'sort_order' => 0,
         ];
     }

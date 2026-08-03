@@ -29,7 +29,7 @@ class ReviewFactory extends Factory
                 'Клиент, детейлинг',
                 'Клиент, подбор запчастей',
             ]),
-            'body' => fake()->realText(220),
+            'body' => fake()->text(220),
             'rating' => fake()->numberBetween(4, 5),
             'photo_path' => null,
             'is_published' => false,
