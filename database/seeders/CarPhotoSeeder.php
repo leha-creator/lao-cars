@@ -57,7 +57,9 @@ class CarPhotoSeeder extends Seeder
             return;
         }
 
-        $cars = Car::query()->orderBy('sort_order')->orderBy('id')->get();
+        // with('brand'): марка нужна каждой карточке для подписи alt,
+        // без предзагрузки цикл даёт запрос на каждый автомобиль.
+        $cars = Car::query()->with('brand')->orderBy('sort_order')->orderBy('id')->get();
 
         if ($cars->isEmpty()) {
             $this->command?->warn('[CarPhotoSeeder] каталог пуст — сначала CarSeeder');
