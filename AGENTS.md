@@ -8,9 +8,9 @@
 
 **Разделы сайта:** Каталог · Автосервис · Запчасти · Контакты (закреплены в меню) плюс «О компании». **Блога в проекте нет** — раздел 3.5 ТЗ исключён, модель статей и WYSIWYG не заводятся. Детейлинг и доп. сервисы — блоки внутри страницы автосервиса, отдельных URL у них нет.
 
-**Текущее состояние: собран каркас (веха 3.1).** Laravel поднят, подключены PostgreSQL и Redis, работает админ-панель Filament, настроены сборка фронтенда, тесты и CI. Прикладных моделей, ресурсов админки и публичных страниц ещё нет — это вехи 3.2 и далее.
+**Текущее состояние: собраны каркас (веха 3.1) и схема данных (веха 3.2).** Laravel поднят, подключены PostgreSQL и Redis, работает админ-панель Filament, настроены сборка фронтенда, тесты и CI. Заведены модели, миграции, фабрики и сиды: каталог с фотографиями, услуги и запчасти, заявки, команда, отзывы, настройки сайта. Ресурсов админки и публичных страниц ещё нет — это вехи 3.4 и далее.
 
-Подробности — в [.ai-factory/DESCRIPTION.md](.ai-factory/DESCRIPTION.md), план каркаса — в [.ai-factory/plans/project-scaffold.md](.ai-factory/plans/project-scaffold.md).
+Подробности — в [.ai-factory/DESCRIPTION.md](.ai-factory/DESCRIPTION.md), планы вех — в [.ai-factory/plans/](.ai-factory/plans/).
 
 ## Технологический стек
 
@@ -34,10 +34,14 @@
 ```bash
 docker compose up -d      # PostgreSQL на 5432, Redis на 56379
 php artisan migrate
+php artisan storage:link  # без него фото каталога не отдаются по URL
+php artisan db:seed       # демо-данные: каталог, услуги, отзывы, настройки
 npm run dev               # или npm run build
 php artisan serve
 php artisan queue:work    # обработка очереди заявок
 ```
+
+`storage:link` не хранится в репозитории (`/public/storage` в `.gitignore`), поэтому на чистом клоне команду нужно выполнить руками. Сиды идемпотентны — повторный запуск не плодит дубли; `CarPhotoSeeder` копирует фотографии из `assets/cars/` в `storage/app/public/cars/` и пропускается в тестовом окружении.
 
 Тесты идут в реальные PostgreSQL и Redis (база `laocars_testing`, `REDIS_DB=1`), поэтому контейнеры должны быть подняты:
 
@@ -68,17 +72,25 @@ laocars/
 │   └── skills/               # Скиллы: встроенные aif-* + установленные под стек
 ├── .github/workflows/ci.yml  # CI: Pint и тесты на PostgreSQL и Redis
 ├── app/
-│   ├── Models/User.php       # Реализует FilamentUser — доступ в админку
+│   ├── Enums/                # CarStatus, EngineType, DriveType, ServiceCategory,
+│   │   └── Concerns/         # LeadStatus, ContactMethod, PreferredTime + HasLabels
+│   ├── Models/               # Brand, Car, CarPhoto, Service, Lead, LeadComment,
+│   │   └── Concerns/         # Employee, Review, Setting, User + HasSlug
+│   ├── Providers/            # AppServiceProvider: morph map источников заявки
 │   └── Providers/Filament/   # AdminPanelProvider: панель /admin, брендинг, локаль
 ├── config/logging.php        # Канал `leads` — отдельный лог пути заявки
+├── database/
+│   ├── migrations/           # Схема: каталог, услуги, заявки, контент, настройки
+│   ├── factories/            # Фабрики всех моделей с состояниями
+│   └── seeders/              # Демо-данные; CarPhotoSeeder раскладывает assets/cars
 ├── docker/postgres/init/     # Init-скрипты Postgres: создание базы laocars_testing
 ├── resources/
 │   ├── css/app.css           # Tailwind v4; @theme пустой — токены в вехе 4.1
 │   ├── js/app.js             # Alpine.js
 │   └── views/layouts/app.blade.php  # Базовый layout: title, description, canonical
 ├── tests/
-│   ├── Pest.php              # RefreshDatabase для Feature-тестов
-│   └── Feature/              # InfrastructureTest, SmokeTest, Filament/AdminPanelTest
+│   ├── Pest.php              # RefreshDatabase + сброс кеша настроек между тестами
+│   └── Feature/              # Infrastructure, Smoke, Filament, Models/*, Database/*
 ├── assets/
 │   ├── cars/                 # 46 исходных фото автомобилей (IMG_*.PNG) для каталога
 │   └── Макет сайта «ЛАО КАРС»/  # Экспорт макета: десктоп, мобильные, UI Kit
@@ -89,7 +101,7 @@ laocars/
 └── ТЗ_ЛАО_КАРС.md            # Техническое задание заказчика, версия 1.0
 ```
 
-Каталоги `app/Enums/`, `app/Services/`, `app/Jobs/`, `app/Policies/` из `ARCHITECTURE.md` появятся вместе с первыми классами в вехах 3.2 и далее — пустых папок с `.gitkeep` в проекте нет.
+Каталоги `app/Services/`, `app/Jobs/`, `app/Policies/` из `ARCHITECTURE.md` появятся вместе с первыми классами в вехах 3.5 и 3.7 — пустых папок с `.gitkeep` в проекте нет.
 
 ## Ключевые точки входа
 
@@ -99,7 +111,11 @@ laocars/
 | .ai-factory/DESCRIPTION.md | Спецификация: стек, решения по развилкам ТЗ, границы MVP |
 | .ai-factory/config.yaml | Конфиг AI Factory: языки, пути, git |
 | routes/web.php | Публичные маршруты |
+| app/Models/Lead.php | Заявка со всех форм: полиморфный источник, статусы, комментарии |
+| app/Models/Setting.php | Настройки сайта: key-value с jsonb и кешем в Redis |
+| app/Providers/AppServiceProvider.php | Morph map источников заявки (`car`, `service`) |
 | app/Providers/Filament/AdminPanelProvider.php | Конфигурация админ-панели: путь, брендинг, ресурсы |
+| database/seeders/DatabaseSeeder.php | Порядок сидов демо-данных |
 | compose.yml | Локальные PostgreSQL и Redis |
 | phpunit.xml | Тестовое окружение — переопределяет драйверы скелета |
 | config/logging.php | Канал `leads`: приём заявки и доставка уведомлений |
@@ -110,13 +126,13 @@ laocars/
 
 | Документ | Путь | Описание |
 | :---- | :---- | :---- |
-| README | README.md | Landing-страница: запуск окружения, тесты, CI, стек |
+| README | README.md | Landing-страница: запуск окружения, схема данных и демо-данные, тесты, CI, стек |
 | Техническое задание | ТЗ_ЛАО_КАРС.md | Требования заказчика: структура разделов, админка, оценка сроков, риски |
 | Спецификация проекта | .ai-factory/DESCRIPTION.md | Стек, архитектурные заметки, что входит и не входит в MVP |
 | Правила кода | .ai-factory/rules/base.md | Именование, структура модулей, ошибки, логирование, тесты |
 | Роадмап | .ai-factory/ROADMAP.md | Вехи по этапам ТЗ и что уже закрыто |
 
-Отдельного каталога `docs/` пока нет — README покрывает запуск целиком. Разносить по страницам имеет смысл, когда появятся API, конфигурация и деплой.
+Отдельного каталога `docs/` пока нет — README покрывает запуск и схему данных целиком. Разносить по страницам имеет смысл, когда появятся API, конфигурация и деплой.
 
 ## AI-контекст
 
@@ -149,6 +165,10 @@ laocars/
 - **Конфигурация Tailwind — только через `@theme` в `resources/css/app.css`.** `tailwind.config.js` в стиле v3 не создавать: в v4 его нет, и токены вехи 4.1 из него не подхватятся.
 - **Внешние шрифты с CDN не подключать** — блок `bunny()` из скелета убран осознанно.
 - **Ассеты Filament (`public/css|js|fonts/filament`) в git не попадают** — их публикует `filament:upgrade` на каждом `composer install`.
+- **Модели пишутся на атрибутах Laravel 13** — `#[Fillable([...])]`, `#[Scope]` над методом, `#[RouteKey('slug')]`, а не `protected $fillable` и префикс `scopeXxx`. Так написан весь `app/Models/`. Скилл `laocars-leads` показывает код в до-13-м стиле — он источник доменных решений, а не синтаксиса.
+- **Схема `leads` уже содержит поля вехи 3.7** — способ связи, удобное время, марка/модель/VIN для подбора запчасти. Не заводите под них отдельную миграцию: в 3.7 остаётся логика приёма и уведомлений.
+- **`WithoutModelEvents` в сидах не возвращать.** Трейт оборачивает прогон в `Model::withoutEvents()`, а на событиях держится генерация slug (иначе NOT NULL на `cars.slug`) и сброс кеша настроек.
+- **`fake()->realText()` не использовать.** В локали `ru_RU` он строит цепочку Маркова по большому корпусу и выедает лимит памяти на прогоне тестов. Нужен текст — `fake()->text()`.
 - **Заявка не должна теряться** — ключевой инвариант проекта: запись лида в БД первична, уведомление вторично. Детали в скилле `laocars-leads`.
 - **Блог не восстанавливать.** ТЗ и макет описывают раздел «Полезно» и пункт меню «Блог» — они отменены. Не заводить модель `Article`, `ArticleResource`, маршруты `/blog` и WYSIWYG под статьи, даже если встретите упоминание в ТЗ.
 - **Запчасти — категория `Service`, а не модель `Part`.** Отдельная сущность появится вместе с витриной (артикулы, наличие, фильтры), которой в MVP нет.
