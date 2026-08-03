@@ -10,6 +10,7 @@
 /.idea
 /.nova
 /.phpunit.cache
+/.playwright-mcp
 /.vscode
 /.zed
 /auth.json
@@ -18,6 +19,12 @@
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
+# Ассеты Filament публикуются командой `filament:upgrade` из post-autoload-dump,
+# то есть заново на каждом `composer install` — в том числе в CI и на проде.
+# Держать их в репозитории значит коммитить пересобираемые артефакты.
+/public/css/filament
+/public/fonts/filament
+/public/js/filament
 /storage/*.key
 /storage/pail
 /vendor

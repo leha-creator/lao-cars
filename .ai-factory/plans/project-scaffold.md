@@ -83,12 +83,12 @@
 
 ### Фаза 2 — Админка и фронтенд-сборка
 
-- [ ] **5. Установить Filament v5 и создать админ-панель** *(зависит от 3)*
+- [x] **5. Установить Filament v5 и создать админ-панель** *(зависит от 3)*
   `composer require "filament/filament:5.*" -W`, затем `php artisan filament:install --panels` и `php artisan make:filament-user`. **Форма ограничения принципиальна:** `filament/filament:"^5.0"` на этой машине доходит до composer как точная версия `5.0` и резолв падает — `v5.0.0` заблокирован security-адвизориями `PKSA-nsry-m1tp-jzr9`, `PKSA-317j-243v-z7tc`, `PKSA-3rh1-zh9g-4mq5`. Альтернатива, если захочется каноничного `^5.0`: вписать ограничение прямо в `composer.json` и выполнить `composer update`.
   Панель по пути `/admin`, локаль `ru`, таймзона `Europe/Moscow`, brand name «ЛАО КАРС». Совместимость проверена прогоном резолва до начала работ: Filament v5.7.5 встаёт на Laravel 13.23.0 с Livewire v4.3.5 на PHP 8.5.4 — поднимать или понижать что-либо не требуется. Конкретные ресурсы (`CarResource`, `LeadResource`) относятся к вехам 3.4–3.5 и здесь не создаются.
   Проверка: `/admin/login` отдаёт 200, вход ведёт на дашборд.
 
-- [ ] **6. Привести фронтенд-сборку в порядок и создать базовый Blade-layout** *(зависит от 5)*
+- [x] **6. Привести фронтенд-сборку в порядок и создать базовый Blade-layout** *(зависит от 5)*
   Tailwind v4 и Vite устанавливать не нужно — скелет Laravel 13 уже принёс `tailwindcss ^4.0.0`, `@tailwindcss/vite ^4.0.0`, `vite ^8.0.0` и `laravel-vite-plugin ^3.1`, а `resources/css/app.css` уже содержит `@import 'tailwindcss'`. Задача — убедиться в этом и вычистить дефолты под будущую веху 4.1.
   Фактическая работа: поставить Alpine.js (в скелете его нет) и подключить в `resources/js/app.js`; убрать из блока `@theme` дефолтный `--font-sans: 'Instrument Sans'` и удалить блок `fonts: [bunny('Instrument Sans', ...)]` из `vite.config.js` — иначе проект тянет с CDN шрифт, который вехе 4.1 не нужен (там Unbounded и Manrope). Оставить пустую секцию `@theme { }` с пометкой «токены — веха 4.1». Директивы `@source` из скелета сохранить. `tailwind.config.js` в стиле v3 не создавать.
   `resources/views/layouts/app.blade.php` — минимальный каркас со слотами под title/description (задел под SEO вех 4.x). Стили панели Filament не смешивать с фронтовой темой.

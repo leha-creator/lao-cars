@@ -3,7 +3,15 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/*
+ * Токены дизайн-системы — веха 4.1.
+ *
+ * В Tailwind v4 конфигурация живёт здесь, а не в `tailwind.config.js`: файла в
+ * стиле v3 в проекте быть не должно. Сюда пойдут шрифты (Unbounded, Manrope),
+ * палитра и радиусы из макета, когда он будет разобран.
+ *
+ * Дефолтный `--font-sans: 'Instrument Sans'` из скелета Laravel убран
+ * намеренно: он тянул шрифт с fonts.bunny.net, который проекту не нужен.
+ */
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
 }
