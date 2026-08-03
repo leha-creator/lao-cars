@@ -1,0 +1,71 @@
+# Локальное окружение ЛАО КАРС: только базы данных.
+#
+# PHP и Node запускаются локально (Herd), в контейнерах живут лишь PostgreSQL и
+# Redis — bind mount исходников в контейнер на Windows даёт заметную просадку
+# по I/O на каждом запросе. Прод-образ приложения делается отдельно (веха 7.1).
+#
+# Значения здесь заданы явно, а не через ${...} из `.env`. Причина конкретная:
+# `.env.example` хранит канонический REDIS_PORT=6379 ради сервисов GitHub
+# Actions, и интерполяция после `cp .env.example .env` увела бы публикацию
+# Redis на порт, занятый нативной службой. Плюс POSTGRES_* читаются только при
+# первичной инициализации volume — подстановка из `.env` создавала бы тихое
+# расхождение пароля после его смены.
+#
+# Эти значения должны совпадать с `.env` приложения:
+#   DB_HOST=127.0.0.1   DB_PORT=5432    DB_DATABASE=laocars
+#   DB_USERNAME=laocars DB_PASSWORD=secret
+#   REDIS_HOST=127.0.0.1  REDIS_PORT=56379
+#
+# Запуск:   docker compose up -d
+# Сброс:    docker compose down -v   (пересоздаёт volume и init-скрипты)
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: laocars-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: laocars
+      POSTGRES_USER: laocars
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Скрипты отсюда выполняются ТОЛЬКО при первичной инициализации пустого
+      # volume. Если база `laocars_testing` не появилась — пересоздать окружение
+      # через `docker compose down -v`, иначе тесты упадут с невнятным
+      # «database does not exist».
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U laocars -d laocars"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: laocars-redis
+    restart: unless-stopped
+    # appendonly — чтобы очередь заявок переживала перезапуск контейнера.
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      # 6379 на этой машине занят нативной службой `redis-server`, которая
+      # поднимается заново после перезагрузки. Останавливать её не вариант —
+      # публикуемся на 56379. Смещение живёт только здесь и в `.env`;
+      # `.env.example` сохраняет канонический 6379 для CI.
+      - "56379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  postgres-data:
+  redis-data:
