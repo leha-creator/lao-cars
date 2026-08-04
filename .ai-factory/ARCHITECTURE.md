@@ -25,10 +25,14 @@
 ```
 laocars/
 ├── app/
-│   ├── Enums/                          # LeadStatus, CarStatus,
+│   ├── Console/Commands/               # MakeAdminCommand — первый
+│   │                                   # администратор на проде
+│   ├── Enums/                          # LeadStatus, CarStatus, UserRole,
 │   │                                   # ServiceCategory (включая Parts)
 │   ├── Filament/
 │   │   ├── NavigationGroup.php         # Разделы меню админки (enum)
+│   │   ├── Forms/Components/           # MediaPicker — выбор из
+│   │   │                               # медиабиблиотеки, со связью и без
 │   │   ├── Resources/                  # Раскладка make:filament-resource v5:
 │   │   │   ├── Cars/                   #   CarResource.php
 │   │   │   │   ├── Schemas/            #   CarForm.php
@@ -37,8 +41,13 @@ laocars/
 │   │   │   │   └── Pages/              #   List / Create / Edit
 │   │   │   ├── Brands/                 # те же подпапки + Actions/ —
 │   │   │   ├── CarAttributes/          #   действие, нужное и списку,
-│   │   │   └── Media/                  #   и странице редактирования
-│   │   └── Pages/                      # Настройки сайта
+│   │   │   ├── Employees/              #   и странице редактирования
+│   │   │   ├── Media/
+│   │   │   ├── Reviews/
+│   │   │   ├── Services/
+│   │   │   └── Users/
+│   │   └── Pages/                      # ManageSiteSettings — страница
+│   │                                   # настроек, собрана через content()
 │   ├── Http/
 │   │   ├── Controllers/                # ── PRESENTATION ──
 │   │   │   ├── HomeController.php      # тонкие: приняли → делегировали → отдали
@@ -58,7 +67,10 @@ laocars/
 │   │   ├── Lead.php
 │   │   ├── Employee.php
 │   │   └── Review.php
-│   ├── Policies/                       # Права: администратор vs менеджер
+│   ├── Policies/                       # Права: администратор vs менеджер.
+│   │                                   # AdminOnlyPolicy и StaffPolicy —
+│   │                                   # вся матрица в двух файлах,
+│   │                                   # конкретная политика = одна строка
 │   ├── Providers/
 │   │   └── Filament/                   # AdminPanelProvider: путь панели, брендинг
 │   ├── Services/                       # ── BUSINESS LOGIC ──
@@ -68,7 +80,8 @@ laocars/
 │   │   ├── CatalogFilter.php           # сборка запроса каталога по фильтрам
 │   │   └── TelegramNotifier.php        # внешний API
 │   ├── Support/                        # Чистые правила без слоя и состояния
-│   │   └── ThumbnailPath.php           # соответствие «оригинал → превью»
+│   │   ├── ThumbnailPath.php           # соответствие «оригинал → превью»
+│   │   └── MediaSettingKeys.php        # какие настройки ссылаются на медиа
 │   └── View/Components/                # Blade-компоненты (x-lead-form и др.)
 ├── database/
 │   ├── migrations/
@@ -100,11 +113,12 @@ Routes → Controllers → Services → Models → БД
 - ✅ Сервис вызывает модели, Jobs, другие сервисы
 - ✅ Job вызывает сервисы и модели
 - ✅ Filament-ресурсы работают с моделями и сервисами
-- ❌ Модель не знает о сервисах, контроллерах и HTTP-запросе — правило, которое ловится первым: когда модели понадобилось правило раскладки превью из `ImageProcessor`, оно уехало в `app/Support/ThumbnailPath.php`, а не притянуло сервис в `Car`
+- ❌ Модель не знает о сервисах, контроллерах, Filament-ресурсах и HTTP-запросе — правило, которое ловится первым и уже дважды: правило раскладки превью уехало из `ImageProcessor` в `app/Support/ThumbnailPath.php`, а список медийных ключей настроек — из страницы `ManageSiteSettings` в `app/Support/MediaSettingKeys.php`. В обоих случаях данные нужны и модели, и верхнему слою, и переезд вниз дешевле импорта вверх
 - ✅ Модель может пользоваться `app/Support/` — там лежат чистые функции над данными и конфигом, без диска, HTTP и внешнего мира
 - ❌ Сервис не знает о контроллерах и не принимает `Request` — только DTO или скаляры
 - ❌ Job не вызывается синхронно из контроллера в обход очереди
 - ❌ Blade не ходит в БД: никаких `Car::where(...)` в шаблоне
+- ❌ Проверок прав внутри Filament-ресурсов нет — права живут только в политиках (`app/Policies/`). Панель работает в строгом режиме авторизации: отсутствующая политика закрывает раздел `LogicException`, а не открывает его всем
 
 **Про «пропуск слоя».** Классический Layered запрещает контроллеру обращаться к данным напрямую. Здесь правило смягчено осознанно: для чистого чтения (`Service::inCategory(ServiceCategory::Parts)->ordered()->get()`) прослойка-сервис — пустой файл, который только переадресует вызов. Сервис появляется там, где есть что оркестрировать: транзакция, несколько шагов, побочный эффект. Для заявки сервис обязателен — в этом весь смысл.
 

@@ -8,9 +8,9 @@
 
 **Разделы сайта:** Каталог · Автосервис · Запчасти · Контакты (закреплены в меню) плюс «О компании». **Блога в проекте нет** — раздел 3.5 ТЗ исключён, модель статей и WYSIWYG не заводятся. Детейлинг и доп. сервисы — блоки внутри страницы автосервиса, отдельных URL у них нет.
 
-**Текущее состояние: собраны каркас (веха 3.1), схема данных (вехи 3.2–3.3) и админка каталога (веха 3.4).** Laravel поднят, подключены PostgreSQL и Redis, настроены сборка фронтенда, тесты и CI. Заведены модели, миграции, фабрики и сиды: каталог с фотографиями, услуги и запчасти, заявки, команда, отзывы, настройки сайта. Поверх фиксированных колонок `cars` работает справочник характеристик (`CarAttribute`) и их значения (`CarAttributeValue`).
+**Текущее состояние: собраны каркас (веха 3.1), схема данных (вехи 3.2–3.3) и админка целиком (вехи 3.4–3.5).** Laravel поднят, подключены PostgreSQL и Redis, настроены сборка фронтенда, тесты и CI. Заведены модели, миграции, фабрики и сиды: каталог с фотографиями, услуги и запчасти, заявки, команда, отзывы, настройки сайта. Поверх фиксированных колонок `cars` работает справочник характеристик (`CarAttribute`) и их значения (`CarAttributeValue`).
 
-В админке Filament работают четыре раздела: автомобили (CRUD, мультизагрузка фото с сортировкой, редактор динамических характеристик), марки, справочник характеристик и медиабиблиотека. Все загрузки проходят через `ImageProcessor`. Публичных страниц ещё нет — это вехи 3.6 и далее; роли и политики доступа — веха 3.5.
+В админке Filament работают восемь разделов: автомобили (CRUD, мультизагрузка фото с сортировкой, редактор динамических характеристик), марки, справочник характеристик, медиабиблиотека, услуги и запчасти (вкладки по категориям), команда, отзывы с модерацией и пользователи; плюс страница настроек сайта. Все загрузки проходят через `ImageProcessor`, выбор уже загруженного изображения — через `MediaPicker`. Доступ разделён на администратора и менеджера политиками в строгом режиме авторизации. Публичных страниц ещё нет — это вехи 3.6 и далее.
 
 Подробности — в [.ai-factory/DESCRIPTION.md](.ai-factory/DESCRIPTION.md), планы вех — в [.ai-factory/plans/](.ai-factory/plans/).
 
@@ -76,18 +76,26 @@ laocars/
 │   └── skills/               # Скиллы: встроенные aif-* + установленные под стек
 ├── .github/workflows/ci.yml  # CI: Pint и тесты на PostgreSQL и Redis
 ├── app/
+│   ├── Console/Commands/     # MakeAdminCommand: первый администратор на проде
 │   ├── Enums/                # CarStatus, EngineType, DriveType, CarAttributeType,
 │   │   └── Concerns/         # ServiceCategory, LeadStatus, ContactMethod,
-│   │                         # PreferredTime + HasLabels
+│   │                         # PreferredTime, UserRole + HasLabels, HasColors
 │   ├── Filament/             # Админка: NavigationGroup + Resources/<Множ.>/
-│   │   └── Resources/        # Cars, Brands, CarAttributes, Media —
-│   │                         # Schemas/, Tables/, Pages/, Actions/, Concerns/
+│   │   ├── Forms/Components/ # MediaPicker: выбор из библиотеки, со связью и без
+│   │   ├── Pages/            # ManageSiteSettings: настройки сайта через content()
+│   │   └── Resources/        # Cars, Brands, CarAttributes, Media, Services,
+│   │                         # Employees, Reviews, Users — Schemas/, Tables/,
+│   │                         # Pages/, Actions/, Concerns/
 │   ├── Models/               # Brand, Car, CarPhoto, CarAttribute, Media,
 │   │   └── Concerns/         # CarAttributeValue, Service, Lead, LeadComment,
 │   │                         # Employee, Review, Setting, User + HasSlug
+│   ├── Policies/             # AdminOnlyPolicy и StaffPolicy — вся матрица прав
+│   │                         # в двух файлах; конкретная политика = одна строка
 │   ├── Providers/            # AppServiceProvider: morph map + ImageManager (GD)
-│   ├── Providers/Filament/   # AdminPanelProvider: панель /admin, брендинг, локаль
-│   └── Services/             # ImageProcessor + StoredImage: WebP, ресайз, превью
+│   ├── Providers/Filament/   # AdminPanelProvider: панель /admin, брендинг, локаль,
+│   │                         # strictAuthorization, страница профиля
+│   ├── Services/             # ImageProcessor + StoredImage: WebP, ресайз, превью
+│   └── Support/              # ThumbnailPath, MediaSettingKeys — чистые правила
 ├── config/images.php         # Пределы обработки изображений и потолок загрузки
 ├── config/logging.php        # Канал `leads` — отдельный лог пути заявки
 ├── database/
@@ -112,9 +120,11 @@ laocars/
 └── ТЗ_ЛАО_КАРС.md            # Техническое задание заказчика, версия 1.0
 ```
 
-Каталоги `app/Jobs/` и `app/Policies/` из `ARCHITECTURE.md` появятся вместе с первыми классами в вехах 3.5 и 3.7 — пустых папок с `.gitkeep` в проекте нет.
+Каталог `app/Jobs/` из `ARCHITECTURE.md` появится вместе с первыми классами в вехе 3.7 — пустых папок с `.gitkeep` в проекте нет.
 
-**Админка закрыта только аутентификацией.** Политики администратора и менеджера — веха 3.5; до неё любой пользователь панели видит и правит всё. Публиковать сборку в интернет нельзя.
+**Права живут только в политиках, и панель работает в строгом режиме.** `->strictAuthorization()` в `AdminPanelProvider` меняет умолчание: без политики Filament не разрешает, а бросает `LogicException` при первом обращении. Поэтому у каждой модели, попадающей в панель, политика обязана существовать и реализовывать полный набор методов, включая `reorder` (его дёргают все `reorderable()`-таблицы) и `deleteAny` (его дёргает `DeleteBulkAction`). Базовые классы `AdminOnlyPolicy` и `StaffPolicy` это уже делают — новая политика наследуется от одного из них одной строкой.
+
+**Первый администратор на проде — `php artisan laocars:make-admin`.** Умолчание колонки `users.role` — `manager`, а штатная `make:filament-user` роль не спрашивает: заведённый ею пользователь не сможет попасть ни в настройки, ни в список пользователей, и повысить его будет некому.
 
 ## Ключевые точки входа
 
@@ -128,8 +138,12 @@ laocars/
 | app/Models/CarAttribute.php | Справочник динамических характеристик: тип, единица, группа, флаги вывода |
 | app/Models/Setting.php | Настройки сайта: key-value с jsonb и кешем в Redis |
 | app/Providers/AppServiceProvider.php | Morph map источников заявки (`car`, `service`), синглтон `ImageManager` на GD |
-| app/Providers/Filament/AdminPanelProvider.php | Конфигурация админ-панели: путь, брендинг, ресурсы, порядок групп меню |
+| app/Providers/Filament/AdminPanelProvider.php | Конфигурация админ-панели: путь, брендинг, ресурсы, порядок групп меню, строгий режим авторизации, страница профиля |
 | app/Filament/NavigationGroup.php | Разделы меню админки и конвенции раскладки ресурсов Filament v5 |
+| app/Policies/AdminOnlyPolicy.php | Матрица прав администратора; парный `StaffPolicy` — права обеих ролей |
+| app/Filament/Pages/ManageSiteSettings.php | Страница настроек: реестр ключей, вкладки, сохранение через `data_get` |
+| app/Filament/Forms/Components/MediaPicker.php | Выбор изображения из медиабиблиотеки: режим со связью и без |
+| app/Console/Commands/MakeAdminCommand.php | `laocars:make-admin` — первый администратор на проде |
 | app/Services/ImageProcessor.php | Обработка загрузок: WebP, ресайз, превью; `thumbPathFor()` — правило пути превью |
 | database/seeders/DatabaseSeeder.php | Порядок сидов демо-данных |
 | compose.yml | Локальные PostgreSQL и Redis |
