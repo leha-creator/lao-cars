@@ -14,7 +14,7 @@
 # Эти значения должны совпадать с `.env` приложения:
 #   DB_HOST=127.0.0.1   DB_PORT=5432    DB_DATABASE=laocars
 #   DB_USERNAME=laocars DB_PASSWORD=secret
-#   REDIS_HOST=127.0.0.1  REDIS_PORT=56379
+#   REDIS_HOST=127.0.0.1  REDIS_PORT=6380
 #
 # Запуск:   docker compose up -d
 # Сброс:    docker compose down -v   (пересоздаёт volume и init-скрипты)

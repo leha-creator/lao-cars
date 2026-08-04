@@ -28,8 +28,16 @@ laocars/
 │   ├── Enums/                          # LeadStatus, CarStatus,
 │   │                                   # ServiceCategory (включая Parts)
 │   ├── Filament/
-│   │   ├── Resources/                  # Админка: CarResource, ServiceResource,
-│   │   │   └── ...                     # LeadResource, EmployeeResource, ...
+│   │   ├── NavigationGroup.php         # Разделы меню админки (enum)
+│   │   ├── Resources/                  # Раскладка make:filament-resource v5:
+│   │   │   ├── Cars/                   #   CarResource.php
+│   │   │   │   ├── Schemas/            #   CarForm.php
+│   │   │   │   ├── Tables/             #   CarsTable.php
+│   │   │   │   ├── Concerns/           #   логика, общая для страниц
+│   │   │   │   └── Pages/              #   List / Create / Edit
+│   │   │   ├── Brands/                 # те же подпапки + Actions/ —
+│   │   │   ├── CarAttributes/          #   действие, нужное и списку,
+│   │   │   └── Media/                  #   и странице редактирования
 │   │   └── Pages/                      # Настройки сайта
 │   ├── Http/
 │   │   ├── Controllers/                # ── PRESENTATION ──
@@ -54,6 +62,8 @@ laocars/
 │   ├── Providers/
 │   │   └── Filament/                   # AdminPanelProvider: путь панели, брендинг
 │   ├── Services/                       # ── BUSINESS LOGIC ──
+│   │   ├── ImageProcessor.php          # ресайз, WebP и превью для всех загрузок
+│   │   ├── StoredImage.php             # readonly DTO — результат обработки
 │   │   ├── LeadService.php             # приём заявки: запись + постановка уведомления
 │   │   ├── CatalogFilter.php           # сборка запроса каталога по фильтрам
 │   │   └── TelegramNotifier.php        # внешний API

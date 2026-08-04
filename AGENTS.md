@@ -8,7 +8,9 @@
 
 **Разделы сайта:** Каталог · Автосервис · Запчасти · Контакты (закреплены в меню) плюс «О компании». **Блога в проекте нет** — раздел 3.5 ТЗ исключён, модель статей и WYSIWYG не заводятся. Детейлинг и доп. сервисы — блоки внутри страницы автосервиса, отдельных URL у них нет.
 
-**Текущее состояние: собраны каркас (веха 3.1), схема данных (веха 3.2) и динамические характеристики авто (веха 3.3).** Laravel поднят, подключены PostgreSQL и Redis, работает админ-панель Filament, настроены сборка фронтенда, тесты и CI. Заведены модели, миграции, фабрики и сиды: каталог с фотографиями, услуги и запчасти, заявки, команда, отзывы, настройки сайта. Схема данных закрыта целиком: поверх фиксированных колонок `cars` работает справочник характеристик (`CarAttribute`) и их значения (`CarAttributeValue`). Ресурсов админки и публичных страниц ещё нет — это вехи 3.4 и далее.
+**Текущее состояние: собраны каркас (веха 3.1), схема данных (вехи 3.2–3.3) и админка каталога (веха 3.4).** Laravel поднят, подключены PostgreSQL и Redis, настроены сборка фронтенда, тесты и CI. Заведены модели, миграции, фабрики и сиды: каталог с фотографиями, услуги и запчасти, заявки, команда, отзывы, настройки сайта. Поверх фиксированных колонок `cars` работает справочник характеристик (`CarAttribute`) и их значения (`CarAttributeValue`).
+
+В админке Filament работают четыре раздела: автомобили (CRUD, мультизагрузка фото с сортировкой, редактор динамических характеристик), марки, справочник характеристик и медиабиблиотека. Все загрузки проходят через `ImageProcessor`. Публичных страниц ещё нет — это вехи 3.6 и далее; роли и политики доступа — веха 3.5.
 
 Подробности — в [.ai-factory/DESCRIPTION.md](.ai-factory/DESCRIPTION.md), планы вех — в [.ai-factory/plans/](.ai-factory/plans/).
 
@@ -32,7 +34,7 @@
 В Docker живут только базы: PHP и Node запускаются локально через Herd — bind mount исходников в контейнер на Windows заметно бьёт по I/O.
 
 ```bash
-docker compose up -d      # PostgreSQL на 5432, Redis на 56379
+docker compose up -d      # PostgreSQL на 5432, Redis на 6380
 php artisan migrate
 php artisan storage:link  # без него фото каталога не отдаются по URL
 php artisan db:seed       # демо-данные: каталог, услуги, отзывы, настройки
@@ -41,7 +43,7 @@ php artisan serve
 php artisan queue:work    # обработка очереди заявок
 ```
 
-`storage:link` не хранится в репозитории (`/public/storage` в `.gitignore`), поэтому на чистом клоне команду нужно выполнить руками. Сиды идемпотентны — повторный запуск не плодит дубли; `CarPhotoSeeder` копирует фотографии из `assets/cars/` в `storage/app/public/cars/` и пропускается в тестовом окружении.
+`storage:link` входит в `composer setup` — симлинк не хранится в репозитории (`/public/storage` в `.gitignore`), и без него все превью админки отдают 404. Сиды идемпотентны — повторный запуск не плодит дубли; `CarPhotoSeeder` прогоняет фотографии из `assets/cars/` через `ImageProcessor` в `storage/app/public/cars/` (128 МБ PNG → 8,6 МБ WebP с превью) и пропускается в тестовом окружении.
 
 Тесты идут в реальные PostgreSQL и Redis (база `laocars_testing`, `REDIS_DB=1`), поэтому контейнеры должны быть подняты:
 
@@ -52,7 +54,9 @@ php vendor/bin/pint --test
 
 Полный сброс окружения — `docker compose down -v`: init-скрипт, создающий `laocars_testing`, выполняется только на пустом volume.
 
-**Порт Redis смещён на 56379:** штатный 6379 занят нативной службой `redis-server`. Смещение живёт только в `.env`; `.env.example` хранит канонический 6379, потому что из него собирается CI.
+**Порт Redis смещён на 6380:** штатный 6379 занят нативной службой `redis-server`. Смещение живёт в `compose.yml` и `.env`; `.env.example` хранит канонический 6379, потому что из него собирается CI.
+
+Пятизначный порт для этого не годится: WinNAT резервирует под динамические порты диапазоны вида 55842–56541, и Docker падает с «socket in a way forbidden by its access permissions». Диапазоны переезжают после перезагрузки, поэтому сбой выглядит как «вчера работало». Перед выбором нового порта — `netsh interface ipv4 show excludedportrange protocol=tcp`.
 
 ## Структура проекта
 
@@ -75,11 +79,16 @@ laocars/
 │   ├── Enums/                # CarStatus, EngineType, DriveType, CarAttributeType,
 │   │   └── Concerns/         # ServiceCategory, LeadStatus, ContactMethod,
 │   │                         # PreferredTime + HasLabels
-│   ├── Models/               # Brand, Car, CarPhoto, CarAttribute,
+│   ├── Filament/             # Админка: NavigationGroup + Resources/<Множ.>/
+│   │   └── Resources/        # Cars, Brands, CarAttributes, Media —
+│   │                         # Schemas/, Tables/, Pages/, Actions/, Concerns/
+│   ├── Models/               # Brand, Car, CarPhoto, CarAttribute, Media,
 │   │   └── Concerns/         # CarAttributeValue, Service, Lead, LeadComment,
 │   │                         # Employee, Review, Setting, User + HasSlug
-│   ├── Providers/            # AppServiceProvider: morph map источников заявки
-│   └── Providers/Filament/   # AdminPanelProvider: панель /admin, брендинг, локаль
+│   ├── Providers/            # AppServiceProvider: morph map + ImageManager (GD)
+│   ├── Providers/Filament/   # AdminPanelProvider: панель /admin, брендинг, локаль
+│   └── Services/             # ImageProcessor + StoredImage: WebP, ресайз, превью
+├── config/images.php         # Пределы обработки изображений и потолок загрузки
 ├── config/logging.php        # Канал `leads` — отдельный лог пути заявки
 ├── database/
 │   ├── migrations/           # Схема: каталог, услуги, заявки, контент, настройки
@@ -103,7 +112,9 @@ laocars/
 └── ТЗ_ЛАО_КАРС.md            # Техническое задание заказчика, версия 1.0
 ```
 
-Каталоги `app/Services/`, `app/Jobs/`, `app/Policies/` из `ARCHITECTURE.md` появятся вместе с первыми классами в вехах 3.5 и 3.7 — пустых папок с `.gitkeep` в проекте нет.
+Каталоги `app/Jobs/` и `app/Policies/` из `ARCHITECTURE.md` появятся вместе с первыми классами в вехах 3.5 и 3.7 — пустых папок с `.gitkeep` в проекте нет.
+
+**Админка закрыта только аутентификацией.** Политики администратора и менеджера — веха 3.5; до неё любой пользователь панели видит и правит всё. Публиковать сборку в интернет нельзя.
 
 ## Ключевые точки входа
 
@@ -116,8 +127,10 @@ laocars/
 | app/Models/Lead.php | Заявка со всех форм: полиморфный источник, статусы, комментарии |
 | app/Models/CarAttribute.php | Справочник динамических характеристик: тип, единица, группа, флаги вывода |
 | app/Models/Setting.php | Настройки сайта: key-value с jsonb и кешем в Redis |
-| app/Providers/AppServiceProvider.php | Morph map источников заявки (`car`, `service`) |
-| app/Providers/Filament/AdminPanelProvider.php | Конфигурация админ-панели: путь, брендинг, ресурсы |
+| app/Providers/AppServiceProvider.php | Morph map источников заявки (`car`, `service`), синглтон `ImageManager` на GD |
+| app/Providers/Filament/AdminPanelProvider.php | Конфигурация админ-панели: путь, брендинг, ресурсы, порядок групп меню |
+| app/Filament/NavigationGroup.php | Разделы меню админки и конвенции раскладки ресурсов Filament v5 |
+| app/Services/ImageProcessor.php | Обработка загрузок: WebP, ресайз, превью; `thumbPathFor()` — правило пути превью |
 | database/seeders/DatabaseSeeder.php | Порядок сидов демо-данных |
 | compose.yml | Локальные PostgreSQL и Redis |
 | phpunit.xml | Тестовое окружение — переопределяет драйверы скелета |
