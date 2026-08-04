@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasColors;
 use App\Enums\Concerns\HasLabels;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasLabel;
@@ -16,6 +17,7 @@ use Filament\Support\Contracts\HasLabel;
  */
 enum CarStatus: string implements HasColor, HasLabel
 {
+    use HasColors;
     use HasLabels;
 
     case InStock = 'in_stock';
@@ -38,7 +40,7 @@ enum CarStatus: string implements HasColor, HasLabel
      * в badge-колонке ресурса — копия словаря, которая разъезжается
      * с оригиналом при первом же новом статусе.
      */
-    public function getColor(): string
+    public function color(): string
     {
         return match ($this) {
             self::InStock => 'success',

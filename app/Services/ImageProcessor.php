@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Support\ThumbnailPath;
 use Illuminate\Http\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -82,19 +83,14 @@ final class ImageProcessor
     /**
      * Путь превью по пути оригинала: `cars/a.webp` → `cars/thumbs/a.webp`.
      *
-     * Публичный, потому что состояние `FileUpload` — плоский массив путей,
-     * места под `thumb_path` в нём нет. `Car::syncPhotos()` восстанавливает
-     * превью этим правилом, и жить оно обязано в одном месте: разъехавшись
-     * с раскладкой `store()`, превью галереи молча отвяжутся.
+     * Само правило живёт в `ThumbnailPath`, а не здесь: `Car::syncPhotos()`
+     * восстанавливает `thumb_path` вычислением, а модели по правилам
+     * зависимостей нельзя знать о сервисах. Метод остаётся как удобный
+     * фасад для тех, у кого сервис уже под рукой.
      */
     public function thumbPathFor(string $path): string
     {
-        $directory = dirname($path);
-        $thumbs = (string) config('images.thumbs_directory');
-
-        return $directory === '.' || $directory === ''
-            ? $thumbs.'/'.basename($path)
-            : $directory.'/'.$thumbs.'/'.basename($path);
+        return ThumbnailPath::for($path);
     }
 
     /**

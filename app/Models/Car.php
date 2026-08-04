@@ -8,7 +8,7 @@ use App\Enums\CarStatus;
 use App\Enums\DriveType;
 use App\Enums\EngineType;
 use App\Models\Concerns\HasSlug;
-use App\Services\ImageProcessor;
+use App\Support\ThumbnailPath;
 use Database\Factories\CarFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\RouteKey;
@@ -244,8 +244,8 @@ final class Car extends Model
      *   `alt` переживает пересортировку;
      * - у новой записи `alt` собирается по образцу `CarPhotoSeeder`
      *   («BMW X5, фото 3»), а `thumb_path` восстанавливается правилом
-     *   `ImageProcessor::thumbPathFor()` и пишется, **только если файл
-     *   существует на диске** — иначе шаблон получит битую ссылку;
+     *   `ThumbnailPath::for()` и пишется, **только если файл существует
+     *   на диске** — иначе шаблон получит битую ссылку;
      * - пропавшие из массива пути удаляются вызовом `delete()` на
      *   модели, а не массовым запросом: массовое удаление не поднимает
      *   события Eloquent, и файлы остались бы на диске навсегда.
@@ -258,7 +258,6 @@ final class Car extends Model
 
         $existing = $this->photos()->get()->keyBy('path');
         $disk = Storage::disk('public');
-        $processor = app(ImageProcessor::class);
 
         foreach ($paths as $index => $path) {
             $photo = $existing->get($path);
@@ -270,7 +269,7 @@ final class Car extends Model
                 continue;
             }
 
-            $thumbPath = $processor->thumbPathFor($path);
+            $thumbPath = ThumbnailPath::for($path);
 
             if (! $disk->exists($thumbPath)) {
                 // Не ошибка: так выглядит файл, у которого обработка

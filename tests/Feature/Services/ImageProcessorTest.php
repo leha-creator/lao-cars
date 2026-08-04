@@ -15,6 +15,7 @@
  */
 
 use App\Services\ImageProcessor;
+use App\Support\ThumbnailPath;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -86,9 +87,12 @@ it('matches thumbPathFor() with the path storeFile() actually used', function ()
     $stored = $this->processor->storeFile($file->getRealPath(), 'public', 'cars', 'photo.png');
 
     // Car::syncPhotos() восстанавливает thumb_path вычислением, а не
-    // хранением: если правило раскладки разъедется с этим методом,
-    // превью галереи молча отвяжутся.
-    expect($this->processor->thumbPathFor($stored->path))->toBe($stored->thumbPath);
+    // хранением, и зовёт ThumbnailPath напрямую — модели по правилам
+    // зависимостей нельзя знать о сервисе. Проверяются оба входа
+    // в одно правило: разъехавшись с раскладкой store(), они молча
+    // отвяжут превью всей галереи.
+    expect(ThumbnailPath::for($stored->path))->toBe($stored->thumbPath)
+        ->and($this->processor->thumbPathFor($stored->path))->toBe($stored->thumbPath);
 });
 
 it('keeps the original file and logs an error when processing fails', function () {

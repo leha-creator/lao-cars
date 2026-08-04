@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasColors;
 use App\Enums\Concerns\HasLabels;
+use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasLabel;
 
 /**
  * Статус обработки заявки (раздел 4 ТЗ: новая / в работе / закрыта).
  */
-enum LeadStatus: string
+enum LeadStatus: string implements HasColor, HasLabel
 {
+    use HasColors;
     use HasLabels;
 
     case New = 'new';
