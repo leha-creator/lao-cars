@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
  * общей медиабиблиотеки: галерее нужна сортировка внутри карточки,
  * а не переиспользование между разделами.
  */
-#[Fillable(['car_id', 'disk', 'path', 'alt', 'sort_order'])]
+#[Fillable(['car_id', 'disk', 'path', 'thumb_path', 'alt', 'sort_order'])]
 final class CarPhoto extends Model
 {
     /** @use HasFactory<CarPhotoFactory> */
@@ -38,6 +38,24 @@ final class CarPhoto extends Model
     {
         return Attribute::get(
             fn (): string => Storage::disk($this->disk)->url($this->path),
+        );
+    }
+
+    /**
+     * URL превью с откатом на оригинал.
+     *
+     * `thumb_path` пуст, когда обработка не удалась или фотография залита
+     * до вехи 3.4. Отдавать в этом случае `null` значит показать в списке
+     * админки битую картинку — лучше тяжёлый оригинал, чем пустая рамка.
+     *
+     * Как и `url`, не входит в `$appends`.
+     */
+    protected function thumbUrl(): Attribute
+    {
+        return Attribute::get(
+            fn (): string => $this->thumb_path === null
+                ? $this->url
+                : Storage::disk($this->disk)->url($this->thumb_path),
         );
     }
 

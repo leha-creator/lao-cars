@@ -6,6 +6,7 @@ use App\Models\Car;
 use App\Models\Service;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
+use Intervention\Image\ImageManager;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,7 +15,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Драйвер задаётся здесь, а не в конфиге пакета: моста
+        // intervention/image-laravel в проекте нет намеренно — нужен сервис
+        // с внедрением через контейнер, а не статический фасад. GD, потому
+        // что imagick в сборке нет ни локально, ни в образах setup-php.
+        $this->app->singleton(ImageManager::class, fn (): ImageManager => ImageManager::gd());
     }
 
     /**

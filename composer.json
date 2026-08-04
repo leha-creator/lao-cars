@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.3",
         "filament/filament": "5.*",
+        "intervention/image": "^3.11",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
         "predis/predis": "3.*"
@@ -42,6 +43,7 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
             "@php artisan migrate --force",
+            "@php artisan storage:link",
             "npm install --ignore-scripts",
             "npm run build"
         ],

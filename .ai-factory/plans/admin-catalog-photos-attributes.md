@@ -135,7 +135,7 @@
 
 ### Фаза 2 — Обработка изображений и медиабиблиотека
 
-- [ ] **4. `intervention/image`, конфиг и сервис `ImageProcessor`**
+- [x] **4. `intervention/image`, конфиг и сервис `ImageProcessor`**
   `composer require intervention/image:^3.11`. Laravel-мост (`intervention/image-laravel`) не ставится — нужен сервис с внедрением через контейнер, а не фасад.
   `config/images.php`: `max_width` (1920), `thumb_width` (600), `quality` (82), `thumbs_directory` (`thumbs`), `max_upload_kb` (12288). Значения через `env()` **внутри конфига** — вне config-файлов `env()` возвращает `null` после `config:cache`.
   Ключ `max_upload_kb` — ровно потолок Livewire (правило по умолчанию `file|max:12288`). Задавать в `FileUpload::maxSize()` больше него бессмысленно: загрузка отвалится валидацией Livewire с сообщением, по которому причину не понять. Поднимать нужно оба места сразу.
@@ -150,7 +150,7 @@
   Логирование: ERROR при провале обработки (имя файла, исключение); INFO с итоговым размером — только при разнице больше чем вдвое, иначе лог заполняется рутиной.
   Проверка: в tinker обработать файл из `assets/cars/` — на диске `.webp` заметно меньше исходных 3 МБ и превью в подпапке `thumbs/`; скормить сервису текстовый файл с расширением `.png` — оригинал сохранён, в логе ERROR.
 
-- [ ] **5. Медиабиблиотека: миграция, модель, фабрика** *(зависит от 4)*
+- [x] **5. Медиабиблиотека: миграция, модель, фабрика** *(зависит от 4)*
   Миграция `create_media_table`: `id`, `disk` (string, default `public`), `path` (string, **unique** — один файл одна запись), `thumb_path` (string, nullable), `name` (string — человеческое имя для поиска), `alt` (string, nullable), `mime` (string), `size` (`unsignedInteger`, байты после обработки), `timestamps`. Индексы: `unique('path')`, `index('created_at')` (сортировка библиотеки по умолчанию — новые сверху). Больше не нужно: поиск идёт по `name` через `ILIKE`, а библиотека — сотни строк, не миллионы.
   `app/Models/Media.php` в стиле проекта (`final`, `declare(strict_types=1)`, `#[Fillable([...])]`, `HasFactory`): аксессоры `url` и `thumbUrl` (последний откатывается на `url`, если превью нет) — оба **не** в `$appends`, по той же причине, что и в `CarPhoto`; каст `size => 'integer'`.
   Событие `deleted` — удаляет с диска и оригинал, и превью. Регистрируется через `#[ObservedBy]` либо `booted()` — как принято в проекте на момент реализации; если прецедента нет, `booted()` с комментарием.
@@ -158,7 +158,7 @@
   Логирование: INFO при удалении файла с диска (`path`) — удалённый по ошибке файл иначе не восстановить и не отследить.
   Проверка: `php artisan migrate`; в tinker создать `Media` с реальным файлом, удалить — файлы ушли с диска; вставка второй записи с тем же `path` падает на уникальном индексе.
 
-- [ ] **6. `MediaResource` — админка медиабиблиотеки** *(зависит от 5)*
+- [x] **6. `MediaResource` — админка медиабиблиотеки** *(зависит от 5)*
   Ресурс над `Media`, группа `NavigationGroup::Media`, иконка `Heroicon::OutlinedPhoto`, `$modelLabel = 'Изображение'`, `$pluralModelLabel = 'Медиабиблиотека'`, `$recordTitleAttribute = 'name'`.
   Список — сеткой превью (`ImageColumn` по `thumb_url`), плюс `name` (`searchable`), `size` (`formatStateUsing` в КБ/МБ), `created_at`; `defaultSort('created_at', 'desc')`.
   Загрузка — `headerActions()` с действием «Загрузить»: `FileUpload::make('files')->multiple()->image()->maxSize(config('images.max_upload_kb'))->acceptedFileTypes(['image/jpeg','image/png','image/webp'])->saveUploadedFileUsing(...)` через `ImageProcessor`; в `action()` на каждый файл создаётся запись `Media` (`name` — исходное имя файла без расширения, `alt` пустой). Отдельная страница создания не нужна: запись без файла бессмысленна.

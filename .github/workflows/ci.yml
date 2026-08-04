@@ -65,7 +65,12 @@ jobs:
           # phpredis в образах setup-php по умолчанию нет — клиент Redis в
           # проекте predis, он ставится composer'ом. Несоответствие клиента дало
           # бы «Class "Redis" not found» уже после зелёной локальной сборки.
-          extensions: mbstring, intl, bcmath, zip, pdo_pgsql, pgsql
+          # gd нужен ImageProcessor'у и UploadedFile::fake()->image():
+          # локально он есть в сборке PHP, но в образах setup-php по
+          # умолчанию его нет — без этой строки тесты обработки
+          # изображений падают только на CI, уже после зелёной локальной
+          # сборки.
+          extensions: mbstring, intl, bcmath, zip, pdo_pgsql, pgsql, gd
           coverage: none
 
       - name: Установить Node
