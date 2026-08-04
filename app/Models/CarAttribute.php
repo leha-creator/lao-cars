@@ -98,6 +98,28 @@ final class CarAttribute extends Model
         return in_array($value, $this->options ?? [], strict: true);
     }
 
+    /**
+     * Флаг «в фильтре» гасится моделью, а не формой.
+     *
+     * Фильтр каталога работает только по типам «Выбор из списка»
+     * и «Да / Нет» (`CarAttributeType::isFilterable()`). Если тип меняют
+     * на текст или число, флаг обязан сброситься сам — иначе
+     * в справочнике остаётся характеристика, которую фильтр отказывается
+     * применять, и расхождение видно только в логе.
+     *
+     * Источник истины именно здесь, а не в форме вехи 3.4: тип правится
+     * из формы, из сида и из tinker, а три копии правила разъедутся.
+     * Тот же приём, что дата публикации отзыва в вехе 3.5.
+     */
+    protected static function booted(): void
+    {
+        self::saving(static function (self $attribute): void {
+            if ($attribute->type instanceof CarAttributeType && ! $attribute->type->isFilterable()) {
+                $attribute->show_in_filter = false;
+            }
+        });
+    }
+
     #[Scope]
     protected function inCard(Builder $query): void
     {

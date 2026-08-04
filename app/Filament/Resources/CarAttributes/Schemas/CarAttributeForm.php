@@ -75,7 +75,12 @@ final class CarAttributeForm
 
                 Toggle::make('show_in_filter')
                     ->label('Показывать в фильтре каталога')
-                    ->default(false),
+                    ->helperText('Фильтр работает только для списка и «Да / Нет»: равенство по свободному тексту бессмысленно, а числу нужен диапазон.')
+                    ->default(false)
+                    // Форма прячет бессмысленный переключатель, но источник
+                    // истины — модель: `CarAttribute::booted()` гасит флаг
+                    // при смене типа независимо от того, откуда правят.
+                    ->visible(fn (Get $get): bool => self::typeOf($get)?->isFilterable() === true),
             ]);
     }
 
