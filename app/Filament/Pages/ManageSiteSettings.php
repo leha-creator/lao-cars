@@ -147,7 +147,7 @@ final class ManageSiteSettings extends Page
         foreach (self::settingKeys() as $key) {
             $value = data_get($state, $key);
 
-            if ($value !== Setting::get($key)) {
+            if (self::isChanged($value, Setting::get($key))) {
                 $changed[] = $key;
             }
 
@@ -171,6 +171,43 @@ final class ManageSiteSettings extends Page
             ->title('Настройки сохранены')
             ->success()
             ->send();
+    }
+
+    /**
+     * Отличается ли новое значение настройки от сохранённого.
+     *
+     * Голого `!==` здесь мало. Значения-объекты (`home.promo`,
+     * `footer.guarantee`) лежат в jsonb, а PostgreSQL порядок ключей
+     * в jsonb не сохраняет — он их нормализует. Форма же собирает объект
+     * в порядке объявления полей, и `!==`, чувствительный к порядку
+     * ключей, объявлял бы эти настройки изменёнными при каждом
+     * сохранении. На запись это не влияет (значения те же), но лог
+     * изменений превращается в шум, ради которого он и заводился.
+     *
+     * Сравнение остаётся строгим по типам: ключи сортируются
+     * рекурсивно, значения сравниваются через `!==` (правило `RULES.md`
+     * про нестрогие сравнения).
+     */
+    private static function isChanged(mixed $new, mixed $stored): bool
+    {
+        return self::normalize($new) !== self::normalize($stored);
+    }
+
+    private static function normalize(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        $normalized = array_map(self::normalize(...), $value);
+
+        // Списки (бегущая строка, преимущества) сортировать нельзя —
+        // там порядок и есть содержание.
+        if (! array_is_list($normalized)) {
+            ksort($normalized);
+        }
+
+        return $normalized;
     }
 
     public function defaultForm(Schema $schema): Schema

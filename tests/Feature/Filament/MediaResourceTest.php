@@ -1,17 +1,21 @@
 <?php
 
 /*
- * Медиабиблиотека в админке (веха 3.4).
+ * Медиабиблиотека в админке (веха 3.4, дополнена вехой 3.5).
  *
- * Потребителей у библиотеки до вехи 3.5 нет, поэтому проверяется само
- * хранилище: список, загрузка через ImageProcessor, правка подписей
- * и удаление вместе с файлами на диске.
+ * Веха 3.4 проверяла само хранилище: список, загрузку через
+ * ImageProcessor, правку подписей и удаление вместе с файлами на диске.
+ * Веха 3.5 добавила потребителей, а с ними — проверку использования
+ * перед удалением и отказ от массового удаления.
  */
 
 use App\Filament\Resources\Media\MediaResource;
 use App\Filament\Resources\Media\Pages\EditMedia;
 use App\Filament\Resources\Media\Pages\ListMedia;
+use App\Models\Employee;
 use App\Models\Media;
+use App\Models\Review;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\ImageProcessor;
 use Filament\Actions\DeleteAction;
@@ -93,4 +97,67 @@ it('deletes the record together with its files on disk', function () {
 
     Storage::disk('public')->assertMissing('media/x.webp');
     Storage::disk('public')->assertMissing('media/thumbs/x.webp');
+});
+
+it('reports where a record is used', function () {
+    $media = Media::factory()->create();
+
+    expect($media->usages())->toBe([]);
+
+    Employee::factory()->for($media)->create(['name' => 'Андрей Волков']);
+    Review::factory()->for($media)->create(['author_name' => 'Ольга Ким']);
+    Setting::set('home.promo', ['title' => 'Промо', 'image_id' => $media->getKey()]);
+
+    expect($media->usages())->toBe([
+        'Сотрудник: Андрей Волков',
+        'Отзыв: Ольга Ким',
+        'Настройки: промо-блок на главной',
+    ]);
+});
+
+it('cancels deletion of a record that is still in use', function () {
+    // Блокировка, а не предупреждение: у сотрудников и отзывов есть
+    // nullOnDelete(), а ссылка внутри jsonb настроек внешнего ключа
+    // не имеет и стала бы висячим id.
+    Storage::fake('public');
+    Storage::disk('public')->put('media/used.webp', 'original');
+
+    $media = Media::factory()->create(['path' => 'media/used.webp']);
+    Employee::factory()->for($media)->create();
+
+    livewire(EditMedia::class, ['record' => $media->getRouteKey()])
+        ->callAction(DeleteAction::class);
+
+    expect(Media::query()->whereKey($media->id)->exists())->toBeTrue();
+    Storage::disk('public')->assertExists('media/used.webp');
+});
+
+it('deletes a record once it is no longer used', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('media/freed.webp', 'original');
+
+    $media = Media::factory()->create(['path' => 'media/freed.webp']);
+    $employee = Employee::factory()->for($media)->create();
+
+    $employee->update(['media_id' => null]);
+
+    livewire(EditMedia::class, ['record' => $media->getRouteKey()])
+        ->callAction(DeleteAction::class);
+
+    expect(Media::query()->whereKey($media->id)->exists())->toBeFalse();
+    Storage::disk('public')->assertMissing('media/freed.webp');
+});
+
+it('offers no bulk deletion', function () {
+    // DeleteBulkAction удаляет записи мимо before() и обошёл бы проверку
+    // использования целиком — та же причина, по которой его нет у марок.
+    //
+    // Проверяется набор массовых действий таблицы, а не имя действия:
+    // `delete` есть и у строкового действия, и по имени эти два
+    // не различить.
+    Media::factory()->count(2)->create();
+
+    $table = livewire(ListMedia::class)->assertOk()->instance()->getTable();
+
+    expect($table->getFlatBulkActions())->toBe([]);
 });

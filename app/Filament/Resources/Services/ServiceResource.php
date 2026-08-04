@@ -45,6 +45,13 @@ final class ServiceResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Услуги и запчасти';
 
+    /**
+     * Подпись в меню задаётся явно, потому что по умолчанию Filament
+     * прогоняет `$pluralModelLabel` через тайтл-кейс, и в боковом меню
+     * появляется «Услуги И Запчасти» с заглавным союзом.
+     */
+    protected static ?string $navigationLabel = 'Услуги и запчасти';
+
     public static function form(Schema $schema): Schema
     {
         return ServiceForm::configure($schema);
