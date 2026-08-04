@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use App\Enums\Concerns\HasLabels;
+use Filament\Support\Contracts\HasLabel;
 
 /**
  * Тип двигателя — фильтруемая характеристика каталога (раздел 3.2 ТЗ).
  */
-enum EngineType: string
+enum EngineType: string implements HasLabel
 {
     use HasLabels;
 

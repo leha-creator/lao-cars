@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use App\Enums\Concerns\HasLabels;
+use Filament\Support\Contracts\HasLabel;
 
 /**
  * Тип динамической характеристики автомобиля (веха 3.3).
@@ -15,7 +16,7 @@ use App\Enums\Concerns\HasLabels;
  * в модели, фабрике, сиде, редакторе админки и фильтре каталога.
  * Приведение к типу делается на чтении методом `cast()`.
  */
-enum CarAttributeType: string
+enum CarAttributeType: string implements HasLabel
 {
     use HasLabels;
 

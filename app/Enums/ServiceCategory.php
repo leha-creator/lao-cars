@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use App\Enums\Concerns\HasLabels;
+use Filament\Support\Contracts\HasLabel;
 
 /**
  * Категория позиции в единой сущности «услуга».
@@ -14,7 +15,7 @@ use App\Enums\Concerns\HasLabels;
  * «по запросу», порядок). Модель `Part` появится вместе с витриной
  * (артикулы, наличие, фильтры), которой в MVP нет — см. DESCRIPTION.md.
  */
-enum ServiceCategory: string
+enum ServiceCategory: string implements HasLabel
 {
     use HasLabels;
 

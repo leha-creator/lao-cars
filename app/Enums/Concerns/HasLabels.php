@@ -16,6 +16,22 @@ trait HasLabels
     abstract public function label(): string;
 
     /**
+     * Подпись для Filament.
+     *
+     * Filament читает подписи только через собственный контракт
+     * `Filament\Support\Contracts\HasLabel`: без него badge-колонка
+     * покажет сырое значение, а `->options(EnumClass::class)` отдаст
+     * имена кейсов (`InStock`) вместо русских подписей. Делегирование
+     * живёт в трейте, а не в каждом enum-е, — иначе восемь копий одной
+     * строки. Интерфейс объявляется на самих enum-ах: трейт объявить
+     * `implements` не может.
+     */
+    public function getLabel(): ?string
+    {
+        return $this->label();
+    }
+
+    /**
      * Значения в виде «значение => подпись» — формат, который напрямую
      * принимают select-ы Filament и поля форм сайта.
      *

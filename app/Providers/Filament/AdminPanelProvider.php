@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\NavigationGroup;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -32,6 +33,10 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            // Порядок групп в меню фиксируется порядком кейсов enum-а.
+            // Без явной регистрации группы встают в порядке обнаружения
+            // ресурсов, и меню перетасовывается от каждого нового файла.
+            ->navigationGroups(NavigationGroup::class)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

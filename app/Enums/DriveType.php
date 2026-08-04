@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use App\Enums\Concerns\HasLabels;
+use Filament\Support\Contracts\HasLabel;
 
 /**
  * Тип привода — фильтруемая характеристика каталога (раздел 3.2 ТЗ).
@@ -12,7 +13,7 @@ use App\Enums\Concerns\HasLabels;
  * `label()` даёт значение для строки «Привод» в карточке; в списке
  * каталога подпись достраивается словом «привод» на стороне вёрстки.
  */
-enum DriveType: string
+enum DriveType: string implements HasLabel
 {
     use HasLabels;
 
