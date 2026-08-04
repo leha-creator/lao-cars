@@ -6,8 +6,8 @@ namespace Database\Seeders;
 
 use App\Models\Car;
 use App\Models\CarPhoto;
+use App\Services\ImageProcessor;
 use Illuminate\Database\Seeder;
-use Illuminate\Http\File;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Finder\Finder;
 
@@ -21,9 +21,13 @@ use Symfony\Component\Finder\Finder;
  *    превратило бы тесты в наказание.
  * 2. Копирование идемпотентно — уже лежащий на диске файл
  *    пропускается, повторный `db:seed` не переливает 128 МБ заново.
+ *    Проверка идёт по итоговому `.webp`-имени, а не по исходному:
+ *    иначе каждый прогон переобрабатывал бы все 46 файлов заново.
  *
- * Исходники — PNG примерно по 3 МБ, для веба они не подготовлены.
- * Ресайз и оптимизация относятся к вехе 3.4 вместе с медиабиблиотекой.
+ * Исходники — PNG примерно по 3 МБ. Через `ImageProcessor` (веха 3.4)
+ * они превращаются в WebP с превью: без этого демо-данные оставались бы
+ * тяжелее того, что заливает через админку администратор, и список
+ * из 12 карточек весил бы десятки мегабайт.
  */
 class CarPhotoSeeder extends Seeder
 {
@@ -68,6 +72,7 @@ class CarPhotoSeeder extends Seeder
         }
 
         $disk = Storage::disk('public');
+        $processor = app(ImageProcessor::class);
         $copied = 0;
         $reused = 0;
         $attached = 0;
@@ -82,13 +87,33 @@ class CarPhotoSeeder extends Seeder
                 }
 
                 $source = $files[$cursor++];
-                $name = mb_strtolower(basename($source));
-                $path = self::TARGET_DIR.'/'.$name;
+
+                // Имя выводится из исходного и потому предсказуемо:
+                // на нём и держится идемпотентность. Случайное имя от
+                // ImageProcessor заставляло бы каждый прогон
+                // переобрабатывать все 46 файлов заново.
+                $stem = mb_strtolower(pathinfo($source, PATHINFO_FILENAME));
+                $path = self::TARGET_DIR.'/'.$stem.'.webp';
 
                 if ($disk->exists($path)) {
                     $reused++;
+                    $thumbPath = $processor->thumbPathFor($path);
+                    $thumbPath = $disk->exists($thumbPath) ? $thumbPath : null;
                 } else {
-                    $disk->putFileAs(self::TARGET_DIR, new File($source), $name);
+                    // Файл, на котором обработка сорвалась, сохраняется
+                    // как есть под исходным расширением — проверка выше
+                    // его не увидит и следующий прогон попробует снова.
+                    // Это и нужно: битый исходник стоит перечитать.
+                    $stored = $processor->storeFile(
+                        sourcePath: $source,
+                        disk: 'public',
+                        directory: self::TARGET_DIR,
+                        originalName: basename($source),
+                        basename: $stem,
+                    );
+
+                    $path = $stored->path;
+                    $thumbPath = $stored->thumbPath;
                     $copied++;
                 }
 
@@ -96,6 +121,7 @@ class CarPhotoSeeder extends Seeder
                     ['car_id' => $car->id, 'path' => $path],
                     [
                         'disk' => 'public',
+                        'thumb_path' => $thumbPath,
                         'alt' => "{$car->brand->name} {$car->model}, фото ".($i + 1),
                         'sort_order' => $i,
                     ],
@@ -108,7 +134,7 @@ class CarPhotoSeeder extends Seeder
         }
 
         $this->command?->info(
-            "[CarPhotoSeeder] файлов скопировано: {$copied}, уже было на диске: {$reused}, привязано к карточкам: {$attached}"
+            "[CarPhotoSeeder] файлов обработано: {$copied}, уже было на диске: {$reused}, привязано к карточкам: {$attached}"
         );
     }
 

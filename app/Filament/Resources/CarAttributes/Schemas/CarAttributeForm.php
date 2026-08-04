@@ -105,9 +105,22 @@ final class CarAttributeForm
 
     /**
      * Текущий тип из состояния формы — или `null`, пока он не выбран.
+     *
+     * Состояние приходит в двух видах, и оба реальны: на создании это
+     * строка из `Select`, а на редактировании — уже объект enum-а,
+     * потому что модель кастует колонку `type` в `CarAttributeType`.
+     * Приведение `(string) $get('type')` роняет форму редактирования
+     * с «Object of class CarAttributeType could not be converted
+     * to string».
      */
     private static function typeOf(Get $get): ?CarAttributeType
     {
-        return CarAttributeType::tryFrom((string) $get('type'));
+        $type = $get('type');
+
+        if ($type instanceof CarAttributeType) {
+            return $type;
+        }
+
+        return is_string($type) ? CarAttributeType::tryFrom($type) : null;
     }
 }

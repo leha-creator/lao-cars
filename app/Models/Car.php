@@ -8,6 +8,7 @@ use App\Enums\CarStatus;
 use App\Enums\DriveType;
 use App\Enums\EngineType;
 use App\Models\Concerns\HasSlug;
+use App\Services\ImageProcessor;
 use Database\Factories\CarFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\RouteKey;
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Автомобиль каталога.
@@ -227,6 +229,93 @@ final class Car extends Model
         // Загруженная связь после записи устарела: следующее обращение
         // к cardAttributes() должно видеть актуальные значения.
         $this->unsetRelation('attributeValues');
+    }
+
+    /**
+     * Записать галерею по списку путей — единственный путь записи фото.
+     *
+     * Ровно тот же приём, что `syncAttributeValues()`, и по той же
+     * причине: правила ниже должны лежать в одном месте, иначе редактор
+     * админки и будущий импорт разъедутся.
+     *
+     * - позиция в массиве становится `sort_order`, то есть первое фото
+     *   и есть главное — `mainPhoto()` уже на это опирается;
+     * - существующий путь обновляет только порядок: заданный вручную
+     *   `alt` переживает пересортировку;
+     * - у новой записи `alt` собирается по образцу `CarPhotoSeeder`
+     *   («BMW X5, фото 3»), а `thumb_path` восстанавливается правилом
+     *   `ImageProcessor::thumbPathFor()` и пишется, **только если файл
+     *   существует на диске** — иначе шаблон получит битую ссылку;
+     * - пропавшие из массива пути удаляются вызовом `delete()` на
+     *   модели, а не массовым запросом: массовое удаление не поднимает
+     *   события Eloquent, и файлы остались бы на диске навсегда.
+     *
+     * @param  array<int, string>  $paths
+     */
+    public function syncPhotos(array $paths): void
+    {
+        $paths = array_values(array_filter($paths, static fn (mixed $path): bool => is_string($path) && $path !== ''));
+
+        $existing = $this->photos()->get()->keyBy('path');
+        $disk = Storage::disk('public');
+        $processor = app(ImageProcessor::class);
+
+        foreach ($paths as $index => $path) {
+            $photo = $existing->get($path);
+
+            if ($photo instanceof CarPhoto) {
+                $photo->sort_order = $index;
+                $photo->save();
+
+                continue;
+            }
+
+            $thumbPath = $processor->thumbPathFor($path);
+
+            if (! $disk->exists($thumbPath)) {
+                // Не ошибка: так выглядит файл, у которого обработка
+                // не удалась и оригинал сохранён как есть.
+                Log::warning('[Car] превью не найдено на диске, фото останется без него', [
+                    'car_id' => $this->id,
+                    'path' => $path,
+                    'expected_thumb' => $thumbPath,
+                ]);
+
+                $thumbPath = null;
+            }
+
+            $this->photos()->create([
+                'disk' => 'public',
+                'path' => $path,
+                'thumb_path' => $thumbPath,
+                'alt' => trim(sprintf('%s %s', $this->brand?->name ?? '', $this->model)).', фото '.($index + 1),
+                'sort_order' => $index,
+            ]);
+        }
+
+        foreach ($existing as $path => $photo) {
+            if (in_array($path, $paths, strict: true)) {
+                continue;
+            }
+
+            $photo->delete();
+        }
+
+        // Загруженная связь после записи устарела.
+        $this->unsetRelation('photos');
+        $this->unsetRelation('mainPhoto');
+    }
+
+    protected static function booted(): void
+    {
+        // Каскад БД (`car_photos.car_id` объявлен `cascadeOnDelete()`
+        // в вехе 3.2) событий Eloquent не поднимает — без этого удаление
+        // автомобиля оставляет его файлы на диске навсегда.
+        self::deleting(static function (self $car): void {
+            foreach ($car->photos()->cursor() as $photo) {
+                $photo->delete();
+            }
+        });
     }
 
     #[Scope]

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -57,6 +58,44 @@ final class CarPhoto extends Model
                 ? $this->url
                 : Storage::disk($this->disk)->url($this->thumb_path),
         );
+    }
+
+    protected static function booted(): void
+    {
+        // Чистить диск в редакторе значило бы забыть об этом в tinker
+        // и в будущем импорте. Событие ловит все пути удаления, кроме
+        // каскада БД — его перекрывает событие `deleting` на `Car`.
+        self::deleted(static function (self $photo): void {
+            // CarPhotoSeeder раскладывает файлы без повторов, но
+            // полагаться на это в коде удаления нельзя: две записи,
+            // указывающие на один файл, — обычное следствие ручной
+            // правки или импорта.
+            $stillReferenced = self::query()
+                ->where('disk', $photo->disk)
+                ->where('path', $photo->path)
+                ->whereKeyNot($photo->getKey())
+                ->exists();
+
+            if ($stillReferenced) {
+                return;
+            }
+
+            $disk = Storage::disk($photo->disk);
+
+            foreach (array_filter([$photo->path, $photo->thumb_path]) as $path) {
+                if (! $disk->exists($path)) {
+                    continue;
+                }
+
+                $disk->delete($path);
+
+                Log::info('[CarPhoto] файл удалён с диска', [
+                    'car_id' => $photo->car_id,
+                    'disk' => $photo->disk,
+                    'path' => $path,
+                ]);
+            }
+        });
     }
 
     /**

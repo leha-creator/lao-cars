@@ -48,11 +48,18 @@ final class ImageProcessor
      * Нужен сидам и будущему импорту: они работают с путями, а не
      * с загрузками Livewire, и обязаны проходить ровно ту же обработку —
      * иначе демо-данные окажутся тяжелее того, что заливает администратор.
+     *
+     * `$basename` (имя без расширения) задаётся вызывающим, когда путь
+     * должен быть предсказуемым: сид проверяет по нему, обработан ли
+     * файл, и со случайным именем не смог бы остаться идемпотентным.
+     * По умолчанию имя случайное — у загрузок из админки исходные имена
+     * повторяются («IMG_1760.PNG» с двух телефонов), и совпадение
+     * затирало бы чужой файл.
      */
-    public function storeFile(string $sourcePath, string $disk, string $directory, ?string $originalName = null): StoredImage
+    public function storeFile(string $sourcePath, string $disk, string $directory, ?string $originalName = null, ?string $basename = null): StoredImage
     {
         $originalName ??= basename($sourcePath);
-        $base = Str::lower(Str::random(8)).'-'.uniqid();
+        $base = $basename ?? Str::lower(Str::random(8)).'-'.uniqid();
         $originalSize = @filesize($sourcePath) ?: 0;
 
         try {
@@ -120,6 +127,12 @@ final class ImageProcessor
         Storage::disk($disk)->put($thumbPath, (string) $image->toWebp($quality));
 
         $size = strlen($encoded);
+
+        // GD держит распакованный растр: снимок 6000×4000 — это около
+        // 96 МБ в памяти, и без явного освобождения несколько загрузок
+        // подряд упираются в memory_limit. Сборщик мусора PHP до конца
+        // запроса сюда может и не дойти.
+        unset($image, $encoded);
 
         // INFO только при заметной экономии: логировать каждую загрузку
         // значит утопить в рутине те записи, ради которых лог и читают.
