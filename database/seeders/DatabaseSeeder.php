@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -23,15 +24,35 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Демо-пользователь с известным паролем и без ограничений на
+        // Демо-пользователи с известным паролем и без ограничений на
         // вход в панель (см. User::canAccessPanel) на проде — открытая
-        // дверь в админку, поэтому создаётся только вне production.
-        // firstOrCreate вместо factory()->create(): повторный db:seed
-        // не должен падать на уникальном e-mail.
+        // дверь в админку, поэтому создаются только вне production.
+        // Первого администратора на проде заводит `laocars:make-admin`.
+        //
+        // updateOrCreate, а не firstOrCreate: последний не тронул бы уже
+        // существующего `test@example.com`, и тот остался бы с умолчанием
+        // колонки, то есть менеджером, — потеряв доступ к настройкам
+        // сайта после миграции и без единого сообщения.
+        //
+        // Менеджер заводится вторым не для полноты: ограниченную панель
+        // надо уметь посмотреть глазами, а не только в тестах.
         if (! app()->isProduction()) {
-            User::firstOrCreate(
+            User::updateOrCreate(
                 ['email' => 'test@example.com'],
-                User::factory()->raw(['name' => 'Test User', 'email' => 'test@example.com']),
+                User::factory()->raw([
+                    'name' => 'Test User',
+                    'email' => 'test@example.com',
+                    'role' => UserRole::Admin,
+                ]),
+            );
+
+            User::updateOrCreate(
+                ['email' => 'manager@example.com'],
+                User::factory()->raw([
+                    'name' => 'Test Manager',
+                    'email' => 'manager@example.com',
+                    'role' => UserRole::Manager,
+                ]),
             );
         }
 

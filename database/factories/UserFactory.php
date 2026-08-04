@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -9,6 +10,16 @@ use Illuminate\Support\Str;
 
 /**
  * @extends Factory<User>
+ *
+ * ВАЖНО: умолчание роли здесь — администратор, и это не описка.
+ *
+ * В БД умолчание обратное (`manager`), потому что там забытая роль обязана
+ * урезать права. В тестах наоборот: десятки тестов админки заводят
+ * пользователя через `User::factory()->create()` и заходят в каталог и
+ * медиабиблиотеку. Менеджер по умолчанию уронил бы их все разом с 403,
+ * и причина «поменяли умолчание фабрики» ищется дольше, чем пишется.
+ *
+ * Ограничения роли проверяются явным состоянием `->manager()`.
  */
 class UserFactory extends Factory
 {
@@ -30,6 +41,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'role' => UserRole::Admin,
         ];
     }
 
@@ -40,6 +52,19 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Менеджер: каталог и заявки, без контента, медиа и настроек.
+     *
+     * Единственный способ получить в тесте урезанные права — умолчание
+     * фабрики их не даёт намеренно (см. PHPDoc класса).
+     */
+    public function manager(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::Manager,
         ]);
     }
 }

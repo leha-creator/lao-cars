@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'role'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -26,14 +27,26 @@ class User extends Authenticatable implements FilamentUser
      * только при `APP_ENV=local`: на любом другом окружении — 403. Такое
      * поведение означало бы, что права зависят от окружения, а не от модели.
      *
-     * Пока в системе есть только сотрудники — таблица `users` не используется
-     * для клиентов сайта, поэтому вход открыт всем аутентифицированным.
-     * Разделение администратора и менеджера — веха 3.5, и делаться оно будет
-     * политиками, а не проверками внутри контроллеров.
+     * Метод по-прежнему возвращает `true` всем аутентифицированным, и это
+     * не пропущенная проверка: в панель ходят обе роли, а различает их не
+     * вход, а политики (`app/Policies/`). Панель работает в строгом режиме
+     * авторизации, поэтому отсутствие политики закрывает ресурс, а не
+     * открывает его.
      */
     public function canAccessPanel(Panel $panel): bool
     {
         return true;
+    }
+
+    /**
+     * Полный доступ к панели.
+     *
+     * Тонкая обёртка над enum-ом: сравнение с кейсом живёт в одном месте
+     * (`UserRole::isAdmin()`), а политики зовут этот метод.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role->isAdmin();
     }
 
     /**
@@ -46,6 +59,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
     }
 }
