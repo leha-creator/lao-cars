@@ -29,7 +29,7 @@ class EmployeeFactory extends Factory
                 'Специалист по подбору запчастей',
             ]),
             'bio' => fake()->text(180),
-            'photo_path' => null,
+            'media_id' => null,
             'is_published' => true,
             'sort_order' => 0,
         ];

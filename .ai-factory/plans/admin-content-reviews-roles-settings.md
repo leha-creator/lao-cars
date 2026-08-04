@@ -154,7 +154,7 @@
 
 ### Фаза 2 — Контент: услуги, команда, отзывы
 
-- [ ] **4. `ServiceResource` — услуги автосервиса и категории запчастей** *(зависит от 2)*
+- [x] **4. `ServiceResource` — услуги автосервиса и категории запчастей** *(зависит от 2)*
   Ресурс над `Service`: группа `NavigationGroup::Content`, иконка `Heroicon::OutlinedWrenchScrewdriver`, `$navigationSort` первым в группе, `$recordTitleAttribute = 'title'`, `$modelLabel = 'Позиция'`, `$pluralModelLabel = 'Услуги и запчасти'`. Подпись множественного числа именно такая: сущность одна, но администратор ищет в меню и «услуги», и «запчасти».
   Форма (`Schemas/ServiceForm.php`), секциями:
   - **«Основное»**: `category` — `Select` с `->options(ServiceCategory::class)`, `required()`, подсказка «Запчасти уходят на свою посадочную страницу, остальные категории — блоками страницы автосервиса»; `title` — обязательное; `slug` — необязательное, `unique(ignoreRecord: true)`, `rule('regex:/^[a-z0-9-]+$/')`, подсказка про автогенерацию (трейт `HasSlug` транслитерирует кириллицу); `description` — `Textarea`.
@@ -167,7 +167,7 @@
   Логирование: не требуется — CRUD без побочных эффектов.
   Проверка: `/admin/services` открывается на сидах, 21 позиция разложена по вкладкам; ввести цену — появилось поле уточнения, стереть цену — поле исчезло и уточнение не сохранилось; на вкладке «Все» перетаскивания нет, на вкладке «Шиномонтаж» есть и меняет порядок только её позиций; менеджер получает 403 на `/admin/services`.
 
-- [ ] **5. `MediaPicker`, конфигурация таблицы пикера и переезд фото на `media_id`** *(зависит от 2)*
+- [x] **5. `MediaPicker`, конфигурация таблицы пикера и переезд фото на `media_id`** *(зависит от 2)*
   Закрывает первый долг вехи 3.4. Порядок внутри задачи важен: сначала связь, потом компонент — компонент без потребителя проверить нечем, ровно поэтому веха 3.4 его и отложила.
   Миграция `replace_photo_path_with_media_id_in_employees_and_reviews`: в обеих таблицах `foreignId('media_id')->nullable()->constrained(table: 'media')->nullOnDelete()` и `dropColumn('photo_path')`. Имя таблицы задаётся **явно** — не потому, что инфлектор ошибётся (проверено: `Str::plural('media')` даёт `media`), а потому что читателю миграции не нужно это проверять. В `down()` — `dropConstrainedForeignId('media_id')`, снимающий внешний ключ вместе с колонкой, и возврат `photo_path`; данные не восстанавливаются, их и не было (`EmployeeFactory`/`ReviewFactory` кладут `null`, сиды не трогают).
   `Employee` и `Review`: `media_id` в `#[Fillable]` вместо `photo_path`, связь `media(): BelongsTo` (`belongsTo(Media::class)` — внешний ключ выводится из имени метода корректно), аксессор `photo_url` переписан на `$this->media?->url` с сохранением имени: вехи 4.5 не должны переучиваться. Фабрики: `'media_id' => null`.
@@ -177,7 +177,7 @@
   Логирование: не требуется — компонент и схема.
   Проверка: `php artisan migrate` и `php artisan migrate:rollback` (откат не падает на внешнем ключе); `php artisan test --filter=EmployeeTest` зелёный; в tinker `Employee::factory()->for(Media::factory())->create()->photo_url` отдаёт URL, без медиа — `null`; удаление записи медиа обнуляет `media_id` у сотрудника и не роняет запрос.
 
-- [ ] **6. `EmployeeResource` — команда** *(зависит от 5)*
+- [x] **6. `EmployeeResource` — команда** *(зависит от 5)*
   Ресурс над `Employee`: группа `NavigationGroup::Content`, иконка `Heroicon::OutlinedUserGroup`, `$modelLabel = 'Сотрудник'`, `$pluralModelLabel = 'Команда'`, `$recordTitleAttribute = 'name'`.
   **`getEloquentQuery()` грузит `with('media')`** — список с превью без предзагрузки даёт запрос на строку; N+1 на списках перечислен антипаттерном в `ARCHITECTURE.md`.
   Форма: `name` и `position` обязательные; `bio` — `Textarea`; `media_id` — `MediaPicker::make('media_id')->relationship('media', 'name')` (первый потребитель библиотеки, ради которого она делалась); `is_published` — `Toggle`, по умолчанию `true`; `sort_order` — `numeric()`.
@@ -186,7 +186,7 @@
   Логирование: не требуется — CRUD.
   Проверка: `/admin/employees` показывает четырёх сотрудников сида; выбрать изображение через пикер — в модальном окне таблица медиабиблиотеки с превью, после выбора превью видно в списке; перетащить карточку — порядок сохранился; счётчик запросов на списке не растёт с числом строк.
 
-- [ ] **7. `ReviewResource` — отзывы, рейтинг и модерация** *(зависит от 5)*
+- [x] **7. `ReviewResource` — отзывы, рейтинг и модерация** *(зависит от 5)*
   Ресурс над `Review`: группа `NavigationGroup::Content`, иконка `Heroicon::OutlinedStar`, `$modelLabel = 'Отзыв'`, `$pluralModelLabel = 'Отзывы'`, `$recordTitleAttribute = 'author_name'`; `getEloquentQuery()` с `with('media')`.
   **Правило даты публикации — в модели, а не в форме.** `Review::booted()`: событие `saving` — если `is_published` стало истинным, а `published_at` пуст, проставить `now()`; при снятии публикации дату **не** трогать. Публиковать можно из формы, из действия в списке и из tinker; три копии правила разъедутся, а `scopeOrdered()` уже сортирует по этой дате.
   Форма: `author_name` обязательное; `author_context` — подсказка «Клиент, импорт авто»; `body` — `Textarea` обязательное; `rating` — `ToggleButtons::make('rating')->options([1..5])->inline()`, необязательное (в ТЗ рейтинг опционален, в макете есть); `media_id` — `MediaPicker` со связью; `is_published` — `Toggle`; `published_at` — `DateTimePicker` только для чтения с подсказкой «проставляется автоматически при первой публикации»; `sort_order`.

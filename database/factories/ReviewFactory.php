@@ -31,7 +31,7 @@ class ReviewFactory extends Factory
             ]),
             'body' => fake()->text(220),
             'rating' => fake()->numberBetween(4, 5),
-            'photo_path' => null,
+            'media_id' => null,
             'is_published' => false,
             'published_at' => null,
             'sort_order' => 0,
