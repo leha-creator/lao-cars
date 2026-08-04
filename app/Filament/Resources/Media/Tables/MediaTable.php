@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Media\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\Media\Actions\DeleteMediaAction;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -40,30 +38,15 @@ final class MediaTable
             ])
             ->defaultSort('created_at', 'desc')
             ->recordActions([
-                self::deleteAction(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    // Безопасно только потому, что `shouldFetchSelectedRecords`
-                    // по умолчанию true и Filament удаляет записи по одной,
-                    // поднимая событие `deleted`. Массовый запрос
-                    // (`fetchSelectedRecords(false)`) событий не поднимает —
-                    // включив его здесь, вы оставите файлы на диске навсегда.
-                    DeleteBulkAction::make()
-                        ->modalDescription('Файлы будут удалены с диска. Записи может использовать другой раздел сайта.'),
-                ]),
+                DeleteMediaAction::make(),
             ]);
-    }
-
-    /**
-     * Проверить использование записи в этой вехе нечем — потребители
-     * библиотеки появляются вехой 3.5. Пока единственная страховка —
-     * честное предупреждение в подтверждении.
-     */
-    private static function deleteAction(): DeleteAction
-    {
-        return DeleteAction::make()
-            ->requiresConfirmation()
-            ->modalDescription('Файл будет удалён с диска. Если на него уже ссылается раздел сайта, ссылка станет битой.');
+        // Массового удаления здесь больше нет. В вехе 3.4 оно было
+        // безопасно, потому что проверять было нечего: у библиотеки
+        // не было потребителей, а файлы с диска убирались событием
+        // `deleted`, которое `DeleteBulkAction` поднимает на каждой
+        // записи. Теперь проверка есть, и она живёт в `before()`
+        // строкового действия — а массовое удаление идёт мимо `before()`
+        // и обошло бы её целиком. Та же причина, по которой массового
+        // удаления нет у марок.
     }
 }
