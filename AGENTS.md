@@ -83,7 +83,9 @@ laocars/
 │   │                         # + HasLabels, HasColors
 │   ├── Http/
 │   │   ├── Controllers/      # CatalogController: список и карточка авто;
-│   │   │                     # LeadController: приём заявок со всех форм
+│   │   │                     # LeadController: приём заявок со всех форм;
+│   │   │                     # Home/Service/Parts/ContactController —
+│   │   │                     # страницы разделов, до вех 4.2–4.5 заглушки
 │   │   └── Requests/         # CatalogFilterRequest: валидация GET-контракта,
 │   │                         # битый параметр уводит на чистый /catalog;
 │   │                         # StoreLeadRequest: валидация формы + toData()
@@ -109,10 +111,12 @@ laocars/
 │   │                         # + SimilarCars — выборка и опции каталога;
 │   │                         # LeadData + LeadService + TelegramNotifier —
 │   │                         # приём заявки и уведомление менеджеру
-│   ├── Support/              # ThumbnailPath, MediaSettingKeys, AttributeFilterIndex
-│   │                         # — чистые правила без слоя и состояния
+│   ├── Support/              # ThumbnailPath, MediaSettingKeys, SiteMenu,
+│   │                         # SocialLinks, AttributeFilterIndex — чистые
+│   │                         # правила без слоя и состояния
 │   └── View/Components/      # LeadForm (x-lead-form): один компонент на все
-│                             # формы заявок сайта
+│                             # формы заявок сайта; SiteHeader и SiteFooter —
+│                             # каркас, читают настройки сами (см. правила)
 ├── config/images.php         # Пределы обработки изображений и потолок загрузки
 ├── config/catalog.php        # Карточек на странице и размер блока похожих
 ├── config/leads.php          # Лимит заявок в минуту с одного IP
@@ -123,15 +127,19 @@ laocars/
 │   └── seeders/              # Демо-данные; CarPhotoSeeder раскладывает assets/cars
 ├── docker/postgres/init/     # Init-скрипты Postgres: создание базы laocars_testing
 ├── resources/
-│   ├── css/app.css           # Tailwind v4; @theme пустой — токены в вехе 4.1
-│   ├── js/app.js             # Alpine.js
+│   ├── css/app.css           # Tailwind v4; @theme — токены дизайн-системы
+│   ├── images/               # Логотип; в манифест попадает через
+│   │                         # import.meta.glob в app.js (обязательно eager)
+│   ├── js/app.js             # Alpine.js + glob статики вёрстки
 │   └── views/
-│       ├── layouts/app.blade.php  # Базовый layout: title, description,
-│       │                     # canonical, robots
-│       ├── components/       # lead-form — функциональный шаблон без дизайна;
-│       │                     # вёрстка приходит вехой 4.1
+│       ├── layouts/app.blade.php  # Каркас: SEO-секции, @fonts, шапка,
+│       │                     # подвал, above-header под веху 4.2
+│       ├── components/       # lead-form, car-card, page-heading,
+│       │                     # site-header, site-footer
+│       ├── home|services|parts|contacts/  # index — заглушки на каркасе;
+│       │                     # наполнение вехами 4.2, 4.4 и 4.5
 │       └── catalog/          # index и show — функциональные шаблоны без
-│                             # дизайна; вёрстка приходит вехами 4.1 и 4.3
+│                             # дизайна; вёрстка приходит вехой 4.3
 ├── tests/
 │   ├── Pest.php              # RefreshDatabase, сброс кеша настроек,
 │   │                         # resetRateLimiters(), countQueries()
@@ -160,7 +168,10 @@ laocars/
 | ТЗ_ЛАО_КАРС.md | Первоисточник требований: разделы сайта, состав админки, сроки, риски |
 | .ai-factory/DESCRIPTION.md | Спецификация: стек, решения по развилкам ТЗ, границы MVP |
 | .ai-factory/config.yaml | Конфиг AI Factory: языки, пути, git |
-| routes/web.php | Публичные маршруты: `/`, `/catalog`, `/catalog/{slug}`, `POST /leads` |
+| routes/web.php | Публичные маршруты: `/`, `/catalog`, `/catalog/{slug}`, `/services`, `/parts`, `/contacts`, `POST /leads` |
+| resources/css/app.css | Токены дизайн-системы в `@theme` — источник истины по палитре, шрифтам и радиусам |
+| vite.config.js | Сборка и самохостинг шрифтов: веса, `subsets` с кириллицей, preload |
+| app/Support/SiteMenu.php | Состав навигации: один список на шапку и подвал; пункт без роута выпадает |
 | app/Services/CatalogCriteria.php | Единственное место, где имена GET-параметров каталога превращаются в поля |
 | app/Http/Requests/StoreLeadRequest.php | Контракт формы заявки: правила не мягче колонок, honeypot, `page_url` от сервера |
 | app/Services/LeadService.php | Приём заявки: запись в транзакции и постановка уведомления |
@@ -191,6 +202,7 @@ laocars/
 | Документ | Путь | Описание |
 | :---- | :---- | :---- |
 | README | README.md | Landing-страница: запуск окружения, схема данных и демо-данные, тесты, CI, стек |
+| Дизайн-система и каркас | docs/design-system.md | Токены, шрифты, компоненты каркаса, как добавить страницу, диагностика вёрстки |
 | Каталог: фильтры и URL | docs/catalog.md | GET-параметры каталога, сортировки, индексация, фильтруемые характеристики |
 | Заявки и уведомления | docs/leads.md | Путь заявки до Telegram, настройка бота, воркер, диагностика, работа менеджера |
 | Админка каталога | docs/admin-catalog.md | Марки, карточки, фото, характеристики, медиабиблиотека |
@@ -229,8 +241,11 @@ laocars/
 - **Python в этом окружении — только `py -3`.** Команда `python3` резолвится в заглушку Microsoft Store из `WindowsApps`, которая печатает «Python» и выходит с кодом 49, не выполнив скрипт. Скан безопасности через `python3` даст ложное «успешно».
 - **Git инициализирован, базовая ветка `master`** (`git.enabled: true`). Ветки под планы автоматически не создаются (`create_branches: false`) — работа идёт в `master`.
 - **Тесты не подменяют драйверы.** `phpunit.xml` намеренно уводит их в реальные PostgreSQL и Redis. Не возвращайте `sqlite`, `array` и `sync`: с ними прогон зеленеет, не проверяя инфраструктуру, а `Queue::size()` перестаёт что-либо значить. По той же причине в проверках очереди не используется `Queue::fake()`.
-- **Конфигурация Tailwind — только через `@theme` в `resources/css/app.css`.** `tailwind.config.js` в стиле v3 не создавать: в v4 его нет, и токены вехи 4.1 из него не подхватятся.
-- **Внешние шрифты с CDN не подключать** — блок `bunny()` из скелета убран осознанно.
+- **Конфигурация Tailwind — только через `@theme` в `resources/css/app.css`.** `tailwind.config.js` в стиле v3 не создавать: в v4 его нет, и токены оттуда не подхватятся. Имя нового токена не должно совпадать с ключом другого пространства имён: `--color-*` и `--text-*` дают один класс, и `--color-base` перебил бы размер шрифта `text-base`.
+- **Палитру Tailwind по умолчанию пока не обнулять** (`--color-*: initial`): на `text-gray-*` ещё держатся функциональные шаблоны каталога. Триггер уборки — веха 4.3.
+- **Шрифты подключаются только самохостингом** через блок `fonts` в `vite.config.js`. Тегом `<link>` с внешнего CDN — нет: `bunny()` из скелета убран осознанно, а Google Fonts в макете подключён так, как на живом сайте делать не надо. `subsets` обязан содержать `cyrillic` — умолчание `['latin']` оставляет русский текст без глифов молча.
+- **Шапка и подвал читают настройки сами** — единственное исключение из «Blade не ходит в БД», и на страницы оно не распространяется. Обоснование и границы — в `ARCHITECTURE.md` и `docs/design-system.md`.
+- **Состав меню правится в одном месте** — `app/Support/SiteMenu.php`. Он же расходится с макетом намеренно: там «Услуги» и «Блог», в проекте «Автосервис» и «Запчасти».
 - **Ассеты Filament (`public/css|js|fonts/filament`) в git не попадают** — их публикует `filament:upgrade` на каждом `composer install`.
 - **Модели пишутся на атрибутах Laravel 13** — `#[Fillable([...])]`, `#[Scope]` над методом, `#[RouteKey('slug')]`, а не `protected $fillable` и префикс `scopeXxx`. Так написан весь `app/Models/`. Скилл `laocars-leads` показывает код в до-13-м стиле — он источник доменных решений, а не синтаксиса.
 - **`key` характеристики — публичный контракт.** По нему строятся GET-параметры фильтра каталога (`?attr[body_type]=Седан`, веха 3.6) и обращения из шаблонов карточки и микроразметки Vehicle (веха 4.3). Свободно правится подпись (`label`), а не ключ: смена `key` ломает сохранённые ссылки на фильтр и код шаблонов.
