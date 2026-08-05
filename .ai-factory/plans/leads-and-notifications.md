@@ -133,7 +133,7 @@
 
 ### Фаза 4 — Панель заявок
 
-- [ ] **6. `LeadResource`: список, фильтры и страница просмотра** *(зависит от 2)*
+- [x] **6. `LeadResource`: список, фильтры и страница просмотра** *(зависит от 2)*
   Раскладка по конвенции `NavigationGroup` (PHPDoc): `app/Filament/Resources/Leads/LeadResource.php`, `Tables/LeadsTable.php`, `Schemas/LeadInfolist.php`, `Pages/ListLeads.php`, `Pages/ViewLead.php`.
   Ресурс: `$navigationGroup = NavigationGroup::Leads`, иконка — кейс `Heroicon` (строковое имя проходит молча и оставляет пустое место в меню), `$modelLabel = 'Заявка'`, `$pluralModelLabel = 'Заявки'`. `canCreate(): false` и отсутствие страницы `Edit` (решение 10) — с комментарием, иначе их «допишут». `getEloquentQuery()` → `->with('source')`: без предзагрузки полиморфной связи колонка источника даёт N+1 на каждой строке. `getNavigationBadge()` — `Lead::new()->count()` по образцу `ReviewResource`.
   Таблица: дата (`d.m.Y H:i`, сортируемая, сортировка по умолчанию — по убыванию), имя и телефон (`searchable`, телефон `copyable`), источник через `->state(fn (Lead $record) => $record->sourceLabel())`, статус `TextColumn::badge()` (подпись и цвет придут из `LeadStatus` сами — интерфейсы `HasLabel`/`HasColor` уже реализованы), признак заявки на подбор запчасти. Фильтры: по статусу, по типу источника (`car` / `service` / без источника) и по дате.
@@ -143,7 +143,7 @@
   Проверка: менеджер видит раздел «Заявки», в списке — заявки со всех источников, «Общая форма» среди них; badge совпадает с числом новых; счётчик запросов на списке из 20 заявок не растёт при добавлении 20 новых (сторож против N+1).
   Файлы: `app/Filament/Resources/Leads/*`.
 
-- [ ] **7. Смена статуса и комментарии менеджера** *(зависит от 6)*
+- [x] **7. Смена статуса и комментарии менеджера** *(зависит от 6)*
   `app/Filament/Resources/Leads/Actions/ChangeLeadStatusAction.php` — статические `takeInWork()`, `close()`, `reopen()`, каждая возвращает `Filament\Actions\Action`, видимая только из допустимого статуса (`->visible(fn (Lead $record) => ...)`). Отдельный класс, потому что действия нужны и в строке списка, и в шапке `ViewLead` (правило `RULES.md`); голый экземпляр во втором месте однажды разойдётся с первым. Подтверждения нет — это триаж (решение 4).
   `app/Filament/Resources/Leads/RelationManagers/CommentsRelationManager.php` — лента комментариев на странице просмотра: `body` (`Textarea`, `required`), автор проставляется из `auth()->id()` и в форме не редактируется, сортировка по `created_at`. Таблица грузит `author` предзагрузкой. Удаление комментария — только автору или администратору; правки чужих комментариев нет: лента работы с заявкой это журнал, а не документ.
   `ViewLead` — заголовочные действия: те же экземпляры `ChangeLeadStatusAction`.
