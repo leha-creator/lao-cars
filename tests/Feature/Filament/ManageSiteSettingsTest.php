@@ -9,6 +9,7 @@
  * ключей страницы с ключами сида.
  */
 
+use App\Enums\ServiceCategory;
 use App\Filament\Pages\ManageSiteSettings;
 use App\Models\Media;
 use App\Models\Setting;
@@ -131,6 +132,44 @@ it('has a key registry matching the seeder', function () {
 
     expect(array_diff($seederKeys, ManageSiteSettings::settingKeys()))->toBe([])
         ->and(array_diff(ManageSiteSettings::settingKeys(), $seederKeys))->toBe([]);
+});
+
+it('keeps the services advantages a list of objects', function () {
+    // Формат значения — то, от чего зависит шаблон страницы автосервиса
+    // (веха 4.4), и ломается он молча: репитер, дегидрированный в другую
+    // форму, даёт `foreach` по неверной структуре уже на проде.
+    livewire(ManageSiteSettings::class)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $advantages = Setting::get('services_page.advantages');
+
+    expect($advantages)->toHaveCount(4)
+        ->and(array_is_list($advantages))->toBeTrue()
+        ->and($advantages[0])->toHaveKeys(['number', 'title', 'text']);
+});
+
+it('keeps the services notes an object with a field per service category', function () {
+    // Описания категорий — ОДНА настройка-объект, а не четыре ключа, и поля
+    // формы строятся циклом по енаму. Новая категория, не получившая поля,
+    // провалилась бы молча: реестр сверяется с сидом по ключу
+    // `services_page.notes` целиком.
+    livewire(ManageSiteSettings::class)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $notes = Setting::get('services_page.notes');
+
+    expect($notes)->toBeArray()
+        ->and(array_is_list($notes))->toBeFalse();
+
+    foreach (ServiceCategory::serviceCategories() as $category) {
+        expect($notes)->toHaveKey($category->value);
+    }
+
+    // Запчасти живут на своей посадочной странице и описания категории
+    // в этой настройке не имеют.
+    expect($notes)->not->toHaveKey(ServiceCategory::Parts->value);
 });
 
 it('keeps the media key list pointing at real settings', function () {
