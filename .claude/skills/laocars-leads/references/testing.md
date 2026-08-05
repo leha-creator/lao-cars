@@ -157,39 +157,76 @@ it('срабатывает rate limiting после 5 заявок в минут
 Прямая проверка инварианта №1. Если этот тест зелёный — бизнес не теряет деньги при
 недоступном внешнем API.
 
+**Проверять его на `queue.default = sync` нельзя** — и это не стилистическое
+замечание. `SyncQueue::executeJob()` ловит исключение задачи и передаёт его
+в `handleException()`, а тот после `$queueJob->fail($e)` **пробрасывает исключение
+дальше** (`vendor/laravel/framework/src/Illuminate/Queue/SyncQueue.php`). То есть
+на `sync` упавшая задача выносит пользователю 500 — ровно то, что тест должен
+опровергать. Зелёным такой тест станет только если задача начнёт глотать
+исключения, то есть если выключить ретраи, не заметив этого.
+
+Поэтому инвариант разделён на два теста: HTTP-путь проверяется на настоящей
+очереди, поведение при недоступном API — прямым вызовом `handle()`.
+
 ```php
+use App\Jobs\NotifyManagerAboutLead;
 use App\Services\TelegramNotifier;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 
-it('сохраняет лид и отвечает пользователю, даже если Telegram недоступен', function (): void {
-    // Очередь работает синхронно — воспроизводим полный путь, включая сбой
-    config(['queue.default' => 'sync']);
-    Http::fake(['api.telegram.org/*' => Http::response('Service Unavailable', 503)]);
+it('сохраняет лид и отвечает редиректом, а уведомление только ставит в очередь', function (): void {
+    Queue::fake();
 
-    $response = $this->post(route('leads.store'), [
+    $this->post(route('leads.store'), [
         'name'  => 'Иван',
         'phone' => '+7 900 123-45-67',
-    ]);
-
-    // Пользователь не видит ошибку
-    $response->assertRedirect()->assertSessionHasNoErrors();
+    ])->assertRedirect()->assertSessionHasNoErrors();
 
     // Лид на месте — это главное
     expect(Lead::count())->toBe(1);
+
+    Queue::assertPushed(NotifyManagerAboutLead::class);
+});
+
+it('бросает исключение при недоступном Telegram, чтобы сработали ретраи', function (): void {
+    config(['services.telegram.token' => 'token', 'services.telegram.chat_id' => '1']);
+    Http::fake(['api.telegram.org/*' => Http::response('', 503)]);
+
+    $lead = Lead::factory()->create();
+
+    // Исключение здесь — правильное поведение: без него задача считается
+    // выполненной и ретраев не будет.
+    expect(fn () => (new NotifyManagerAboutLead($lead))->handle(app(TelegramNotifier::class)))
+        ->toThrow(RuntimeException::class);
+
+    expect(Lead::whereKey($lead->getKey())->exists())->toBeTrue();
 });
 
 it('логирует окончательный провал доставки уведомления', function (): void {
-    Http::fake(['api.telegram.org/*' => Http::response('', 503)]);
-    Log::shouldReceive('channel')->with('leads')->andReturnSelf();
-    Log::shouldReceive('error')->once()->withArgs(
-        fn (string $message): bool => str_contains($message, 'failed permanently')
-    );
+    $log = Log::spy();
+    $log->shouldReceive('channel')->with('leads')->andReturnSelf();
 
-    $lead = Lead::factory()->create();
+    $lead = Lead::factory()->create(['phone' => '+7 999 123-45-67']);
     (new NotifyManagerAboutLead($lead))->failed(new RuntimeException('Telegram API error: 503'));
+
+    // Проверять именно отсутствие полного номера, а не только наличие записи:
+    // персональные данные клиента в канал `leads` не идут.
+    Log::shouldHaveReceived('error')
+        ->withArgs(fn (string $message, array $context): bool => $context['lead_id'] === $lead->getKey()
+            && ! str_contains(json_encode($context, JSON_UNESCAPED_UNICODE), '+7 999 123-45-67'))
+        ->once();
 });
 ```
+
+### Изоляция счётчика rate limit
+
+Счётчик лимитера живёт в Redis, а `RefreshDatabase` откатывает только базу. Тест,
+упирающийся в лимит, оставляет счётчик следующим тестам — и падать начинает
+не он, а произвольный соседний тест, отправляющий форму. Сброс (`Cache::flush()`
+в помощнике `resetRateLimiters()` из `tests/Pest.php`) обязателен в `beforeEach`
+**каждого** файла, который отправляет форму заявки, а не только того, где
+проверяется сам лимит.
 
 ## Тест админки
 

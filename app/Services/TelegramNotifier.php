@@ -123,8 +123,11 @@ final class TelegramNotifier
             $lines[] = 'Страница: '.e((string) $lead->page_url);
         }
 
-        // TODO (задача 6 вехи 3.7): ссылка на карточку заявки в админке —
-        // появится вместе с `LeadResource`.
+        $lines[] = '';
+        // Ссылка на карточку заявки: менеджер попадает в панель одним
+        // касанием, а не ищет заявку в списке. `e()` не нужен — адрес
+        // собирает роутер, а не клиент.
+        $lines[] = 'Открыть в админке: '.route('filament.admin.resources.leads.view', $lead);
 
         return implode("\n", $lines);
     }

@@ -180,7 +180,7 @@
 
 ### Фаза 6 — Синхронизация контекста и документация
 
-- [ ] **10. Синхронизация контекста и документация** *(зависит от 8, 9)*
+- [x] **10. Синхронизация контекста и документация** *(зависит от 8, 9)*
   - `ROADMAP.md`: отметить веху 3.7 выполненной, строка в таблицу «Завершено» с датой. В «Внешние зависимости» уточнить статус доступов: токен Telegram-бота и chat_id нужны к запуску, без них уведомления пропускаются с WARN, а заявки продолжают сохраняться. В формулировки вех 4.2, 4.4 и 4.5 дописать, что компонент `x-lead-form` готов и монтируется, а не пишется заново.
   - `ARCHITECTURE.md`: в структуру папок добавить `app/Http/Requests/StoreLeadRequest.php`, `app/Http/Controllers/LeadController.php`, `app/Jobs/NotifyManagerAboutLead.php`, `app/Services/LeadData.php`, `app/View/Components/LeadForm.php`, `app/Filament/Resources/Leads/` (с подпапками `Actions/` и `RelationManagers/` — последняя в проекте первая), `config/leads.php`, `resources/views/components/`. Пример кода `LeadController::store` привести к фактической сигнатуре: сейчас там `LeadData::fromRequest($request)`, что противоречит правилу «сервис не принимает `Request`» из этого же файла (решение 7).
   - `DESCRIPTION.md`: в разделе возможностей отметить, что приём заявок, очередь и Telegram-уведомления реализованы; в архитектурных заметках — что `page_url` определяется сервером, а honeypot отбрасывает спам молча.

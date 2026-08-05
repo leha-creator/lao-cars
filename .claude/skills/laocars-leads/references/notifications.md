@@ -67,15 +67,21 @@ final class TelegramNotifier
             return;
         }
 
-        $response = Http::timeout(10)
-            ->retry(2, 200)
+        // `->retry()` у клиента не ставится: повторы принадлежат задаче
+        // ($tries = 5 и $backoff). Retry здесь вместе с ретраями задачи
+        // дал бы до пятнадцати обращений к API на один лид и растянул бы
+        // «мгновенное уведомление» на минуты внутри одной попытки.
+        $response = Http::timeout((int) config('services.telegram.timeout'))
             ->post("https://api.telegram.org/bot{$token}/sendMessage", [
                 'chat_id'    => $chatId,
                 'text'       => $this->format($lead),
                 'parse_mode' => 'HTML',
             ]);
 
-        // Бросаем исключение — Job уйдёт в ретрай по своему backoff
+        // Бросаем исключение — Job уйдёт в ретрай по своему backoff.
+        // В сообщение идут только статус и тело ответа: URL запроса
+        // содержит токен, и он унёс бы его в лог — файл, который живёт
+        // 30 дней и попадает в бэкапы.
         if ($response->failed()) {
             throw new RuntimeException(
                 "Telegram API error: {$response->status()} {$response->body()}"
@@ -90,21 +96,28 @@ final class TelegramNotifier
         return implode("\n", array_filter([
             '🚗 <b>Новая заявка — ЛАО КАРС</b>',
             '',
-            "<b>Источник:</b> {$lead->sourceLabel()}",
-            "<b>Имя:</b> " . e($lead->name),
-            "<b>Телефон:</b> " . e($lead->phone),
-            $lead->email ? "<b>Email:</b> " . e($lead->email) : null,
-            $lead->message ? "<b>Комментарий:</b> " . e($lead->message) : null,
+            '<b>Источник:</b> ' . e($lead->sourceLabel()),
+            '<b>Имя:</b> ' . e($lead->name),
+            '<b>Телефон:</b> ' . e($lead->phone),
+            $lead->email ? '<b>Email:</b> ' . e($lead->email) : null,
+            $lead->message ? '<b>Комментарий:</b> ' . e($lead->message) : null,
             '',
-            "<b>Страница:</b> {$lead->page_url}",
-            "<b>Открыть:</b> " . route('filament.admin.resources.leads.view', $lead),
+            $lead->page_url ? '<b>Страница:</b> ' . e($lead->page_url) : null,
+            // Адрес карточки собирает роутер, а не клиент — здесь e() не нужен.
+            '<b>Открыть:</b> ' . route('filament.admin.resources.leads.view', $lead),
         ]));
     }
 }
 ```
 
-`e()` на пользовательских данных обязателен: `parse_mode: HTML` означает, что имя вида
-`<b>hack` сломает разметку сообщения, а Telegram вернёт 400 и уронит задачу в ретраи.
+`e()` **на каждом** значении, пришедшем от клиента или из БД, обязателен: `parse_mode: HTML`
+означает, что имя вида `<b>hack` сломает разметку сообщения, Telegram вернёт 400, и задача
+уйдёт в пять ретраев по вине клиента, а не сети. Ошибка не воспроизводится на нормальных
+данных и ждёт первого клиента с `<` в имени или комментарии — поэтому её проверяет
+отдельный тест.
+
+`sourceLabel()` — тоже пользовательские данные: марка и модель автомобиля, название
+услуги приходят из админки.
 
 ## Job
 
@@ -127,7 +140,13 @@ final class NotifyManagerAboutLead implements ShouldQueue
 
     public int $tries = 5;
 
-    /** Растущие паузы: сеть моргнула — доставим через 10с; API лежит — через 15 мин */
+    /**
+     * Растущие паузы: сеть моргнула — доставим через 10с; API лежит — через 15 мин.
+     *
+     * Четыре значения на пять попыток — не опечатка: Laravel повторяет
+     * последнее значение для всех последующих попыток, то есть пятая ждёт
+     * те же 900 секунд. Дописывать сюда пятый элемент не нужно.
+     */
     public array $backoff = [10, 60, 300, 900];
 
     public function __construct(private readonly Lead $lead) {}

@@ -82,15 +82,20 @@ laocars/
 │   │                         # PreferredTime, UserRole, CatalogSort
 │   │                         # + HasLabels, HasColors
 │   ├── Http/
-│   │   ├── Controllers/      # CatalogController: список и карточка авто
+│   │   ├── Controllers/      # CatalogController: список и карточка авто;
+│   │   │                     # LeadController: приём заявок со всех форм
 │   │   └── Requests/         # CatalogFilterRequest: валидация GET-контракта,
-│   │                         # битый параметр уводит на чистый /catalog
+│   │                         # битый параметр уводит на чистый /catalog;
+│   │                         # StoreLeadRequest: валидация формы + toData()
+│   ├── Jobs/                 # NotifyManagerAboutLead: уведомление вне
+│   │                         # HTTP-цикла, 5 попыток с растущими паузами
 │   ├── Filament/             # Админка: NavigationGroup + Resources/<Множ.>/
 │   │   ├── Forms/Components/ # MediaPicker: выбор из библиотеки, со связью и без
 │   │   ├── Pages/            # ManageSiteSettings: настройки сайта через content()
 │   │   └── Resources/        # Cars, Brands, CarAttributes, Media, Services,
-│   │                         # Employees, Reviews, Users — Schemas/, Tables/,
-│   │                         # Pages/, Actions/, Concerns/
+│   │                         # Employees, Reviews, Users, Leads — Schemas/,
+│   │                         # Tables/, Pages/, Actions/, Concerns/,
+│   │                         # RelationManagers/ (комментарии к заявке)
 │   ├── Models/               # Brand, Car, CarPhoto, CarAttribute, Media,
 │   │   └── Concerns/         # CarAttributeValue, Service, Lead, LeadComment,
 │   │                         # Employee, Review, Setting, User + HasSlug
@@ -101,11 +106,16 @@ laocars/
 │   │                         # strictAuthorization, страница профиля
 │   ├── Services/             # ImageProcessor + StoredImage: WebP, ресайз, превью;
 │   │                         # CatalogCriteria + CatalogFilter + CatalogFilterOptions
-│   │                         # + SimilarCars — выборка и опции каталога
-│   └── Support/              # ThumbnailPath, MediaSettingKeys, AttributeFilterIndex
-│                             # — чистые правила без слоя и состояния
+│   │                         # + SimilarCars — выборка и опции каталога;
+│   │                         # LeadData + LeadService + TelegramNotifier —
+│   │                         # приём заявки и уведомление менеджеру
+│   ├── Support/              # ThumbnailPath, MediaSettingKeys, AttributeFilterIndex
+│   │                         # — чистые правила без слоя и состояния
+│   └── View/Components/      # LeadForm (x-lead-form): один компонент на все
+│                             # формы заявок сайта
 ├── config/images.php         # Пределы обработки изображений и потолок загрузки
 ├── config/catalog.php        # Карточек на странице и размер блока похожих
+├── config/leads.php          # Лимит заявок в минуту с одного IP
 ├── config/logging.php        # Канал `leads` — отдельный лог пути заявки
 ├── database/
 │   ├── migrations/           # Схема: каталог, услуги, заявки, контент, настройки
@@ -118,12 +128,15 @@ laocars/
 │   └── views/
 │       ├── layouts/app.blade.php  # Базовый layout: title, description,
 │       │                     # canonical, robots
+│       ├── components/       # lead-form — функциональный шаблон без дизайна;
+│       │                     # вёрстка приходит вехой 4.1
 │       └── catalog/          # index и show — функциональные шаблоны без
 │                             # дизайна; вёрстка приходит вехами 4.1 и 4.3
 ├── tests/
-│   ├── Pest.php              # RefreshDatabase, сброс кеша настроек, countQueries()
+│   ├── Pest.php              # RefreshDatabase, сброс кеша настроек,
+│   │                         # resetRateLimiters(), countQueries()
 │   └── Feature/              # Infrastructure, Smoke, Filament, Models/*,
-│                             # Database/*, Services/*, Http/*
+│                             # Database/*, Services/*, Http/*, Jobs/*
 ├── assets/
 │   ├── cars/                 # 46 исходных фото автомобилей (IMG_*.PNG) для каталога
 │   └── Макет сайта «ЛАО КАРС»/  # Экспорт макета: десктоп, мобильные, UI Kit
@@ -134,7 +147,7 @@ laocars/
 └── ТЗ_ЛАО_КАРС.md            # Техническое задание заказчика, версия 1.0
 ```
 
-Каталог `app/Jobs/` из `ARCHITECTURE.md` появится вместе с первыми классами в вехе 3.7 — пустых папок с `.gitkeep` в проекте нет.
+**Заявка первична, уведомление вторично.** `LeadService::capture()` пишет лид в транзакции и только потом ставит `NotifyManagerAboutLead` в очередь. Telegram недоступен — заявка всё равно в БД, а задача уходит в ретраи; несконфигурированный бот даёт WARN и пропуск без исключения. Инвариант проверяется двумя тестами, и **ни один из них не работает на `queue.default = sync`**: `SyncQueue::handleException()` пробрасывает исключение наружу, то есть упавшая задача выносит пользователю 500 — ровно то, что тест должен опровергать.
 
 **Права живут только в политиках, и панель работает в строгом режиме.** `->strictAuthorization()` в `AdminPanelProvider` меняет умолчание: без политики Filament не разрешает, а бросает `LogicException` при первом обращении. Поэтому у каждой модели, попадающей в панель, политика обязана существовать и реализовывать полный набор методов, включая `reorder` (его дёргают все `reorderable()`-таблицы) и `deleteAny` (его дёргает `DeleteBulkAction`). Базовые классы `AdminOnlyPolicy` и `StaffPolicy` это уже делают — новая политика наследуется от одного из них одной строкой.
 
@@ -147,8 +160,12 @@ laocars/
 | ТЗ_ЛАО_КАРС.md | Первоисточник требований: разделы сайта, состав админки, сроки, риски |
 | .ai-factory/DESCRIPTION.md | Спецификация: стек, решения по развилкам ТЗ, границы MVP |
 | .ai-factory/config.yaml | Конфиг AI Factory: языки, пути, git |
-| routes/web.php | Публичные маршруты: `/`, `/catalog`, `/catalog/{slug}` |
+| routes/web.php | Публичные маршруты: `/`, `/catalog`, `/catalog/{slug}`, `POST /leads` |
 | app/Services/CatalogCriteria.php | Единственное место, где имена GET-параметров каталога превращаются в поля |
+| app/Http/Requests/StoreLeadRequest.php | Контракт формы заявки: правила не мягче колонок, honeypot, `page_url` от сервера |
+| app/Services/LeadService.php | Приём заявки: запись в транзакции и постановка уведомления |
+| app/Services/TelegramNotifier.php | Отправка в Telegram: `e()` на каждом значении, токен не идёт в лог |
+| app/View/Components/LeadForm.php | `x-lead-form` — один компонент на все формы заявок сайта |
 | app/Support/AttributeFilterIndex.php | Длина префикса `left(value, N)`: её берут и миграция, и фильтр, и тест-сторож |
 | app/Models/Lead.php | Заявка со всех форм: полиморфный источник, статусы, комментарии |
 | app/Models/CarAttribute.php | Справочник динамических характеристик: тип, единица, группа, флаги вывода |
@@ -165,6 +182,7 @@ laocars/
 | compose.yml | Локальные PostgreSQL и Redis |
 | phpunit.xml | Тестовое окружение — переопределяет драйверы скелета |
 | config/logging.php | Канал `leads`: приём заявки и доставка уведомлений |
+| config/leads.php | Лимит заявок в минуту с одного IP |
 | .mcp.json | Конфигурация MCP-серверов проекта |
 | assets/cars/ | Исходные фото для наполнения каталога |
 
@@ -173,12 +191,15 @@ laocars/
 | Документ | Путь | Описание |
 | :---- | :---- | :---- |
 | README | README.md | Landing-страница: запуск окружения, схема данных и демо-данные, тесты, CI, стек |
+| Каталог: фильтры и URL | docs/catalog.md | GET-параметры каталога, сортировки, индексация, фильтруемые характеристики |
+| Заявки и уведомления | docs/leads.md | Путь заявки до Telegram, настройка бота, воркер, диагностика, работа менеджера |
+| Админка каталога | docs/admin-catalog.md | Марки, карточки, фото, характеристики, медиабиблиотека |
+| Роли и доступ | docs/admin-roles.md | Права ролей, заведение сотрудников, первый запуск на проде |
+| Контент и настройки | docs/admin-content.md | Услуги и запчасти, команда, модерация отзывов, настройки сайта |
 | Техническое задание | ТЗ_ЛАО_КАРС.md | Требования заказчика: структура разделов, админка, оценка сроков, риски |
 | Спецификация проекта | .ai-factory/DESCRIPTION.md | Стек, архитектурные заметки, что входит и не входит в MVP |
 | Правила кода | .ai-factory/rules/base.md | Именование, структура модулей, ошибки, логирование, тесты |
 | Роадмап | .ai-factory/ROADMAP.md | Вехи по этапам ТЗ и что уже закрыто |
-
-Отдельного каталога `docs/` пока нет — README покрывает запуск и схему данных целиком. Разносить по страницам имеет смысл, когда появятся API, конфигурация и деплой.
 
 ## AI-контекст
 

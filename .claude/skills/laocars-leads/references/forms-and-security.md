@@ -38,8 +38,7 @@ final class StoreLeadRequest extends FormRequest
             'source_type' => ['nullable', Rule::in(['car', 'service'])],
             'source_id'   => ['nullable', 'integer', 'required_with:source_type'],
 
-            // Honeypot: реальный пользователь это поле не видит и не заполняет
-            'website' => ['prohibited'],
+            // Honeypot `website` в правилах отсутствует намеренно — см. ниже.
         ];
     }
 
@@ -61,9 +60,28 @@ final class StoreLeadRequest extends FormRequest
 }
 ```
 
-`prohibited` на honeypot возвращает ошибку валидации ботам, не создавая лид. Если нужно,
-чтобы бот не понимал, что его отсекли, — убирайте поле из правил и проверяйте вручную в
-контроллере, отдавая обычный success-ответ без записи в БД.
+**Honeypot отбрасывает бота молча, а не ошибкой валидации.** `'website' => ['prohibited']`
+выглядит короче, но сообщает боту имя поля-ловушки: ловушка, которая себя называет,
+перестаёт работать после первого прогона. Поле не попадает в `rules()` вовсе, а проверяет
+его отдельный метод; контроллер отдаёт боту тот же редирект с тем же сообщением об успехе,
+что и человеку, и ничего не пишет в БД:
+
+```php
+// StoreLeadRequest
+public function isSpam(): bool
+{
+    return filled($this->input('website'));
+}
+
+// LeadController::store()
+if ($request->isSpam()) {
+    Log::channel('leads')->debug('[Lead] заявка отброшена по honeypot', ['ip' => $request->ip()]);
+
+    return back()->with('status', 'Заявка принята — менеджер свяжется с вами.');
+}
+```
+
+Уровень DEBUG, а не WARN: ботов много, и WARN забил бы лог.
 
 ### Проверка существования источника
 
@@ -132,10 +150,11 @@ Route::post('/leads', StoreLeadController::class)
         <input type="hidden" name="source_id" value="{{ $source->id }}">
     @endisset
 
-    <input type="hidden" name="page_url" value="{{ url()->current() }}">
+    {{-- Скрытого поля `page_url` здесь нет намеренно: адрес страницы
+         определяет сервер (см. ниже). --}}
 
-    {{-- Honeypot: скрыт от людей, но заполняется ботами --}}
-    <div class="hidden" aria-hidden="true">
+    {{-- Honeypot: уводится за пределы экрана, а не прячется display:none --}}
+    <div class="absolute -left-[9999px]" aria-hidden="true">
         <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
     </div>
 
@@ -151,10 +170,42 @@ Route::post('/leads', StoreLeadController::class)
 </form>
 ```
 
-Скрывать honeypot нужно классом в CSS, а не `type="hidden"`: боты обычно пропускают
-hidden-поля, но заполняют видимые в разметке текстовые.
+Honeypot уводится за пределы экрана (`absolute -left-[9999px]`), а не прячется
+через `class="hidden"` или `type="hidden"`: `display:none` боты распознают,
+а hidden-поля пропускают.
 
 `old()` во всех полях — при ошибке валидации клиент не должен вводить телефон заново.
+
+### Адрес страницы определяет сервер
+
+Скрытого поля `page_url` в форме нет и быть не должно. Значение уходит **ссылкой
+в Telegram менеджеру**, и клиентское поле превращает уведомление в вектор фишинга:
+менеджер видит «Страница: …» и кликает. Адрес берётся из сессии на стороне сервера,
+проверяется на принадлежность своему хосту и обрезается до длины колонки:
+
+```php
+// StoreLeadRequest
+private function pageUrl(): ?string
+{
+    $previous = url()->previous();
+
+    $host = parse_url($previous, PHP_URL_HOST);
+    $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+    if (! is_string($host) || ! is_string($appHost) || $host !== $appHost) {
+        return null;
+    }
+
+    // `page_url` — varchar(255), и PostgreSQL считает в нём символы,
+    // а не байты: substr() на кириллическом адресе режет посреди символа.
+    return mb_substr($previous, 0, 255);
+}
+```
+
+Плата за решение: отправка формы из вкладки, открытой без предшествующего GET,
+даёт адрес корня вместо страницы. Лид при этом не теряется, менеджер лишается
+контекста. Если контекст окажется критичным, правильный ход — подписанное поле,
+а не сырое.
 
 ## Единый партиал
 
@@ -162,21 +213,31 @@ hidden-поля, но заполняют видимые в разметке те
 
 ```blade
 {{-- В карточке авто --}}
-<x-lead-form :source="$car" source-type="car" title="Оставить заявку на этот автомобиль" />
+<x-lead-form :source="$car" title="Оставить заявку на этот автомобиль" />
 
 {{-- На странице услуги --}}
-<x-lead-form :source="$service" source-type="service" title="Записаться" />
+<x-lead-form :source="$service" title="Записаться" />
 
 {{-- В контактах и на главной --}}
 <x-lead-form title="Обратный звонок" />
+
+{{-- Подбор запчасти: те же поля плюс марка, модель и VIN --}}
+<x-lead-form :parts="true" title="Подобрать запчасть" />
 ```
+
+Атрибута `source-type` у компонента нет: алиас берётся из самой модели
+(`$source->getMorphClass()`), потому что morph map включён в `AppServiceProvider`.
+Второй словарь «класс → алиас» в шаблоне разошёлся бы с первым.
 
 ## Чеклист безопасности формы
 
 - [ ] `@csrf` в форме, роут в группе `web`
-- [ ] `throttle:leads` на роуте
-- [ ] Honeypot скрыт классом, а не `type="hidden"`
+- [ ] `throttle:leads` на роуте, отказ — редирект с ошибкой на форме, а не голый 429
+- [ ] Honeypot уведён за экран (не `display:none`, не `type="hidden"`) и отбрасывает молча
+- [ ] `page_url` определяет сервер, скрытого поля в форме нет
 - [ ] `source_id` проверяется на существование, а не берётся на веру
+      (для услуги — ещё и на `is_published`, для авто — только существование)
 - [ ] Валидация в FormRequest, не в контроллере
+- [ ] Ограничения длины не мягче колонок: `phone` 32, `part_vin` 17, `page_url` 255
 - [ ] `old()` во всех полях
 - [ ] В логи не пишутся телефон и email клиента целиком

@@ -42,6 +42,11 @@ laocars/
 │   │   │   ├── Brands/                 # те же подпапки + Actions/ —
 │   │   │   ├── CarAttributes/          #   действие, нужное и списку,
 │   │   │   ├── Employees/              #   и странице редактирования
+│   │   │   ├── Leads/                  # Actions/ChangeLeadStatusAction,
+│   │   │   │                           #   Schemas/LeadInfolist (только
+│   │   │   │                           #   чтение — формы у заявки нет),
+│   │   │   │                           #   RelationManagers/Comments…
+│   │   │   │                           #   (первая в проекте)
 │   │   │   ├── Media/
 │   │   │   ├── Reviews/
 │   │   │   ├── Services/
@@ -56,7 +61,7 @@ laocars/
 │   │   │   ├── PartsController.php     # посадочная «Запчасти»
 │   │   │   └── LeadController.php
 │   │   ├── Requests/                   # Валидация входа (FormRequest)
-│   │   │   ├── StoreLeadRequest.php
+│   │   │   ├── StoreLeadRequest.php    # + toData(): собирает LeadData
 │   │   │   └── CatalogFilterRequest.php
 │   │   └── Middleware/                 # Сквозное: throttle, auth
 │   ├── Jobs/                           # Фоновые задачи
@@ -77,6 +82,7 @@ laocars/
 │   │   ├── ImageProcessor.php          # ресайз, WebP и превью для всех загрузок
 │   │   ├── StoredImage.php             # readonly DTO — результат обработки
 │   │   ├── LeadService.php             # приём заявки: запись + постановка уведомления
+│   │   ├── LeadData.php                # readonly DTO — заявка по типам
 │   │   ├── CatalogCriteria.php         # readonly DTO — фильтр каталога по типам
 │   │   ├── CatalogFilter.php           # сборка запроса каталога по фильтрам
 │   │   ├── CatalogFilterOptions.php    # варианты формы фильтра
@@ -87,10 +93,13 @@ laocars/
 │   │   ├── MediaSettingKeys.php        # какие настройки ссылаются на медиа
 │   │   └── AttributeFilterIndex.php    # длина префикса индекса left(value, N):
 │   │                                   # берут и миграция, и фильтр, и тест
-│   └── View/Components/                # Blade-компоненты (x-lead-form и др.)
+│   └── View/Components/
+│       └── LeadForm.php                # x-lead-form — один компонент
+│                                       # на все формы заявок сайта
 ├── config/
 │   ├── images.php                      # обработка загружаемых изображений
-│   └── catalog.php                     # карточек на странице, размер блока похожих
+│   ├── catalog.php                     # карточек на странице, размер блока похожих
+│   └── leads.php                       # лимит заявок в минуту с одного IP
 ├── database/
 │   ├── migrations/
 │   ├── factories/
@@ -99,6 +108,8 @@ laocars/
 │   ├── views/                          # Blade: layouts, pages, components
 │   │   ├── layouts/app.blade.php       # каркас: title, description,
 │   │   │                               # canonical, robots
+│   │   ├── components/                 # lead-form — до вехи 4.1
+│   │   │                               # функциональная, без дизайна
 │   │   └── catalog/                    # index и show — до вехи 4.3
 │   │                                   # функциональные, без дизайна
 │   ├── css/
@@ -161,7 +172,11 @@ final class LeadController extends Controller
     {
         // Валидация уже в FormRequest, логика — в сервисе.
         // Контроллер только переводит HTTP в вызов и обратно.
-        $leads->capture(LeadData::fromRequest($request));
+        //
+        // DTO собирает сам FormRequest (`toData()`), а не сервис: сервис
+        // не должен принимать `Request` — правило ниже. Тот же приём,
+        // что и у `CatalogFilterRequest::toCriteria()`.
+        $leads->capture($request->toData());
 
         return back()->with('status', 'Заявка принята — менеджер свяжется с вами.');
     }
@@ -174,7 +189,7 @@ final class LeadService
 {
     public function capture(LeadData $data): Lead
     {
-        $lead = DB::transaction(fn (): Lead => Lead::create($data->toArray()));
+        $lead = DB::transaction(fn (): Lead => Lead::create($data->toAttributes()));
 
         // Уведомление — после коммита и вне HTTP-цикла.
         // Telegram лежит — заявка всё равно сохранена.

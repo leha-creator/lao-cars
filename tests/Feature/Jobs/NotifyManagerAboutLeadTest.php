@@ -161,6 +161,21 @@ it('escapes angle brackets coming from the client', function () {
     });
 });
 
+it('links to the lead card in the admin panel', function () {
+    config(['services.telegram.token' => 'token', 'services.telegram.chat_id' => '1']);
+    Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+
+    $lead = Lead::factory()->general()->create();
+
+    app(TelegramNotifier::class)->send($lead);
+
+    // Менеджер попадает в панель одним касанием, а не ищет заявку в списке.
+    Http::assertSent(fn (Request $request): bool => str_contains(
+        (string) $request['text'],
+        route('filament.admin.resources.leads.view', $lead),
+    ));
+});
+
 it('logs a successful delivery', function () {
     config(['services.telegram.token' => 'token', 'services.telegram.chat_id' => '1']);
     Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
