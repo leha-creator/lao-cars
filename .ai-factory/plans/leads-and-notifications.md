@@ -98,7 +98,7 @@
 
 ### Фаза 2 — Уведомление менеджеру
 
-- [ ] **3. `TelegramNotifier` и конфигурация бота**
+- [x] **3. `TelegramNotifier` и конфигурация бота**
   `config/services.php` — секция `telegram`: `token` (`TELEGRAM_BOT_TOKEN`), `chat_id` (`TELEGRAM_MANAGER_CHAT_ID`), `timeout` (`TELEGRAM_TIMEOUT`, умолчание 10). `.env.example` — три пустые переменные с комментарием, что реальные значения живут только в `.env` и что без них уведомления пропускаются с WARN.
   `app/Services/TelegramNotifier.php` — `send(Lead $lead): void`. Токен и chat_id читаются через `config()`, никогда через `env()`. Пустой любой из двух → WARN в канал `leads` (`lead_id`, причина) и `return` без исключения (решение 6). Иначе `Http::timeout(...)->post("https://api.telegram.org/bot{$token}/sendMessage", [...])` с `parse_mode: HTML`; `->retry()` не ставится (решение 5, записать комментарием — иначе вернут). `$response->failed()` → `RuntimeException` с кодом и телом ответа; успех → INFO в канал `leads`.
   Формат сообщения — приватный `format(Lead $lead): string`: заголовок, `sourceLabel()`, имя, телефон, e-mail и комментарий при наличии, поля подбора запчасти при `isPartsRequest()`, страница и ссылка на карточку заявки в админке. Ссылка ставится задачей 6, когда появится `LeadResource` — до неё в шаблоне оставить `page_url` и TODO с номером задачи.
@@ -107,7 +107,7 @@
   Проверка: в tinker `Http::get('https://api.telegram.org/bot'.config('services.telegram.token').'/getMe')->json()` при заполненном `.env` отдаёт `ok: true`; `app(TelegramNotifier::class)->send(Lead::first())` без токена пишет WARN и не бросает.
   Файлы: `config/services.php`, `app/Services/TelegramNotifier.php`, `.env.example`.
 
-- [ ] **4. Задача `NotifyManagerAboutLead` и её постановка** *(зависит от 2, 3)*
+- [x] **4. Задача `NotifyManagerAboutLead` и её постановка** *(зависит от 2, 3)*
   `app/Jobs/NotifyManagerAboutLead.php` — `implements ShouldQueue`, трейт `Illuminate\Foundation\Queue\Queueable`. `public int $tries = 5;`, `public array $backoff = [10, 60, 300, 900];` (последняя пауза повторяется для пятой попытки — записать комментарием, иначе массив «дополнят»). Конструктор принимает `Lead` — модель, а не массив: `SerializesModels` кладёт в очередь id и подтягивает свежую запись, поэтому уведомление уйдёт с актуальными данными. `handle(TelegramNotifier $telegram)` делегирует. `failed(Throwable $e)` — ERROR в канал `leads` с `lead_id`, **последними четырьмя цифрами телефона** (`mb_substr($phone, -4)`, не весь номер) и текстом ошибки.
   `LeadService::capture()` дополняется: `NotifyManagerAboutLead::dispatch($lead)->afterCommit();` и INFO в канал `leads` о постановке в очередь.
   `afterCommit()` здесь — страховка, а не необходимость: `DB::transaction()` уже вернул управление, то есть транзакция закрыта и задача уходит немедленно. Смысл вызова в будущем вызывающем, который обернёт `capture()` в собственную транзакцию: без `afterCommit()` воркер Redis успевает забрать задачу раньше коммита и падает на несуществующем лиде. Комментарий обязателен, иначе вызов снимут как лишний.

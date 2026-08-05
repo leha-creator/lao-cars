@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Jobs\NotifyManagerAboutLead;
 use App\Models\Lead;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -29,6 +30,20 @@ final class LeadService
             'source_type' => $lead->source_type,
             'source_id' => $lead->source_id,
             'page_url' => $lead->page_url,
+        ]);
+
+        // `afterCommit()` здесь — страховка, а не необходимость:
+        // `DB::transaction()` выше уже вернул управление, то есть
+        // транзакция закрыта и задача ушла бы немедленно и без него.
+        // Смысл вызова — в будущем вызывающем, который обернёт `capture()`
+        // в собственную транзакцию (импорт заявок, пакетная операция
+        // в админке): без `afterCommit()` воркер Redis успевает забрать
+        // задачу раньше коммита и падает на несуществующем лиде —
+        // с сохранившимся лидом и потерянным уведомлением.
+        NotifyManagerAboutLead::dispatch($lead)->afterCommit();
+
+        Log::channel('leads')->info('[Lead] уведомление поставлено в очередь', [
+            'lead_id' => $lead->id,
         ]);
 
         return $lead;
