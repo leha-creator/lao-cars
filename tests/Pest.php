@@ -2,6 +2,7 @@
 
 use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -25,12 +26,36 @@ pest()->extend(TestCase::class)
     ->in('Feature');
 
 /*
- * Кеш настроек живёт в Redis и переживает откат транзакции: RefreshDatabase
- * возвращает базу, но не кеш. Без сброса настройки, записанные одним тестом,
- * протекают в следующий и делают падения неповторяемыми.
+ * Умолчательные виды пагинации, снятые до первого теста.
+ *
+ * Снимок делается здесь, на загрузке файла: Livewire подменяет эти статики
+ * при первом же своём компоненте, и снятое позже значение было бы уже
+ * подменённым.
  */
-pest()->beforeEach(function (): void {
+$paginationDefaults = [Paginator::$defaultView, Paginator::$defaultSimpleView];
+
+/*
+ * Состояние, переживающее откат транзакции. RefreshDatabase возвращает базу,
+ * но не трогает ни Redis, ни статики классов.
+ *
+ * 1. Кеш настроек живёт в Redis: без сброса настройки, записанные одним
+ *    тестом, протекают в следующий и делают падения неповторяемыми.
+ *
+ * 2. Вид пагинации — статик `Paginator::$defaultView`. Любой Livewire-компонент
+ *    с `WithPagination` подменяет его на `livewire::tailwind`
+ *    (`SupportPagination::overrideDefaultPaginationViews()`), а восстанавливает
+ *    только при штатном уничтожении компонента — которого при обычном
+ *    HTTP-запросе к странице Filament не происходит. После такого теста
+ *    публичные страницы рендерят пагинацию кнопками `wire:click` вместо
+ *    ссылок, и падает не тот тест, который это устроил, а первый же
+ *    следующий, проверяющий ссылки пагинации. В обычном порядке прогона
+ *    такой пары не складывается, в обратном — складывается.
+ */
+pest()->beforeEach(function () use ($paginationDefaults): void {
     Setting::flushCache();
+
+    Paginator::defaultView($paginationDefaults[0]);
+    Paginator::defaultSimpleView($paginationDefaults[1]);
 })->in('Feature');
 
 /*
