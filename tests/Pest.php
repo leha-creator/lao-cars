@@ -2,6 +2,7 @@
 
 use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /*
@@ -30,3 +31,31 @@ pest()->extend(TestCase::class)
 pest()->beforeEach(function (): void {
     Setting::flushCache();
 })->in('Feature');
+
+/*
+|--------------------------------------------------------------------------
+| Общие помощники
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Сколько запросов к базе делает вызов.
+ *
+ * Абсолютное число здесь важно меньше, чем его неизменность при росте
+ * выдачи: именно так N+1 отличается от «просто нескольких запросов».
+ * Проверяя счётчик, обязательно задавать и нижнюю границу — правило
+ * RULES.md: выборка, не поймавшая ни одного запроса, иначе проходит
+ * вхолостую.
+ */
+function countQueries(callable $callback): int
+{
+    $queries = 0;
+
+    DB::listen(static function () use (&$queries): void {
+        $queries++;
+    });
+
+    $callback();
+
+    return $queries;
+}
