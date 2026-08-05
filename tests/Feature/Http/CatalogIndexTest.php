@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\CarStatus;
 use App\Enums\EngineType;
 use App\Models\Brand;
 use App\Models\Car;
@@ -139,6 +140,89 @@ it('keeps filter parameters out of the canonical url but keeps the page', functi
 
     $this->get('/catalog?page=2')
         ->assertSee('<link rel="canonical" href="'.route('catalog.index', ['page' => 2]).'">', escape: false);
+});
+
+/*
+ * Вёрстка вехи 4.3. Тесты ниже сторожат не внешний вид, а договорённости,
+ * которые ломаются молча: панель, предлагающая вариант без единого
+ * автомобиля; форма, забывающая выбранное; скрытое поле `page`, уводящее
+ * пользователя в 404.
+ */
+
+it('offers only brands that have an available car', function () {
+    $withCars = Brand::factory()->create(['name' => 'Zeekr']);
+    $withoutCars = Brand::factory()->create(['name' => 'Voyah']);
+
+    Car::factory()->for($withCars)->create();
+
+    // Вариант, дающий ноль автомобилей, — не «пустая выдача», а сломанное
+    // доверие к фильтру. Проверяется значение опции, а не название марки:
+    // название могло бы попасть в разметку карточки и увести тест.
+    $this->get('/catalog')
+        ->assertOk()
+        ->assertSee('value="'.$withCars->slug.'"', escape: false)
+        ->assertDontSee('value="'.$withoutCars->slug.'"', escape: false);
+});
+
+it('returns the selected filter values to the form', function () {
+    $brand = Brand::factory()->create();
+    Car::factory()->for($brand)->create(['status' => CarStatus::OnOrder]);
+
+    $content = $this->get('/catalog?brand='.$brand->slug.'&status=on_order')
+        ->assertOk()
+        ->getContent();
+
+    // Проверяется `selected`/`checked` рядом с нужным значением, а не факт
+    // наличия строки: вариант в списке есть всегда, и без этой связки тест
+    // прошёл бы и на форме, которая ничего не запоминает.
+    expect($content)->toMatch('/value="'.preg_quote($brand->slug, '/').'"[^>]*\bselected\b/')
+        ->and($content)->toMatch('/value="on_order"[^>]*\bchecked\b/');
+});
+
+it('keeps the page parameter out of the filter form', function () {
+    Car::factory()->count(config('catalog.per_page') + 2)->for(Brand::factory())->create();
+
+    // Форма на странице одна — фильтр каталога; ни шапка, ни подвал форм
+    // не содержат.
+    $form = str($this->get('/catalog?page=2')->assertOk()->getContent())
+        ->after('<form')
+        ->before('</form>')
+        ->toString();
+
+    // Скрытое поле `page` выглядит безобидной правкой «чтобы не терять
+    // страницу» и ломает не фильтрацию, а пользователя: контроллер отдаёт
+    // 404 за последней страницей, и фильтрация со страницы 3 привела бы
+    // на ошибку вместо первой страницы новой выдачи.
+    expect($form)->not->toContain('name="page"');
+});
+
+it('shows a reset block instead of a bare line on an empty result', function () {
+    $brand = Brand::factory()->create();
+    Car::factory()->for($brand)->create(['price' => 5_000_000]);
+
+    // Пустая выдача — тупик, и выход из него должен быть виден.
+    $this->get('/catalog?brand='.$brand->slug.'&price_to=1')
+        ->assertOk()
+        ->assertSee('По этим условиям ничего не нашлось')
+        ->assertSee('Сбросить фильтры');
+});
+
+it('renders pagination with the catalog view', function () {
+    Car::factory()->count(config('catalog.per_page') * 2 + 1)->for(Brand::factory())->create();
+
+    $this->get('/catalog?page=2')
+        ->assertOk()
+        // Подсказка роботу о порядке страниц выдачи.
+        ->assertSee('rel="prev"', escape: false)
+        ->assertSee('rel="next"', escape: false)
+        // Активная страница объявляется скринридером, а ссылки подписаны
+        // словом, а не голой цифрой.
+        ->assertSee('aria-current="page"', escape: false)
+        ->assertSee('aria-label="Страница 1"', escape: false)
+        // Вендорный вид светлый: его классы в ответе означали бы, что
+        // `links()` снова рендерит `tailwind.blade.php`, а вместе с ним
+        // в сборку вернётся палитра по умолчанию.
+        ->assertDontSee('text-gray-', escape: false);
 });
 
 it('does not run a query per card', function () {

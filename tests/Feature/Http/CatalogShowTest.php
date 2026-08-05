@@ -3,6 +3,7 @@
 use App\Models\Brand;
 use App\Models\Car;
 use App\Models\CarAttribute;
+use App\Models\CarPhoto;
 
 /*
  * Карточка автомобиля (веха 3.6).
@@ -90,6 +91,106 @@ it('serves a car without a price', function () {
     $this->get('/catalog/'.$car->slug)
         ->assertOk()
         ->assertSee('Цена по запросу');
+});
+
+/*
+ * Вёрстка вехи 4.3. Галерея — главный кандидат на «упрощение»: свести её
+ * к одному <img :src> и списку путей в x-data короче ровно настолько,
+ * чтобы выглядеть улучшением. С работающим JS после такой правки галерея
+ * ведёт себя одинаково, и заметить подмену можно только здесь.
+ */
+
+it('keeps every photo in the markup, not only the main one', function () {
+    $car = Car::factory()->create();
+    CarPhoto::factory()->count(3)->sequenced()->for($car)->create();
+
+    $content = $this->get('/catalog/'.$car->slug)->assertOk()->getContent();
+
+    // Стопка главного фото: все снимки лежат в разметке, показывается один.
+    preg_match_all('/<img[^>]*absolute inset-0[^>]*>/', $content, $stack);
+
+    expect($stack[0])->toHaveCount(3);
+
+    foreach ($car->photos as $photo) {
+        expect($content)->toContain($photo->url);
+    }
+});
+
+it('loads the main photo eagerly and the thumbnails lazily', function () {
+    $car = Car::factory()->create();
+    CarPhoto::factory()->count(3)->sequenced()->for($car)->create();
+
+    $content = $this->get('/catalog/'.$car->slug)->assertOk()->getContent();
+
+    preg_match_all('/<img[^>]*absolute inset-0[^>]*>/', $content, $stack);
+
+    // Главное фото — LCP этой страницы (правило RULES.md). Рефлекс,
+    // выработанный на карточках списка, откладывает загрузку главного
+    // изображения страницы, и ни один автотест кроме этого не покажет:
+    // локально файл грузится мгновенно.
+    expect($stack[0][0])->toContain('fetchpriority="high"')
+        ->and($stack[0][0])->not->toContain('loading="lazy"')
+        // Остальные снимки до клика не нужны.
+        ->and($stack[0][1])->toContain('loading="lazy"');
+});
+
+it('serves a car without photos and shows a caption instead of a gap', function () {
+    $car = Car::factory()->create();
+
+    // Пустой прямоугольник читается как недогруженная страница.
+    $this->get('/catalog/'.$car->slug)
+        ->assertOk()
+        ->assertSee('Фотографии готовятся');
+});
+
+it('does not render arrows and a counter for a single photo', function () {
+    $car = Car::factory()->create();
+    CarPhoto::factory()->for($car)->create();
+
+    // Листать нечего, а стрелки, которые ничего не делают, — обман.
+    $this->get('/catalog/'.$car->slug)
+        ->assertOk()
+        ->assertDontSee('aria-label="Следующее фото"', escape: false)
+        ->assertDontSee('x-text="(active + 1)', escape: false);
+});
+
+it('keeps a single h1 and puts similar cards under h3', function () {
+    $brand = Brand::factory()->create();
+    Car::factory()->count(config('catalog.similar_limit'))->for($brand)->create(['price' => 5_000_000]);
+
+    $car = Car::factory()->for($brand)->create(['price' => 5_000_000]);
+
+    $content = $this->get('/catalog/'.$car->slug)->assertOk()->getContent();
+
+    // Иерархия заголовков — не оформление: по ней ходят скринридеры
+    // и по ней страницу разбирает поисковик.
+    expect(preg_match_all('/<h1[\s>]/', $content))->toBe(1)
+        ->and($content)->toContain('<h3');
+});
+
+it('takes meta tags from the car and falls back to the assembled ones', function () {
+    $brand = Brand::factory()->create(['name' => 'Zeekr']);
+
+    $car = Car::factory()->for($brand)->create([
+        'model' => '001',
+        'year' => 2024,
+        'meta_title' => 'Свой заголовок карточки',
+        'meta_description' => 'Своё описание карточки',
+    ]);
+
+    $this->get('/catalog/'.$car->slug)
+        ->assertOk()
+        ->assertSee('<title>Свой заголовок карточки</title>', escape: false)
+        ->assertSee('content="Своё описание карточки"', escape: false);
+
+    // Администратор очистил поля — карточка возвращается к сборке из полей,
+    // а не отдаёт пустой тег.
+    $car->update(['meta_title' => null, 'meta_description' => null]);
+
+    $this->get('/catalog/'.$car->slug)
+        ->assertOk()
+        ->assertSee('<title>Zeekr 001, 2024 — '.config('app.name').'</title>', escape: false)
+        ->assertSee('Купить Zeekr 001 2024 года', escape: false);
 });
 
 it('does not run a query per attribute row', function () {
