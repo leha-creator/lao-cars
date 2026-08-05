@@ -77,18 +77,30 @@ laocars/
 │   │   ├── ImageProcessor.php          # ресайз, WebP и превью для всех загрузок
 │   │   ├── StoredImage.php             # readonly DTO — результат обработки
 │   │   ├── LeadService.php             # приём заявки: запись + постановка уведомления
+│   │   ├── CatalogCriteria.php         # readonly DTO — фильтр каталога по типам
 │   │   ├── CatalogFilter.php           # сборка запроса каталога по фильтрам
+│   │   ├── CatalogFilterOptions.php    # варианты формы фильтра
+│   │   ├── SimilarCars.php             # подбор похожих для карточки
 │   │   └── TelegramNotifier.php        # внешний API
 │   ├── Support/                        # Чистые правила без слоя и состояния
 │   │   ├── ThumbnailPath.php           # соответствие «оригинал → превью»
-│   │   └── MediaSettingKeys.php        # какие настройки ссылаются на медиа
+│   │   ├── MediaSettingKeys.php        # какие настройки ссылаются на медиа
+│   │   └── AttributeFilterIndex.php    # длина префикса индекса left(value, N):
+│   │                                   # берут и миграция, и фильтр, и тест
 │   └── View/Components/                # Blade-компоненты (x-lead-form и др.)
+├── config/
+│   ├── images.php                      # обработка загружаемых изображений
+│   └── catalog.php                     # карточек на странице, размер блока похожих
 ├── database/
 │   ├── migrations/
 │   ├── factories/
 │   └── seeders/
 ├── resources/
 │   ├── views/                          # Blade: layouts, pages, components
+│   │   ├── layouts/app.blade.php       # каркас: title, description,
+│   │   │                               # canonical, robots
+│   │   └── catalog/                    # index и show — до вехи 4.3
+│   │                                   # функциональные, без дизайна
 │   ├── css/
 │   └── js/                             # Alpine
 ├── routes/
@@ -195,13 +207,23 @@ final class Car extends Model
 
 ```php
 // app/Http/Controllers/CatalogController.php
-public function index(CatalogFilterRequest $request, CatalogFilter $filter): View
+public function index(CatalogFilterRequest $request, CatalogFilter $filter, CatalogFilterOptions $options): View
 {
-    $cars = $filter->apply(Car::query()->with('photos'), $request->validated())
-        ->paginate(12)
+    // Сервис получает DTO, а не Request и не сырой массив: тот же фильтр
+    // вызывается из теста и консольной команды без подделки HTTP.
+    $criteria = $request->toCriteria();
+
+    $cars = $filter->apply(Car::query()->with(['brand', 'mainPhoto']), $criteria)
+        ->paginate((int) config('catalog.per_page'))
         ->withQueryString(); // фильтры переживают пагинацию
 
-    return view('catalog.index', compact('cars'));
+    return view('catalog.index', [
+        'cars' => $cars,
+        'options' => $options->build(),
+        'criteria' => $criteria,
+        'filtered' => $criteria->hasActiveFilters(),
+        'canonical' => $this->canonical($cars),
+    ]);
 }
 ```
 

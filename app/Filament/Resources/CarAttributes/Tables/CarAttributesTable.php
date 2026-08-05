@@ -6,6 +6,7 @@ namespace App\Filament\Resources\CarAttributes\Tables;
 
 use App\Enums\CarAttributeType;
 use App\Filament\Resources\CarAttributes\Actions\DeleteCarAttributeAction;
+use App\Models\CarAttribute;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\FontFamily;
 use Filament\Tables\Columns\TextColumn;
@@ -51,7 +52,14 @@ final class CarAttributesTable
                     ->label('В карточке'),
 
                 ToggleColumn::make('show_in_filter')
-                    ->label('В фильтре'),
+                    ->label('В фильтре')
+                    // У нефильтруемого типа переключатель заблокирован,
+                    // а не просто бесполезен: модель гасит флаг
+                    // на сохранении (`CarAttribute::booted()`), и живой
+                    // переключатель молча возвращался бы в исходное
+                    // положение — поведение, в котором винят интерфейс,
+                    // а не правило.
+                    ->disabled(fn (CarAttribute $record): bool => ! $record->type->isFilterable()),
             ])
             ->defaultSort('sort_order')
             // Порядок характеристик задаёт и порядок групп в сетке карточки

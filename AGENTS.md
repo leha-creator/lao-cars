@@ -79,7 +79,12 @@ laocars/
 │   ├── Console/Commands/     # MakeAdminCommand: первый администратор на проде
 │   ├── Enums/                # CarStatus, EngineType, DriveType, CarAttributeType,
 │   │   └── Concerns/         # ServiceCategory, LeadStatus, ContactMethod,
-│   │                         # PreferredTime, UserRole + HasLabels, HasColors
+│   │                         # PreferredTime, UserRole, CatalogSort
+│   │                         # + HasLabels, HasColors
+│   ├── Http/
+│   │   ├── Controllers/      # CatalogController: список и карточка авто
+│   │   └── Requests/         # CatalogFilterRequest: валидация GET-контракта,
+│   │                         # битый параметр уводит на чистый /catalog
 │   ├── Filament/             # Админка: NavigationGroup + Resources/<Множ.>/
 │   │   ├── Forms/Components/ # MediaPicker: выбор из библиотеки, со связью и без
 │   │   ├── Pages/            # ManageSiteSettings: настройки сайта через content()
@@ -94,9 +99,13 @@ laocars/
 │   ├── Providers/            # AppServiceProvider: morph map + ImageManager (GD)
 │   ├── Providers/Filament/   # AdminPanelProvider: панель /admin, брендинг, локаль,
 │   │                         # strictAuthorization, страница профиля
-│   ├── Services/             # ImageProcessor + StoredImage: WebP, ресайз, превью
-│   └── Support/              # ThumbnailPath, MediaSettingKeys — чистые правила
+│   ├── Services/             # ImageProcessor + StoredImage: WebP, ресайз, превью;
+│   │                         # CatalogCriteria + CatalogFilter + CatalogFilterOptions
+│   │                         # + SimilarCars — выборка и опции каталога
+│   └── Support/              # ThumbnailPath, MediaSettingKeys, AttributeFilterIndex
+│                             # — чистые правила без слоя и состояния
 ├── config/images.php         # Пределы обработки изображений и потолок загрузки
+├── config/catalog.php        # Карточек на странице и размер блока похожих
 ├── config/logging.php        # Канал `leads` — отдельный лог пути заявки
 ├── database/
 │   ├── migrations/           # Схема: каталог, услуги, заявки, контент, настройки
@@ -106,10 +115,15 @@ laocars/
 ├── resources/
 │   ├── css/app.css           # Tailwind v4; @theme пустой — токены в вехе 4.1
 │   ├── js/app.js             # Alpine.js
-│   └── views/layouts/app.blade.php  # Базовый layout: title, description, canonical
+│   └── views/
+│       ├── layouts/app.blade.php  # Базовый layout: title, description,
+│       │                     # canonical, robots
+│       └── catalog/          # index и show — функциональные шаблоны без
+│                             # дизайна; вёрстка приходит вехами 4.1 и 4.3
 ├── tests/
-│   ├── Pest.php              # RefreshDatabase + сброс кеша настроек между тестами
-│   └── Feature/              # Infrastructure, Smoke, Filament, Models/*, Database/*
+│   ├── Pest.php              # RefreshDatabase, сброс кеша настроек, countQueries()
+│   └── Feature/              # Infrastructure, Smoke, Filament, Models/*,
+│                             # Database/*, Services/*, Http/*
 ├── assets/
 │   ├── cars/                 # 46 исходных фото автомобилей (IMG_*.PNG) для каталога
 │   └── Макет сайта «ЛАО КАРС»/  # Экспорт макета: десктоп, мобильные, UI Kit
@@ -133,7 +147,9 @@ laocars/
 | ТЗ_ЛАО_КАРС.md | Первоисточник требований: разделы сайта, состав админки, сроки, риски |
 | .ai-factory/DESCRIPTION.md | Спецификация: стек, решения по развилкам ТЗ, границы MVP |
 | .ai-factory/config.yaml | Конфиг AI Factory: языки, пути, git |
-| routes/web.php | Публичные маршруты |
+| routes/web.php | Публичные маршруты: `/`, `/catalog`, `/catalog/{slug}` |
+| app/Services/CatalogCriteria.php | Единственное место, где имена GET-параметров каталога превращаются в поля |
+| app/Support/AttributeFilterIndex.php | Длина префикса `left(value, N)`: её берут и миграция, и фильтр, и тест-сторож |
 | app/Models/Lead.php | Заявка со всех форм: полиморфный источник, статусы, комментарии |
 | app/Models/CarAttribute.php | Справочник динамических характеристик: тип, единица, группа, флаги вывода |
 | app/Models/Setting.php | Настройки сайта: key-value с jsonb и кешем в Redis |
