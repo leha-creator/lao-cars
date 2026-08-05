@@ -30,6 +30,21 @@ final class CommentsRelationManager extends RelationManager
 
     protected static ?string $title = 'Комментарии менеджера';
 
+    /**
+     * Лента остаётся рабочей на странице просмотра.
+     *
+     * По умолчанию Filament делает менеджеры связей на `ViewRecord`
+     * read-only (`RelationManager::isReadOnly()`), и кнопка «Добавить
+     * комментарий» просто не отображается. Для заявки это означало бы
+     * мёртвую функцию: страницы `Edit` у неё нет и не будет
+     * (`LeadResource::getPages()`), а комментарии — половина работы
+     * менеджера с заявкой.
+     */
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema->components([
