@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Enums\ServiceCategory;
 use App\Filament\Forms\Components\MediaPicker;
 use App\Filament\NavigationGroup;
 use App\Models\Setting;
@@ -90,6 +91,17 @@ final class ManageSiteSettings extends Page
         'pages' => [
             'services_page.intro_title',
             'services_page.intro_text',
+            // Описания категорий прайса — ОДНА настройка-объект с полем
+            // на каждую категорию (`services_page.notes.maintenance` и так
+            // далее), а не четыре отдельных ключа. Реестр сверяется с сидом
+            // по ключу целиком, и четыре ключа вместо одного дали бы четыре
+            // шанса разойтись — сторож `has a key registry matching
+            // the seeder` покраснеет при односторонней правке любого из них.
+            // Образец формы значения — `home.promo`: одна запись, несколько
+            // полей-путей.
+            'services_page.notes',
+            'services_page.price_disclaimer',
+            'services_page.advantages',
             'parts_page.intro_title',
             'parts_page.intro_text',
             'parts_page.delivery_terms',
@@ -390,6 +402,48 @@ final class ManageSiteSettings extends Page
             Textarea::make('services_page.intro_text')
                 ->label('Автосервис: вступление')
                 ->rows(3),
+
+            // Поля описаний строятся циклом по категориям, а не выписаны
+            // руками: список категорий живёт в енаме, и второй список здесь
+            // разошёлся бы с первым на первой же новой категории — причём
+            // молча, новая категория просто не получила бы поля.
+            //
+            // Пустое описание убирает абзац, но не блок: прайс важнее текста.
+            ...array_map(
+                static fn (ServiceCategory $category): Textarea => Textarea::make("services_page.notes.{$category->value}")
+                    ->label("{$category->label()}: описание")
+                    ->rows(3),
+                ServiceCategory::serviceCategories(),
+            ),
+
+            Textarea::make('services_page.price_disclaimer')
+                ->label('Автосервис: оговорка о ценах')
+                ->helperText('Выводится под прайсом вместе с плашкой «Не публичная оферта». Пустое значение убирает блок целиком.')
+                ->rows(3),
+
+            // Формат намеренно повторяет `home.advantages`: у него уже есть
+            // и нормализация значения, и тест на форму. Пустой список убирает
+            // секцию «Почему сюда» вместе с фотопанелью.
+            Repeater::make('services_page.advantages')
+                ->label('Автосервис: почему сюда')
+                ->helperText('Карточки рядом с фотографией мастерской.')
+                ->schema([
+                    TextInput::make('number')
+                        ->label('Номер')
+                        ->required(),
+
+                    TextInput::make('title')
+                        ->label('Заголовок')
+                        ->required(),
+
+                    Textarea::make('text')
+                        ->label('Текст')
+                        ->rows(2),
+                ])
+                ->reorderable()
+                ->collapsed()
+                ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
+                ->defaultItems(0),
 
             TextInput::make('parts_page.intro_title')
                 ->label('Запчасти: заголовок'),
