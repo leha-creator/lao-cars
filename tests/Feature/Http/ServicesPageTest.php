@@ -236,6 +236,65 @@ it('captures a general lead when the visitor needs a consultation', function () 
         ->and($lead->sourceLabel())->toBe('Общая форма');
 });
 
+it('keeps the chosen service selected after a validation error', function () {
+    // Правило вехи 3.7 «old() во всех полях без исключения» распространяется
+    // и на селект: после ошибки валидации посетитель не должен заново искать
+    // свою позицию в списке из семнадцати.
+    //
+    // Это же сторож против `x-model` на селекте. Порчу в браузере тест
+    // разметки не поймает — Alpine затирает значение уже после ответа
+    // сервера, — но он ловит обратное: исчезновение серверного `@selected`,
+    // без которого затирать будет нечего и симптом станет постоянным.
+    $service = pricePosition(ServiceCategory::Detailing, 'Полировка кузова', 12000, 'от');
+
+    // `followingRedirects()`, а не отдельный `get()` после `post()`: флеш
+    // ошибок к следующему запросу теста уже состарен, и проверка «форма
+    // вернулась с сохранённым выбором» прошла бы вхолостую. Здесь редирект
+    // отрисовывается в том же цикле — ровно то, что видит посетитель.
+    $this->from('/services')
+        ->followingRedirects()
+        ->post(route('leads.store'), [
+            'name' => 'Иван',
+            // Телефон не заполнен — форма вернётся с ошибкой.
+            'source_type' => 'service',
+            'source_id' => (string) $service->getKey(),
+        ])
+        ->assertOk()
+        ->assertSee('value="'.$service->getKey().'" selected', escape: false);
+});
+
+it('shows the source error next to the select, not only above the button', function () {
+    // Формулировка вехи 3.7 рассчитана на подделку скрытого поля, а получит
+    // её живой человек, чью услугу сняли с публикации, пока он заполнял
+    // форму. Сообщение обязано указывать на поле, а не висеть над кнопкой.
+    $service = Service::factory()->detailing()->unpublished()->create(['title' => 'Снятая позиция']);
+
+    pricePosition(ServiceCategory::Maintenance, 'Живая работа');
+
+    $html = $this->from('/services')
+        ->followingRedirects()
+        ->post(route('leads.store'), [
+            'name' => 'Иван',
+            'phone' => '+7 999 123-45-67',
+            'source_type' => 'service',
+            'source_id' => (string) $service->getKey(),
+        ])
+        ->assertOk()
+        ->getContent();
+
+    $select = strpos($html, 'id="lead-service"');
+    $error = strpos($html, 'Заявка отправлена на несуществующий объект.');
+    $nextField = strpos($html, 'name="contact_method"');
+
+    expect($select)->not->toBeFalse()
+        ->and($error)->not->toBeFalse()
+        // Сообщение стоит МЕЖДУ селектом и следующим полем формы.
+        ->and($error)->toBeGreaterThan($select)
+        ->and($error)->toBeLessThan($nextField)
+        // Копии над кнопкой быть не должно: одна ошибка — одно сообщение.
+        ->and(substr_count($html, 'Заявка отправлена на несуществующий объект.'))->toBe(1);
+});
+
 it('rejects a lead for a position taken off the site while the form was open', function () {
     Queue::fake();
 
