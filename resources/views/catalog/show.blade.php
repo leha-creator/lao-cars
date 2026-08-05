@@ -108,24 +108,9 @@
 
             <div class="grid gap-6 sm:grid-cols-3">
                 @foreach ($similar as $item)
-                    <article class="border p-4">
-                        <a href="{{ route('catalog.show', $item) }}">
-                            @if ($item->mainPhoto !== null)
-                                <img src="{{ Storage::disk('public')->url($item->mainPhoto->thumb_path ?? $item->mainPhoto->path) }}"
-                                     alt="{{ $item->mainPhoto->alt }}" class="max-w-full">
-                            @endif
-
-                            <h3>{{ $item->brand->name }} {{ $item->model }}, {{ $item->year }}</h3>
-                        </a>
-
-                        <p>
-                            @if ($item->price !== null)
-                                {{ number_format((int) $item->price, 0, ',', ' ') }} ₽
-                            @else
-                                Цена по запросу
-                            @endif
-                        </p>
-                    </article>
+                    {{-- Карточка вложена в раздел со своим h2, поэтому её
+                         заголовок — h3. --}}
+                    <x-car-card :car="$item" heading="h3" />
                 @endforeach
             </div>
         @endif

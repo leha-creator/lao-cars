@@ -1,146 +1,206 @@
 {{--
-    Форма заявки — функциональный шаблон без дизайна.
+    Форма заявки — один компонент на все формы сайта (веха 3.7),
+    свёрстанный по UI Kit макета §05 и секции заявки главной
+    (`Home.dc.html`, строки 199–216) вехой 4.1.
 
-    Вёрстка по макету приходит вехой 4.1. Здесь проверяется другое: что
-    путь заявки работает на живой странице, а не только в тестах —
-    источник доезжает до БД, ошибки валидации возвращаются с сохранённым
-    вводом, а honeypot отбрасывает бота молча.
-
-    Пока вёрстки нет, форма не должна попадать в публичный релиз: на проде
-    она выглядит как сломанный сайт.
+    Решения вехи 3.7 в этом шаблоне — инварианты, а не оформление, и
+    переживают переверстку только за счёт объясняющих комментариев.
+    Каждое из них выглядит как мусор из заглушки для того, кто открыл
+    файл, чтобы навести красоту, — поэтому они помечены явно.
 
     Скрытого поля `page_url` здесь нет намеренно. Адрес страницы определяет
     сервер (`StoreLeadRequest::pageUrl()`): значение уходит ссылкой
     в Telegram менеджеру, и клиентское поле превратило бы уведомление
     в вектор фишинга — менеджер видит «Страница: …» и кликает.
+
+    Якорь `#lead-form` — цель кнопки «Оставить заявку» в шапке.
 --}}
-<section class="mt-8 border-t pt-6">
-    <h2 class="font-medium">{{ $title }}</h2>
+<section id="lead-form" class="px-5 py-16 lg:px-8 lg:py-24">
+    <div class="mx-auto max-w-page">
+        <div class="mx-auto max-w-2xl rounded-[20px] border border-white/8 bg-page-alt p-6 lg:p-9">
+            <h2 class="mb-6 font-display text-2xl font-semibold lg:text-[28px]">{{ $title }}</h2>
 
-    @if (session('status'))
-        {{-- Одно и то же сообщение видят и человек, и бот, заполнивший
-             ловушку: ответ, отличающийся от успеха, выдал бы ловушку. --}}
-        <p class="mt-2 text-green-700">{{ session('status') }}</p>
-    @endif
+            @if (session('status'))
+                {{-- Одно и то же сообщение видят и человек, и бот, заполнивший
+                     ловушку: ответ, отличающийся от успеха, выдал бы ловушку. --}}
+                <p class="mb-6 rounded-field border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent">
+                    {{ session('status') }}
+                </p>
+            @endif
 
-    <form method="POST" action="{{ route('leads.store') }}" class="mt-4 grid max-w-lg gap-3">
-        @csrf
+            <form method="POST" action="{{ route('leads.store') }}" class="flex flex-col gap-4">
+                @csrf
 
-        @if ($source !== null)
-            {{-- Алиасы morph map (`car` / `service`) — ровно то, что лежит
-                 в `leads.source_type`. Значение сервер перепроверяет:
-                 подделать скрытое поле — вопрос одной правки в devtools. --}}
-            <input type="hidden" name="source_type" value="{{ $sourceType() }}">
-            <input type="hidden" name="source_id" value="{{ $source->getKey() }}">
-        @endif
+                @if ($source !== null)
+                    {{-- Алиасы morph map (`car` / `service`) — ровно то, что лежит
+                         в `leads.source_type`. Значение сервер перепроверяет:
+                         подделать скрытое поле — вопрос одной правки в devtools. --}}
+                    <input type="hidden" name="source_type" value="{{ $sourceType() }}">
+                    <input type="hidden" name="source_id" value="{{ $source->getKey() }}">
+                @endif
 
-        {{-- Ловушка для ботов. Уводится за пределы экрана, а не прячется
-             через `class="hidden"` или `type="hidden"`: `display:none` боты
-             распознают, а hidden-поля пропускают. `tabindex="-1"`
-             и `autocomplete="off"` — чтобы в неё не заехал живой человек
-             с клавиатуры или автозаполнением. --}}
-        <div class="absolute -left-[9999px]" aria-hidden="true">
-            <label>
-                Сайт
-                <input type="text" name="website" value="" tabindex="-1" autocomplete="off">
-            </label>
+                {{-- Ловушка для ботов. Уводится за пределы экрана, а не прячется
+                     через `class="hidden"` или `type="hidden"`: `display:none` боты
+                     распознают, а hidden-поля пропускают. `tabindex="-1"`
+                     и `autocomplete="off"` — чтобы в неё не заехал живой человек
+                     с клавиатуры или автозаполнением. --}}
+                <div class="absolute -left-[9999px]" aria-hidden="true">
+                    <label>
+                        Сайт
+                        <input type="text" name="website" value="" tabindex="-1" autocomplete="off">
+                    </label>
+                </div>
+
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-medium text-ink-muted">Имя</span>
+                    {{-- `old()` во всех полях без исключения: при ошибке валидации
+                         клиент не должен вводить телефон и комментарий заново. --}}
+                    <input
+                        type="text"
+                        name="name"
+                        value="{{ old('name') }}"
+                        required
+                        class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                    >
+                    @error('name')
+                        <span class="text-sm text-danger">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-medium text-ink-muted">Телефон</span>
+                    <input
+                        type="tel"
+                        name="phone"
+                        value="{{ old('phone') }}"
+                        required
+                        class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                    >
+                    @error('phone')
+                        <span class="text-sm text-danger">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-medium text-ink-muted">E-mail</span>
+                    <input
+                        type="email"
+                        name="email"
+                        value="{{ old('email') }}"
+                        class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                    >
+                    @error('email')
+                        <span class="text-sm text-danger">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-sm font-medium text-ink-muted">Удобный способ связи</span>
+                        {{-- Нативный `select` на тёмном фоне читается благодаря
+                             `color-scheme: dark` в базовых стилях: без него
+                             браузер красит выпадающий список по светлой схеме. --}}
+                        <select
+                            name="contact_method"
+                            class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                        >
+                            <option value="">Не важно</option>
+                            @foreach (App\Enums\ContactMethod::options() as $value => $label)
+                                <option value="{{ $value }}" @selected(old('contact_method') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('contact_method')
+                            <span class="text-sm text-danger">{{ $message }}</span>
+                        @enderror
+                    </label>
+
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-sm font-medium text-ink-muted">Удобное время звонка</span>
+                        <select
+                            name="preferred_time"
+                            class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                        >
+                            <option value="">Не важно</option>
+                            @foreach (App\Enums\PreferredTime::options() as $value => $label)
+                                <option value="{{ $value }}" @selected(old('preferred_time') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('preferred_time')
+                            <span class="text-sm text-danger">{{ $message }}</span>
+                        @enderror
+                    </label>
+                </div>
+
+                @if ($parts)
+                    {{-- Поля подбора запчасти: по ним заявка отличается от прочих
+                         (`Lead::isPartsRequest()`), а не источником. --}}
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <label class="flex flex-col gap-1.5">
+                            <span class="text-sm font-medium text-ink-muted">Марка автомобиля</span>
+                            <input
+                                type="text"
+                                name="part_brand"
+                                value="{{ old('part_brand') }}"
+                                class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                            >
+                            @error('part_brand')
+                                <span class="text-sm text-danger">{{ $message }}</span>
+                            @enderror
+                        </label>
+
+                        <label class="flex flex-col gap-1.5">
+                            <span class="text-sm font-medium text-ink-muted">Модель</span>
+                            <input
+                                type="text"
+                                name="part_model"
+                                value="{{ old('part_model') }}"
+                                class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                            >
+                            @error('part_model')
+                                <span class="text-sm text-danger">{{ $message }}</span>
+                            @enderror
+                        </label>
+                    </div>
+
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-sm font-medium text-ink-muted">VIN</span>
+                        {{-- 17 символов — не только стандарт VIN, но и длина
+                             колонки: правило валидации мягче колонки означало бы
+                             ошибку драйвера PostgreSQL вместо сообщения на форме. --}}
+                        <input
+                            type="text"
+                            name="part_vin"
+                            value="{{ old('part_vin') }}"
+                            maxlength="17"
+                            class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                        >
+                        @error('part_vin')
+                            <span class="text-sm text-danger">{{ $message }}</span>
+                        @enderror
+                    </label>
+                @endif
+
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-sm font-medium text-ink-muted">Комментарий</span>
+                    <textarea
+                        name="message"
+                        rows="4"
+                        class="resize-y rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                    >{{ old('message') }}</textarea>
+                    @error('message')
+                        <span class="text-sm text-danger">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                @error('source_id')
+                    <span class="text-sm text-danger">{{ $message }}</span>
+                @enderror
+
+                <button
+                    type="submit"
+                    class="mt-1.5 rounded-full bg-accent py-4.5 text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                >{{ $submit }}</button>
+            </form>
         </div>
-
-        <label class="grid gap-1">
-            <span>Имя</span>
-            {{-- `old()` во всех полях без исключения: при ошибке валидации
-                 клиент не должен вводить телефон и комментарий заново. --}}
-            <input type="text" name="name" value="{{ old('name') }}" required class="border p-2">
-            @error('name')
-                <span class="text-sm text-red-700">{{ $message }}</span>
-            @enderror
-        </label>
-
-        <label class="grid gap-1">
-            <span>Телефон</span>
-            <input type="tel" name="phone" value="{{ old('phone') }}" required class="border p-2">
-            @error('phone')
-                <span class="text-sm text-red-700">{{ $message }}</span>
-            @enderror
-        </label>
-
-        <label class="grid gap-1">
-            <span>E-mail</span>
-            <input type="email" name="email" value="{{ old('email') }}" class="border p-2">
-            @error('email')
-                <span class="text-sm text-red-700">{{ $message }}</span>
-            @enderror
-        </label>
-
-        <label class="grid gap-1">
-            <span>Удобный способ связи</span>
-            <select name="contact_method" class="border p-2">
-                <option value="">Не важно</option>
-                @foreach (App\Enums\ContactMethod::options() as $value => $label)
-                    <option value="{{ $value }}" @selected(old('contact_method') === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-            @error('contact_method')
-                <span class="text-sm text-red-700">{{ $message }}</span>
-            @enderror
-        </label>
-
-        <label class="grid gap-1">
-            <span>Удобное время звонка</span>
-            <select name="preferred_time" class="border p-2">
-                <option value="">Не важно</option>
-                @foreach (App\Enums\PreferredTime::options() as $value => $label)
-                    <option value="{{ $value }}" @selected(old('preferred_time') === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-            @error('preferred_time')
-                <span class="text-sm text-red-700">{{ $message }}</span>
-            @enderror
-        </label>
-
-        @if ($parts)
-            {{-- Поля подбора запчасти: по ним заявка отличается от прочих
-                 (`Lead::isPartsRequest()`), а не источником. --}}
-            <label class="grid gap-1">
-                <span>Марка автомобиля</span>
-                <input type="text" name="part_brand" value="{{ old('part_brand') }}" class="border p-2">
-                @error('part_brand')
-                    <span class="text-sm text-red-700">{{ $message }}</span>
-                @enderror
-            </label>
-
-            <label class="grid gap-1">
-                <span>Модель</span>
-                <input type="text" name="part_model" value="{{ old('part_model') }}" class="border p-2">
-                @error('part_model')
-                    <span class="text-sm text-red-700">{{ $message }}</span>
-                @enderror
-            </label>
-
-            <label class="grid gap-1">
-                <span>VIN</span>
-                {{-- 17 символов — не только стандарт VIN, но и длина
-                     колонки: правило валидации мягче колонки означало бы
-                     ошибку драйвера PostgreSQL вместо сообщения на форме. --}}
-                <input type="text" name="part_vin" value="{{ old('part_vin') }}" maxlength="17" class="border p-2">
-                @error('part_vin')
-                    <span class="text-sm text-red-700">{{ $message }}</span>
-                @enderror
-            </label>
-        @endif
-
-        <label class="grid gap-1">
-            <span>Комментарий</span>
-            <textarea name="message" rows="4" class="border p-2">{{ old('message') }}</textarea>
-            @error('message')
-                <span class="text-sm text-red-700">{{ $message }}</span>
-            @enderror
-        </label>
-
-        @error('source_id')
-            <span class="text-sm text-red-700">{{ $message }}</span>
-        @enderror
-
-        <button type="submit" class="border p-2 font-medium">{{ $submit }}</button>
-    </form>
+    </div>
 </section>

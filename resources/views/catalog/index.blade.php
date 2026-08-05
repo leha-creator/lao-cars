@@ -149,26 +149,7 @@
 
         <div class="my-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             @forelse ($cars as $car)
-                <article class="border p-4">
-                    <a href="{{ route('catalog.show', $car) }}">
-                        @if ($car->mainPhoto !== null)
-                            <img src="{{ Storage::disk('public')->url($car->mainPhoto->thumb_path ?? $car->mainPhoto->path) }}"
-                                 alt="{{ $car->mainPhoto->alt }}" class="max-w-full">
-                        @endif
-
-                        <h2 class="font-medium">{{ $car->brand->name }} {{ $car->model }}, {{ $car->year }}</h2>
-                    </a>
-
-                    <p>
-                        @if ($car->price !== null)
-                            {{ number_format((int) $car->price, 0, ',', ' ') }} ₽
-                        @else
-                            Цена по запросу
-                        @endif
-                    </p>
-
-                    <p class="text-sm text-gray-500">{{ $car->status->label() }}</p>
-                </article>
+                <x-car-card :car="$car" />
             @empty
                 <p>
                     Ничего не найдено.

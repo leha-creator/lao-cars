@@ -6,6 +6,7 @@ namespace App\View\Components;
 
 use App\Models\Setting;
 use App\Support\SiteMenu;
+use App\Support\SocialLinks;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\Component;
@@ -41,21 +42,10 @@ final class SiteFooter extends Component
      */
     public array $socials;
 
-    /**
-     * Подписи соцсетей по ключам настроек. Порядок задаёт вывод.
-     *
-     * @var array<string, string>
-     */
-    private const array SOCIAL_LABELS = [
-        'socials.telegram' => 'Telegram',
-        'socials.whatsapp' => 'WhatsApp',
-        'socials.vk' => 'ВКонтакте',
-    ];
-
     public function __construct()
     {
         $this->contacts = Setting::group('contacts');
-        $this->socials = self::resolveSocials();
+        $this->socials = SocialLinks::from(Setting::group('socials'));
 
         $guarantee = Setting::get('footer.guarantee');
         $this->guarantee = is_array($guarantee) ? $guarantee : [];
@@ -98,34 +88,6 @@ final class SiteFooter extends Component
     public function render(): View
     {
         return view('components.site-footer');
-    }
-
-    /**
-     * Пустая соцсеть не выводится вовсе: ссылка на пустой адрес хуже
-     * отсутствующей — она выглядит рабочей и ведёт на текущую страницу.
-     *
-     * Предупреждения здесь нет намеренно, в отличие от контактов: соцсети
-     * необязательны, компания может не вести VK, и WARN о «незаполненном»
-     * поле был бы шумом, а не сигналом.
-     *
-     * @return list<array{label: string, url: string}>
-     */
-    private static function resolveSocials(): array
-    {
-        $stored = Setting::group('socials');
-        $socials = [];
-
-        // Обход идёт по словарю подписей, а не по настройкам: порядок вывода
-        // задаёт макет, а не порядок строк в таблице.
-        foreach (self::SOCIAL_LABELS as $key => $label) {
-            $url = $stored[$key] ?? null;
-
-            if ($url !== null && $url !== '') {
-                $socials[] = ['label' => $label, 'url' => (string) $url];
-            }
-        }
-
-        return $socials;
     }
 
     /**
