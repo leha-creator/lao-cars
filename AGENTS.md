@@ -109,6 +109,7 @@ laocars/
 │   ├── Services/             # ImageProcessor + StoredImage: WebP, ресайз, превью;
 │   │                         # CatalogCriteria + CatalogFilter + CatalogFilterOptions
 │   │                         # + SimilarCars — выборка и опции каталога;
+│   │                         # HomeContent — данные главной;
 │   │                         # LeadData + LeadService + TelegramNotifier —
 │   │                         # приём заявки и уведомление менеджеру
 │   ├── Support/              # ThumbnailPath, MediaSettingKeys, SiteMenu,
@@ -118,7 +119,8 @@ laocars/
 │                             # формы заявок сайта; SiteHeader и SiteFooter —
 │                             # каркас, читают настройки сами (см. правила)
 ├── config/images.php         # Пределы обработки изображений и потолок загрузки
-├── config/catalog.php        # Карточек на странице и размер блока похожих
+├── config/catalog.php        # Карточек на странице, размер блока похожих
+│                             # и потолок подборки на главной
 ├── config/leads.php          # Лимит заявок в минуту с одного IP
 ├── config/logging.php        # Канал `leads` — отдельный лог пути заявки
 ├── database/
@@ -128,16 +130,19 @@ laocars/
 ├── docker/postgres/init/     # Init-скрипты Postgres: создание базы laocars_testing
 ├── resources/
 │   ├── css/app.css           # Tailwind v4; @theme — токены дизайн-системы
-│   ├── images/               # Логотип; в манифест попадает через
-│   │                         # import.meta.glob в app.js (обязательно eager)
+│   ├── images/               # Логотип, фон хиро (hero-960/1920.webp) и фон
+│   │                         # секции заявки (lead-bg.webp); в манифест
+│   │                         # попадает через import.meta.glob в app.js
+│   │                         # (обязательно eager). Исходники — в assets/
 │   ├── js/app.js             # Alpine.js + glob статики вёрстки
 │   └── views/
 │       ├── layouts/app.blade.php  # Каркас: SEO-секции, @fonts, шапка,
-│       │                     # подвал, above-header под веху 4.2
+│       │                     # подвал, above-header — бегущая строка главной
 │       ├── components/       # lead-form, car-card, page-heading,
 │       │                     # site-header, site-footer
-│       ├── home|services|parts|contacts/  # index — заглушки на каркасе;
-│       │                     # наполнение вехами 4.2, 4.4 и 4.5
+│       ├── home/             # index — собрана вехой 4.2
+│       ├── services|parts|contacts/  # index — заглушки на каркасе;
+│       │                     # наполнение вехами 4.4 и 4.5
 │       └── catalog/          # index и show — функциональные шаблоны без
 │                             # дизайна; вёрстка приходит вехой 4.3
 ├── tests/
@@ -173,6 +178,7 @@ laocars/
 | vite.config.js | Сборка и самохостинг шрифтов: веса, `subsets` с кириллицей, preload |
 | app/Support/SiteMenu.php | Состав навигации: один список на шапку и подвал; пункт без роута выпадает |
 | app/Services/CatalogCriteria.php | Единственное место, где имена GET-параметров каталога превращаются в поля |
+| app/Services/HomeContent.php | Данные главной: подборка авто, промо, лента, преимущества, SEO; нормализация jsonb-настроек |
 | app/Http/Requests/StoreLeadRequest.php | Контракт формы заявки: правила не мягче колонок, honeypot, `page_url` от сервера |
 | app/Services/LeadService.php | Приём заявки: запись в транзакции и постановка уведомления |
 | app/Services/TelegramNotifier.php | Отправка в Telegram: `e()` на каждом значении, токен не идёт в лог |
@@ -203,6 +209,7 @@ laocars/
 | :---- | :---- | :---- |
 | README | README.md | Landing-страница: запуск окружения, схема данных и демо-данные, тесты, CI, стек |
 | Дизайн-система и каркас | docs/design-system.md | Токены, шрифты, компоненты каркаса, как добавить страницу, диагностика вёрстки |
+| Главная страница | docs/homepage.md | Блоки главной, настройки, подборка авто и лимит, замена фоновых фото |
 | Каталог: фильтры и URL | docs/catalog.md | GET-параметры каталога, сортировки, индексация, фильтруемые характеристики |
 | Заявки и уведомления | docs/leads.md | Путь заявки до Telegram, настройка бота, воркер, диагностика, работа менеджера |
 | Админка каталога | docs/admin-catalog.md | Марки, карточки, фото, характеристики, медиабиблиотека |
