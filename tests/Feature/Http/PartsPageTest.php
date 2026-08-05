@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Service;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Log;
 
 /*
@@ -86,6 +87,19 @@ it('keeps the parts landing and the services page from leaking into each other',
         ->assertSee('Плановое ТО')
         ->assertDontSee('Кузовные детали')
         ->assertDontSee('href="#parts"', escape: false);
+});
+
+it('falls back to a default heading when the setting is emptied', function () {
+    // Фолбэк через второй аргумент `Setting::get()` срабатывает только
+    // на отсутствующий ключ, а форма настроек пишет пустое значение как есть.
+    // Без нормализации очищенный заголовок давал бы пустой H1 и заголовок
+    // документа из одного тире — при живой настройке и без ошибок в логе.
+    Setting::set('parts_page.intro_title', '');
+
+    $html = $this->get('/parts')->assertOk()->getContent();
+
+    expect($html)->toContain('>Запчасти</h1>')
+        ->and($html)->not->toContain('<title> — ');
 });
 
 it('does not set a lead source on the parts form', function () {

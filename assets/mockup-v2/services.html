@@ -1,0 +1,445 @@
+<!doctype html>
+<!--
+    ЛАО КАРС — макет страницы «Сервис и детейлинг».
+
+    Соответствует тому, что запланировано вехой 4.4: страница автосервиса
+    с блоками по категориям, прайсом и выбором конкретной услуги. Категории
+    и позиции взяты из `App\Enums\ServiceCategory` и `Database\Seeders\ServiceSeeder`
+    один в один — то есть из данных, которые уже лежат в базе, а не придуманы
+    под макет. Порядок блоков — `ServiceCategory::serviceCategories()`.
+
+    Категории «Запчасти» здесь нет намеренно: у неё своя посадочная страница
+    (причина записана в PHPDoc енама). Ссылка на неё в шапке ведёт на главную,
+    пока страницы запчастей в макете нет.
+
+    Шапка — липкий вариант (`.header--solid`), как у всех внутренних страниц
+    в реализованной вёрстке. Прозрачный вариант существует только поверх хиро.
+
+    Стили и скрипты общие с главной: `css/mockup.css` и `js/mockup.js`.
+-->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080706">
+<meta name="description" content="ТО и ремонт, шиномонтаж, детейлинг и дополнительные сервисы для автомобилей любых марок в собственной мастерской ЛАО КАРС в Москве.">
+<title>Сервис и детейлинг — ЛАО КАРС</title>
+
+<link rel="stylesheet" href="css/mockup.css">
+</head>
+
+<body>
+
+<a class="skip" href="#content">Перейти к содержимому</a>
+
+<div class="ticker" aria-label="Коротко о компании">
+  <div class="ticker__track">
+    <div class="ticker__group">
+      <span class="ticker__item ticker__item--accent">★ Москва, Осенняя улица, 17к1</span>
+      <span class="ticker__item">Ежедневно 10:00 – 20:00</span>
+      <span class="ticker__item ticker__item--accent">★ Своя мастерская, не партнёрская сеть</span>
+      <span class="ticker__item">Работаем с гибридами и электромобилями</span>
+      <span class="ticker__item ticker__item--accent">★ Запчасти по VIN</span>
+      <span class="ticker__item">Согласуем работы до начала ремонта</span>
+    </div>
+    <div class="ticker__group" aria-hidden="true">
+      <span class="ticker__item ticker__item--accent">★ Москва, Осенняя улица, 17к1</span>
+      <span class="ticker__item">Ежедневно 10:00 – 20:00</span>
+      <span class="ticker__item ticker__item--accent">★ Своя мастерская, не партнёрская сеть</span>
+      <span class="ticker__item">Работаем с гибридами и электромобилями</span>
+      <span class="ticker__item ticker__item--accent">★ Запчасти по VIN</span>
+      <span class="ticker__item">Согласуем работы до начала ремонта</span>
+    </div>
+  </div>
+</div>
+
+<!-- ШАПКА. На внутренних страницах — липкая с размытием. -->
+<header class="header header--solid">
+  <div class="container header__inner">
+    <a href="index.html" aria-label="ЛАО КАРС — на главную">
+      <img class="logo" src="img/logo-white.png" width="440" height="128" alt="ЛАО КАРС">
+    </a>
+
+    <nav class="nav" aria-label="Основная навигация">
+      <a href="index.html#cars">Продажа автомобилей</a>
+      <a href="index.html#parts">Запчасти</a>
+      <a href="services.html" aria-current="page">Сервис и детейлинг</a>
+    </nav>
+
+    <div class="header__actions">
+      <a class="header__phone" href="tel:+79153229618">+7 (915) 322-96-18</a>
+      <a class="icon-btn icon-btn--phone" href="tel:+79153229618" aria-label="Позвонить: +7 (915) 322-96-18">☎</a>
+      <a class="btn btn--accent btn--sm header__cta" href="#lead-form">Записаться</a>
+
+      <button class="burger" type="button" id="burger" aria-label="Открыть меню" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu" data-open="false">
+  <div class="mobile-menu__top">
+    <img class="logo" src="img/logo-white.png" width="440" height="128" alt="ЛАО КАРС">
+    <button class="icon-btn" type="button" id="menuClose" aria-label="Закрыть меню">✕</button>
+  </div>
+  <nav aria-label="Мобильная навигация">
+    <a href="index.html#cars">Продажа автомобилей</a>
+    <a href="index.html#parts">Запчасти</a>
+    <a href="services.html">Сервис и детейлинг</a>
+  </nav>
+  <div class="mobile-menu__foot">
+    <a class="mobile-menu__phone" href="tel:+79153229618">+7 (915) 322-96-18</a>
+    <a class="btn btn--accent btn--wide" href="#lead-form">Записаться на сервис</a>
+  </div>
+</div>
+
+<main id="content">
+
+  <!-- ШАПКА СТРАНИЦЫ — компонент `x-page-heading`. -->
+  <section class="page-heading">
+    <div class="container">
+      <div class="eyebrow">Услуги</div>
+
+      <h1>Автосервис, шиномонтаж и <em>детейлинг</em></h1>
+
+      <p class="page-heading__intro">
+        Обслуживаем автомобили любых марок, включая гибриды и электромобили.
+        Своя мастерская: работы, шиномонтаж, детейлинг и подготовка автомобиля
+        к эксплуатации выполняются в одном месте, а не передаются подрядчикам.
+      </p>
+
+      <!-- Якорная навигация: прайс длинный, и человек, пришедший за одной
+           категорией, не должен пролистывать три чужие. -->
+      <nav class="anchor-nav" aria-label="Категории услуг">
+        <a href="#maintenance">ТО и ремонт</a>
+        <a href="#tire-service">Шиномонтаж</a>
+        <a href="#detailing">Детейлинг</a>
+        <a href="#extra">Дополнительные сервисы</a>
+      </nav>
+    </div>
+  </section>
+
+  <!-- ПРАЙС ПО КАТЕГОРИЯМ.
+
+       Порядок и состав — `ServiceCategory::serviceCategories()`:
+       ТО и ремонт → шиномонтаж → детейлинг → дополнительные сервисы. -->
+  <div class="container">
+
+    <section class="service-block" id="maintenance">
+      <div class="service-block__grid">
+        <div class="service-block__head">
+          <div class="service-group__icon">ТО</div>
+          <h2>ТО и ремонт</h2>
+          <p>
+            Регламентное обслуживание, диагностика и ремонт. Состав работ
+            и стоимость согласуем до начала: клиент видит, за что платит,
+            прежде чем автомобиль попадёт на подъёмник.
+          </p>
+        </div>
+
+        <div class="service-block__list">
+          <a class="service-row" href="#lead-form" data-service="Плановое ТО">
+            <span class="service-row__title">Плановое ТО</span><span class="service-row__price">от 6 500 ₽</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Замена масла и фильтров">
+            <span class="service-row__title">Замена масла и фильтров</span><span class="service-row__price">3 200 ₽</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Диагностика ходовой части">
+            <span class="service-row__title">Диагностика ходовой части</span><span class="service-row__price">2 500 ₽</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Компьютерная диагностика">
+            <span class="service-row__title">Компьютерная диагностика</span><span class="service-row__price">2 000 ₽</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Ремонт гибридных установок">
+            <span class="service-row__title">Ремонт гибридных установок</span><span class="service-row__price service-row__price--muted">по запросу</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="service-block" id="tire-service">
+      <div class="service-block__grid">
+        <div class="service-block__head">
+          <div class="service-group__icon">ШМ</div>
+          <h2>Шиномонтаж</h2>
+          <p>
+            Сезонная смена, балансировка и хранение комплекта до следующего
+            сезона — чтобы летние колёса не занимали половину балкона.
+          </p>
+        </div>
+
+        <div class="service-block__list">
+          <a class="service-row" href="#lead-form" data-service="Шиномонтаж легкового автомобиля">
+            <span class="service-row__title">Шиномонтаж легкового автомобиля</span><span class="service-row__price">1 200 ₽ / колесо</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Балансировка колёс">
+            <span class="service-row__title">Балансировка колёс</span><span class="service-row__price">600 ₽ / колесо</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Сезонное хранение шин">
+            <span class="service-row__title">Сезонное хранение шин</span><span class="service-row__price">4 500 ₽ / сезон</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Ремонт бокового пореза">
+            <span class="service-row__title">Ремонт бокового пореза</span><span class="service-row__price service-row__price--muted">по запросу</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="service-block" id="detailing">
+      <div class="service-block__grid">
+        <div class="service-block__head">
+          <div class="service-group__icon">Д</div>
+          <h2>Детейлинг</h2>
+          <p>
+            Защита кузова и салона: керамика, полировка, химчистка. Особенно
+            имеет смысл сразу после выдачи — пока покрытие ложится на новый лак.
+          </p>
+        </div>
+
+        <div class="service-block__list">
+          <a class="service-row" href="#lead-form" data-service="Защитное керамическое покрытие">
+            <span class="service-row__title">Защитное керамическое покрытие</span><span class="service-row__price">от 35 000 ₽</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Полировка кузова">
+            <span class="service-row__title">Полировка кузова</span><span class="service-row__price">от 12 000 ₽</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Химчистка салона">
+            <span class="service-row__title">Химчистка салона</span><span class="service-row__price">от 9 000 ₽</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Комплексная мойка">
+            <span class="service-row__title">Комплексная мойка</span><span class="service-row__price">от 2 500 ₽</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="service-block" id="extra">
+      <div class="service-block__grid">
+        <div class="service-block__head">
+          <div class="service-group__icon">+</div>
+          <h2>Дополнительные сервисы</h2>
+          <p>
+            То, что нужно владельцу импортного автомобиля помимо ремонта:
+            меню на русском, оформление, обмен старого автомобиля на новый.
+          </p>
+        </div>
+
+        <div class="service-block__list">
+          <a class="service-row" href="#lead-form" data-service="Русификация мультимедиа">
+            <span class="service-row__title">Русификация мультимедиа</span><span class="service-row__price">от 8 000 ₽</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Помощь в оформлении и постановке на учёт">
+            <span class="service-row__title">Помощь в оформлении и постановке на учёт</span><span class="service-row__price service-row__price--muted">по запросу</span>
+          </a>
+          <a class="service-row" href="#lead-form" data-service="Трейд-ин">
+            <span class="service-row__title">Трейд-ин</span><span class="service-row__price service-row__price--muted">по запросу</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Оговорка о ценах. Тот же смысл, что «не публичная оферта» на главной:
+         прайс показывает порядок сумм, а не фиксирует обязательство. -->
+    <div class="price-disclaimer">
+      <span class="tag tag--accent">Не публичная оферта</span>
+      <p>
+        Цены ориентировочные и зависят от модели, объёма работ и стоимости
+        расходников. Точную сумму называем после осмотра или по VIN — до начала работ.
+      </p>
+    </div>
+  </div>
+
+  <!-- ПОЧЕМУ У НАС -->
+  <section class="section section--alt">
+    <div class="container split">
+      <div class="photo-panel">
+        <img src="img/service-panel.jpg" width="720" height="961" loading="lazy" alt="" aria-hidden="true">
+        <div class="photo-panel__mask"></div>
+        <div class="photo-panel__copy">
+          <div class="eyebrow">Мастерская</div>
+          <h3>Тот же сервис, что готовит наши автомобили к выдаче</h3>
+          <p>Обслуживаться в ЛАО КАРС можно независимо от того, где куплен автомобиль.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="eyebrow">Почему сюда</div>
+        <h2 class="h2">Сервис, который <em>не заканчивается на выдаче</em></h2>
+
+        <div class="eco">
+          <article class="eco__card">
+            <div class="eco__letter">1</div>
+            <h3>Согласуем до начала</h3>
+            <p>Состав работ и стоимость называем до того, как автомобиль встал на подъёмник.</p>
+          </article>
+          <article class="eco__card">
+            <div class="eco__letter">2</div>
+            <h3>Гибриды и электромобили</h3>
+            <p>Работаем с тем, за что берётся не каждый сервис, — включая гибридные установки.</p>
+          </article>
+          <article class="eco__card">
+            <div class="eco__letter">3</div>
+            <h3>Запчасти по VIN</h3>
+            <p>Подбираем оригинал или проверенный аналог сами — не нужно искать деталь отдельно.</p>
+          </article>
+          <article class="eco__card">
+            <div class="eco__letter">4</div>
+            <h3>Одна точка контакта</h3>
+            <p>Продажа, сервис, детейлинг и запчасти — один менеджер по всему автомобилю.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЗАПИСЬ НА СЕРВИС.
+
+       Центрированная карточка без фонового фото — вариант `x-lead-section`
+       без заголовка секции, тот самый, что стоит на страницах разделов
+       в реализованной вёрстке. Фотоподложка осталась форме на главной:
+       если повторить её и здесь, две страницы перестанут отличаться. -->
+  <section class="lead lead--plain" id="lead-form">
+    <div class="container">
+      <div class="lead__card">
+        <h2 class="lead-form__title">Записаться на сервис</h2>
+
+        <form class="lead-form" id="leadForm" novalidate>
+          <div class="lead-form__success" id="leadSuccess" data-visible="false">
+            Заявка принята. Мастер-приёмщик свяжется с вами в рабочее время.
+          </div>
+
+          <div class="honeypot" aria-hidden="true">
+            <label>Сайт<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+          </div>
+
+          <label>
+            <span>Имя</span>
+            <input type="text" name="name" required>
+          </label>
+
+          <label>
+            <span>Телефон</span>
+            <input type="tel" name="phone" placeholder="+7 (___) ___-__-__" required>
+          </label>
+
+          <!-- Выбранная в прайсе строка подставляется сюда скриптом:
+               заявка «на полировку кузова» полезнее заявки «на сервис». -->
+          <label>
+            <span>Интересует</span>
+            <select name="interest">
+              <option>Нужна консультация</option>
+              <option>Плановое ТО</option>
+              <option>Замена масла и фильтров</option>
+              <option>Диагностика ходовой части</option>
+              <option>Компьютерная диагностика</option>
+              <option>Ремонт гибридных установок</option>
+              <option>Шиномонтаж легкового автомобиля</option>
+              <option>Балансировка колёс</option>
+              <option>Сезонное хранение шин</option>
+              <option>Ремонт бокового пореза</option>
+              <option>Защитное керамическое покрытие</option>
+              <option>Полировка кузова</option>
+              <option>Химчистка салона</option>
+              <option>Комплексная мойка</option>
+              <option>Русификация мультимедиа</option>
+              <option>Помощь в оформлении и постановке на учёт</option>
+              <option>Трейд-ин</option>
+            </select>
+          </label>
+
+          <div class="lead-form__row">
+            <label>
+              <span>Марка и модель</span>
+              <input type="text" name="car_model" placeholder="Например, Zeekr 8X">
+            </label>
+
+            <label>
+              <span>Удобное время звонка</span>
+              <select name="preferred_time">
+                <option value="">Не важно</option>
+                <option value="morning">Утро</option>
+                <option value="day">День</option>
+                <option value="evening">Вечер</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            <span>Комментарий</span>
+            <textarea name="message" rows="4"></textarea>
+          </label>
+
+          <button class="btn btn--accent btn--wide" type="submit">Записаться</button>
+
+          <p class="lead-form__note">
+            Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.
+            В макете форма ничего не отправляет.
+          </p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer" id="contacts">
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__about">
+        <img class="logo" src="img/logo-white.png" width="440" height="128" alt="ЛАО КАРС">
+        <p>
+          Автомобили из Китая в наличии и под заказ. Продажа, сервис, детейлинг
+          и запчасти в одной автомобильной экосистеме. Москва, Осенняя улица, 17к1.
+        </p>
+      </div>
+
+      <div>
+        <div class="footer__title">Навигация</div>
+        <div class="footer__list">
+          <a href="index.html#cars">Продажа автомобилей</a>
+          <a href="index.html#parts">Запчасти</a>
+          <a href="services.html">Сервис и детейлинг</a>
+          <a href="index.html#about">О компании</a>
+          <a href="#contacts">Контакты</a>
+        </div>
+      </div>
+
+      <div>
+        <div class="footer__title">Контакты</div>
+        <div class="footer__list">
+          <a href="tel:+79153229618">+7 (915) 322-96-18</a>
+          <a href="mailto:filin@laocars.ru">filin@laocars.ru</a>
+          <div>Ежедневно 10:00 – 20:00</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="footer__title">Соцсети</div>
+        <div class="footer__list">
+          <a href="#contacts">Telegram</a>
+          <a href="#contacts">WhatsApp</a>
+          <a href="#contacts">Дзен</a>
+        </div>
+      </div>
+
+      <div class="footer__guarantee">
+        <strong>Гарантия на работы</strong>
+        <p>Согласуем состав работ до начала, фиксируем результат и отвечаем за то, что сделали.</p>
+        <a href="#lead-form">Записаться →</a>
+      </div>
+    </div>
+
+    <div class="footer__bottom">
+      <div>© 2026 ЛАО КАРС. Все права защищены.</div>
+      <div>Цены и сроки на макете не являются публичной офертой.</div>
+    </div>
+  </div>
+</footer>
+
+<div class="badge">Макет v2 · формы не отправляются</div>
+
+<script src="js/mockup.js"></script>
+
+</body>
+</html>

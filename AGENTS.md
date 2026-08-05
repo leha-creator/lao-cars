@@ -111,6 +111,9 @@ laocars/
 │   │                         # + SimilarCars — выборка и опции каталога;
 │   │                         # CarStructuredData — JSON-LD карточки;
 │   │                         # HomeContent — данные главной;
+│   │                         # ServicesPageContent — данные автосервиса
+│   │                         # (у страницы запчастей парного сервиса нет —
+│   │                         # намеренно, см. PHPDoc контроллеров);
 │   │                         # LeadData + LeadService + TelegramNotifier —
 │   │                         # приём заявки и уведомление менеджеру
 │   ├── Support/              # ThumbnailPath, MediaSettingKeys, SiteMenu,
@@ -182,10 +185,11 @@ laocars/
 | app/Support/SiteMenu.php | Состав навигации: один список на шапку и подвал; пункт без роута выпадает |
 | app/Services/CatalogCriteria.php | Единственное место, где имена GET-параметров каталога превращаются в поля |
 | app/Services/HomeContent.php | Данные главной: подборка авто, промо, лента, преимущества, SEO; нормализация jsonb-настроек |
-| app/Http/Requests/StoreLeadRequest.php | Контракт формы заявки: правила не мягче колонок, honeypot, `page_url` от сервера |
+| app/Services/ServicesPageContent.php | Данные автосервиса: прайс одним запросом с группировкой по категориям, описания, оговорка, преимущества |
+| app/Http/Requests/StoreLeadRequest.php | Контракт формы заявки: правила не мягче колонок, honeypot, `page_url` от сервера, сторож пары «тип + id» источника |
 | app/Services/LeadService.php | Приём заявки: запись в транзакции и постановка уведомления |
 | app/Services/TelegramNotifier.php | Отправка в Telegram: `e()` на каждом значении, токен не идёт в лог |
-| app/View/Components/LeadForm.php | `x-lead-form` — один компонент на все формы заявок сайта; только `<form>`, раскладки в `LeadSection` |
+| app/View/Components/LeadForm.php | `x-lead-form` — один компонент на все формы заявок сайта; только `<form>`, раскладки в `LeadSection`; `:source` и `:services` взаимоисключающи |
 | app/Services/CarStructuredData.php | JSON-LD карточки автомобиля: `Car` + `BreadcrumbList`; печатается с `JSON_HEX_TAG` |
 | app/Support/AttributeFilterIndex.php | Длина префикса `left(value, N)`: её берут и миграция, и фильтр, и тест-сторож |
 | app/Models/Lead.php | Заявка со всех форм: полиморфный источник, статусы, комментарии |
@@ -215,6 +219,7 @@ laocars/
 | Дизайн-система и каркас | docs/design-system.md | Токены, шрифты, компоненты каркаса, как добавить страницу, диагностика вёрстки |
 | Главная страница | docs/homepage.md | Блоки главной, настройки, подборка авто и лимит, замена фоновых фото |
 | Каталог: фильтры и URL | docs/catalog.md | GET-параметры каталога, индексация, панель фильтров без JS, галерея, микроразметка карточки |
+| Автосервис и запчасти | docs/services-and-parts.md | Блоки прайса и их источники, поля админки, выбор услуги в форме, поведение без JS |
 | Заявки и уведомления | docs/leads.md | Путь заявки до Telegram, настройка бота, воркер, диагностика, работа менеджера |
 | Админка каталога | docs/admin-catalog.md | Марки, карточки, фото, характеристики, медиабиблиотека |
 | Роли и доступ | docs/admin-roles.md | Права ролей, заведение сотрудников, первый запуск на проде |

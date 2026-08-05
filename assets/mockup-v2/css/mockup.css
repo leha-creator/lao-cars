@@ -1,0 +1,840 @@
+/* ==========================================================================
+   ШРИФТЫ
+
+   Самохостятся, как и на сайте (см. блок `fonts` в `vite.config.js`): файлы
+   лежат рядом, в `fonts/`. Кириллическое подмножество обязательно — без него
+   браузер молча уезжает в системный шрифт при живом @font-face.
+   ========================================================================== */
+@font-face{font-family:"Unbounded";font-style:normal;font-weight:500 700;font-display:swap;
+  src:url("fonts/unbounded-variable-normal-C627f1f8.woff2") format("woff2");
+  unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"Unbounded";font-style:normal;font-weight:500 700;font-display:swap;
+  src:url("fonts/unbounded-variable-normal-D5afBTBx.woff2") format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Manrope";font-style:normal;font-weight:400 700;font-display:swap;
+  src:url("fonts/manrope-variable-normal-Dvxsihut.woff2") format("woff2");
+  unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"Manrope";font-style:normal;font-weight:400 700;font-display:swap;
+  src:url("fonts/manrope-variable-normal-DHIcAJRg.woff2") format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
+/* ==========================================================================
+   ТОКЕНЫ ДИЗАЙН-СИСТЕМЫ
+
+   Значения перенесены из `resources/css/app.css` (@theme) дословно.
+   Имена доменные, а не «серый-900»: токен, названный по своему месту
+   в системе, переживает смену оттенка.
+   ========================================================================== */
+:root{
+  color-scheme:dark;
+
+  /* Фон. Правило макета: не более двух фоновых оттенков на экране —
+     page плюс один из остальных. */
+  --page:oklch(0.13 0.004 60);
+  --page-alt:oklch(0.16 0.005 60);
+  --surface:oklch(0.185 0.006 60);
+  --deep:oklch(0.1 0.004 60);
+
+  /* Акцент — один на весь сайт: CTA, цены, статус «в наличии», активные
+     состояния и одно-два слова в заголовке. Большие площади не заливаются. */
+  --accent:#f9c227;
+  --accent-hover:#fbd04f;
+
+  /* Текст. */
+  --ink:oklch(0.97 0.003 60);
+  --ink-muted:oklch(0.68 0.01 60);
+  --ink-faint:oklch(0.5 0.01 60);
+
+  /* Подложка под фото до загрузки — чтобы карточка не мигала чёрным. */
+  --photo:oklch(0.87 0.01 60);
+
+  --radius-card:1.125rem;  /* 18px — карточки и панели */
+  --radius-field:0.625rem; /* 10px — поля форм */
+
+  --page-max:90rem;        /* 1440px — ширина, в которой нарисован макет */
+
+  /* Собственная высота шапки: боковые отступы плюс самый высокий элемент.
+     На эти же числа подтягивается хиро отрицательным отступом. */
+  --header-h:66px;
+}
+@media (min-width:1024px){ :root{ --header-h:76px } }
+
+*,*::before,*::after{box-sizing:border-box}
+
+html{scroll-behavior:smooth}
+
+/* Отступ для якорных переходов. На страницах с липкой шапкой цель якоря
+   иначе уезжает ровно под неё: заголовок блока не виден, и человек думает,
+   что ссылка ведёт не туда. Отступ задан всем целям сразу, а не по одной, —
+   следующий якорь появится без правки этого правила. */
+[id]{scroll-margin-top:calc(var(--header-h) + 16px)}
+
+body{
+  margin:0;
+  min-height:100vh;
+  background-color:var(--page);
+  color:var(--ink);
+  font-family:"Manrope",ui-sans-serif,system-ui,sans-serif;
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,h4{margin:0;font-family:"Unbounded",sans-serif;font-weight:600;letter-spacing:-.01em}
+p{margin:0}
+
+::selection{background-color:var(--accent);color:var(--page)}
+
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* Motion-принципы UI Kit §08. Правило заводится сразу: непрерывно ползущая
+   через экран бегущая строка у человека с вестибулярными нарушениями
+   вызывает тошноту, а выключить её нечем. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+
+/* ==========================================================================
+   ПРИМИТИВЫ
+   ========================================================================== */
+.container{width:100%;max-width:var(--page-max);margin-inline:auto;padding-inline:20px}
+@media (min-width:1024px){ .container{padding-inline:32px} }
+
+.section{padding-block:80px}
+@media (min-width:1024px){ .section{padding-block:120px} }
+.section--alt{background:var(--page-alt)}
+.section--deep{background:var(--deep)}
+
+/* Надзаголовок: 13px, разрядка .2em, капс, акцент. */
+.eyebrow{
+  margin-bottom:16px;
+  font-size:13px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--accent);
+}
+
+h2.h2{font-size:30px;line-height:1.15;text-wrap:pretty}
+@media (min-width:1024px){ h2.h2{font-size:34px} }
+.h2 em{font-style:normal;color:var(--accent)}
+
+.lede{color:var(--ink-muted);line-height:1.7}
+
+/* Шапка секции: заголовок слева, поясняющий абзац справа (макет-прототип). */
+.section-head{
+  display:flex;flex-direction:column;gap:20px;
+  margin-bottom:48px;
+}
+@media (min-width:960px){
+  .section-head{flex-direction:row;align-items:flex-end;justify-content:space-between;gap:48px;margin-bottom:56px}
+  .section-head>p{max-width:440px;text-align:right}
+}
+
+/* Кнопки — pill, как в реализованной вёрстке. */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid transparent;border-radius:999px;
+  padding:18px 36px;
+  font-size:15px;font-weight:600;letter-spacing:.02em;
+  cursor:pointer;
+  transition:transform .2s,background-color .2s,border-color .2s,color .2s;
+}
+.btn--accent{background:var(--accent);color:var(--page)}
+.btn--accent:hover{background:var(--accent-hover);transform:translateY(-2px)}
+.btn--ghost{border-color:rgb(255 255 255/.35)}
+.btn--ghost:hover{border-color:rgb(255 255 255/.7);transform:translateY(-2px)}
+.btn--wide{width:100%}
+.btn--sm{padding:12px 24px;font-size:14px}
+
+/* Ссылка-стрелка «Весь каталог →». */
+.link-arrow{
+  display:inline-block;
+  border-bottom:1px solid rgb(255 255 255/.4);
+  padding-bottom:4px;font-size:15px;
+  transition:color .2s,border-color .2s;
+}
+.link-arrow:hover{color:var(--accent);border-color:var(--accent)}
+
+/* Хвост секции с кнопкой «смотреть всё». Один класс на каталог и на услуги:
+   две одинаковые по смыслу кнопки, набранные по-разному, читаются как две
+   разные по важности. */
+.section-cta{display:flex;justify-content:center;margin-top:44px}
+
+/* Карточка — общий примитив: радиус 18px, обводка white/8, фон surface. */
+.card{
+  border:1px solid rgb(255 255 255/.08);
+  border-radius:var(--radius-card);
+  background:var(--surface);
+}
+
+/* Статус-тег: pill с обводкой в цвет статуса, без заливки (UI Kit §04).
+   Акцентный только для «в наличии» — статус, ради которого человек
+   и открывает каталог. */
+.tag{
+  display:inline-block;flex-shrink:0;
+  border:1px solid rgb(255 255 255/.2);border-radius:999px;
+  padding:4px 10px;
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-muted);
+}
+.tag--accent{border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--accent)}
+
+/* ==========================================================================
+   БЕГУЩАЯ СТРОКА НАД ШАПКОЙ
+
+   Лента едет translateX(-50%), поэтому копий обязано быть ровно две и они
+   обязаны совпадать. Зазор между копиями задаёт правый отступ группы,
+   а НЕ gap на обёртке: при обоих сразу -50% не равно ширине одной группы
+   и лента дёргается на пол-зазора каждый цикл.
+   ========================================================================== */
+.ticker{overflow:hidden;border-bottom:1px solid rgb(255 255 255/.06);background:var(--deep);padding-block:8px}
+@media (min-width:1024px){ .ticker{padding-block:9px} }
+.ticker__track{display:flex;width:max-content;animation:marquee 32s linear infinite}
+.ticker__group{display:flex;gap:40px;padding-right:40px}
+@media (min-width:1024px){ .ticker__group{gap:56px;padding-right:56px} }
+.ticker__item{font-size:11.5px;letter-spacing:.04em;white-space:nowrap;color:var(--ink-muted)}
+@media (min-width:1024px){ .ticker__item{font-size:12.5px} }
+.ticker__item--accent{color:var(--accent)}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ==========================================================================
+   ШАПКА
+
+   Поверх хиро: без липкости, фон — градиент, чтобы фотография под шапкой
+   оставалась видимой.
+   ========================================================================== */
+.header{
+  position:relative;z-index:50;
+  background:linear-gradient(to bottom,color-mix(in srgb,var(--page) 92%,transparent),transparent);
+}
+/* Внутренние страницы: липкая, полупрозрачная с размытием. Разные варианты
+   шапки — не украшение: поверх хиро она обязана быть прозрачной и не липкой,
+   иначе фотография первого экрана начинается под полосой фона, а на странице
+   без хиро прозрачная шапка висела бы над текстом. */
+.header--solid{
+  position:sticky;top:0;
+  border-bottom:1px solid rgb(255 255 255/.1);
+  background:color-mix(in srgb,var(--page) 90%,transparent);
+  backdrop-filter:blur(14px);
+}
+
+.header__inner{
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  padding-block:12px;
+}
+@media (min-width:1024px){ .header__inner{padding-block:16px} }
+.logo{height:26px;width:auto;flex-shrink:0}
+@media (min-width:1024px){ .logo{height:30px} }
+
+.nav{display:none;align-items:center;gap:24px;font-size:14px;white-space:nowrap;min-width:0}
+@media (min-width:1024px){ .nav{display:flex} }
+@media (min-width:1280px){ .nav{gap:28px} }
+.nav a{opacity:.85;transition:opacity .2s,color .2s}
+.nav a:hover{opacity:1}
+.nav a[aria-current]{color:var(--accent);opacity:1}
+
+.header__actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+@media (min-width:1024px){ .header__actions{gap:16px} }
+
+/* На десктопе телефон читается текстом, на мобильном превращается
+   в кнопку-иконку: место в шапке 390px занимают логотип и бургер. */
+.header__phone{display:none;font-size:14px;opacity:.9;transition:opacity .2s}
+.header__phone:hover{opacity:1}
+@media (min-width:1024px){ .header__phone{display:inline} }
+
+.icon-btn{
+  display:flex;align-items:center;justify-content:center;
+  width:42px;height:42px;
+  border:1px solid rgb(255 255 255/.1);border-radius:var(--radius-field);
+  background:rgb(255 255 255/.06);font-size:18px;
+}
+@media (min-width:1024px){ .icon-btn--phone{display:none} }
+
+.header__cta{display:none}
+@media (min-width:1024px){ .header__cta{display:inline-flex} }
+
+.burger{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  width:42px;height:42px;border:0;border-radius:var(--radius-field);background:var(--accent);cursor:pointer;
+}
+@media (min-width:1024px){ .burger{display:none} }
+.burger span{display:block;width:17px;height:2px;border-radius:2px;background:var(--page)}
+
+/* Мобильное меню. */
+.mobile-menu{
+  position:fixed;inset:0;z-index:100;
+  display:none;flex-direction:column;
+  padding:20px;
+  background:color-mix(in srgb,var(--page) 98%,transparent);
+  backdrop-filter:blur(10px);
+}
+.mobile-menu[data-open="true"]{display:flex}
+.mobile-menu__top{display:flex;align-items:center;justify-content:space-between;margin-bottom:44px}
+.mobile-menu nav{display:flex;flex-direction:column}
+.mobile-menu nav a{
+  border-bottom:1px solid rgb(255 255 255/.1);
+  padding-block:14px;
+  font-family:"Unbounded",sans-serif;font-size:24px;font-weight:500;
+}
+.mobile-menu nav a:last-child{border-bottom:0}
+.mobile-menu__foot{margin-top:auto;display:flex;flex-direction:column;gap:14px}
+.mobile-menu__phone{font-family:"Unbounded",sans-serif;font-size:20px;color:var(--accent)}
+
+/* ==========================================================================
+   ХИРО
+
+   Секция подтягивается под шапку отрицательным отступом: шапка остаётся
+   в потоке, и без этого фотография начиналась бы под ней, а логотип читался
+   бы на фоне страницы, а не на фото.
+
+   Высота в svh, а не vh: на мобильных vh не учитывает сворачивание адресной
+   строки, и первый экран прыгает при скролле.
+   ========================================================================== */
+.hero{
+  position:relative;
+  display:flex;flex-direction:column;
+  margin-top:calc(var(--header-h) * -1);
+  min-height:88svh;
+  overflow:hidden;
+}
+/* Фиксированная высота — только с десктопной ширины. На мобильном её быть
+   не должно: блок фактов из прототипа делает содержимое выше экрана, и при
+   height + overflow:hidden два последних факта просто обрезаются — молча,
+   без полосы прокрутки. Секция обязана расти под содержимое; фотография
+   всё равно накрывает её целиком (absolute inset:0). */
+@media (min-width:1024px){ .hero{height:92svh;min-height:680px} }
+
+.hero__media{position:absolute;inset:0}
+.hero__media img{width:100%;height:100%;object-fit:cover}
+
+/* Маска: без неё белый текст на светлом участке фотографии нечитаем.
+   Значения стопов — из реализованной вёрстки. */
+.hero__mask{
+  position:absolute;inset:0;
+  background:linear-gradient(to bottom,
+    color-mix(in srgb,var(--page) 30%,transparent) 0%,
+    color-mix(in srgb,var(--page) 72%,transparent) 45%,
+    color-mix(in srgb,var(--page) 97%,transparent) 100%);
+}
+/* Стопы из реализованной вёрстки — десктопные. На мобильном текста над фото
+   вдвое больше и он занимает середину кадра, где маска слабее всего:
+   там же самый светлый участок фотографии. Поэтому мобильная маска плотнее,
+   а не наоборот. */
+@media (min-width:1024px){
+  .hero__mask{
+    background:linear-gradient(to bottom,
+      color-mix(in srgb,var(--page) 10%,transparent) 0%,
+      color-mix(in srgb,var(--page) 55%,transparent) 55%,
+      color-mix(in srgb,var(--page) 96%,transparent) 100%);
+  }
+}
+
+.hero__body{
+  position:relative;z-index:2;
+  display:flex;flex:1;align-items:flex-end;
+  padding-top:var(--header-h);padding-bottom:56px;
+}
+@media (min-width:1024px){ .hero__body{padding-bottom:72px} }
+
+.hero h1{
+  max-width:56rem;margin-bottom:24px;
+  font-size:34px;line-height:1.14;text-wrap:pretty;
+}
+@media (min-width:640px){ .hero h1{font-size:44px} }
+@media (min-width:1024px){ .hero h1{font-size:56px;margin-bottom:26px} }
+.hero h1 em{font-style:normal;color:var(--accent)}
+
+.hero__lede{max-width:38rem;margin-bottom:36px;font-size:18px;line-height:1.65;color:var(--ink-muted)}
+
+.hero__actions{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:44px}
+@media (min-width:1024px){ .hero__actions{gap:20px} }
+
+/* Четыре факта под кнопками — блок из прототипа, оформленный в системе:
+   тонкая линия сверху вместо карточек, чтобы не спорить с фотографией. */
+.hero__facts{display:grid;gap:20px;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:900px){ .hero__facts{grid-template-columns:repeat(4,minmax(0,1fr));gap:28px} }
+.fact{border-top:1px solid rgb(255 255 255/.18);padding-top:14px}
+.fact strong{display:block;margin-bottom:4px;font-size:14px;font-weight:600;color:var(--accent)}
+.fact span{font-size:13px;line-height:1.5;color:var(--ink-muted)}
+
+/* ==========================================================================
+   ПОЛОСА ДОВЕРИЯ
+   ========================================================================== */
+.trust{display:grid;gap:16px;grid-template-columns:repeat(1,minmax(0,1fr));padding-block:56px}
+@media (min-width:640px){ .trust{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (min-width:1024px){ .trust{grid-template-columns:repeat(4,minmax(0,1fr));padding-block:72px} }
+.trust__card{
+  border:1px solid rgb(255 255 255/.07);border-radius:var(--radius-card);
+  background:var(--surface);padding:24px 26px;
+  transition:transform .25s,border-color .25s;
+}
+.trust__card:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+.trust__card strong{display:block;margin-bottom:8px;font-size:15px;font-weight:600}
+.trust__card span{font-size:14px;line-height:1.6;color:var(--ink-muted)}
+
+/* ==========================================================================
+   КАТАЛОГ
+   ========================================================================== */
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:40px}
+/* Одна пилюля на две роли: кнопка фильтра каталога и якорная ссылка
+   на категорию услуг. Набранные по-разному, они читались бы как элементы
+   разного веса, хотя делают одно и то же — сужают то, что видно ниже. */
+.filter,
+.anchor-nav a{
+  display:inline-block;
+  border:1px solid rgb(255 255 255/.15);border-radius:999px;
+  background:transparent;padding:10px 20px;
+  font-size:14px;cursor:pointer;
+  transition:background-color .2s,border-color .2s,color .2s;
+}
+.filter:hover,
+.anchor-nav a:hover{border-color:color-mix(in srgb,var(--accent) 50%,transparent);color:var(--accent)}
+.filter[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--page);font-weight:600}
+
+.cars{display:grid;gap:32px;grid-template-columns:repeat(1,minmax(0,1fr))}
+@media (min-width:640px){ .cars{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (min-width:1024px){ .cars{grid-template-columns:repeat(3,minmax(0,1fr))} }
+
+/* Карточка автомобиля — компонент `x-car-card` реализованной вёрстки. */
+.car{
+  display:block;overflow:hidden;
+  border:1px solid rgb(255 255 255/.08);border-radius:var(--radius-card);
+  background:var(--surface);
+  transition:transform .25s,border-color .25s,box-shadow .25s;
+}
+.car:hover{
+  transform:translateY(-6px);
+  border-color:color-mix(in srgb,var(--accent) 35%,transparent);
+  box-shadow:0 20px 40px rgb(0 0 0/.35);
+}
+/* Соотношение сторон держит контейнер, поэтому карточки не прыгают,
+   пока грузятся фотографии. */
+.car__photo{aspect-ratio:16/9;background:var(--photo)}
+.car__photo img{width:100%;height:100%;object-fit:cover}
+.car__body{padding:24px}
+@media (min-width:1024px){ .car__body{padding:28px} }
+.car__top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.car__title{font-size:17px;line-height:1.3}
+@media (min-width:1024px){ .car__title{font-size:19px} }
+.car__specs{margin-bottom:16px;font-size:14px;color:var(--ink-muted)}
+.car__price{font-family:"Unbounded",sans-serif;font-size:20px;font-weight:600;color:var(--accent)}
+@media (min-width:1024px){ .car__price{font-size:22px} }
+
+/* Карточка-обращение вместо шестого автомобиля (блок из прототипа). */
+.car--cta{
+  display:flex;flex-direction:column;justify-content:center;gap:20px;
+  border-style:dashed;border-color:rgb(255 255 255/.16);
+  background:transparent;padding:32px;
+}
+/* Кнопка внутри — по содержимому, а не во всю ширину карточки: в колоночном
+   flex-контейнере растягивание по умолчанию. Заголовок и абзац при этом
+   обязаны остаться на полную ширину, поэтому align-items здесь не подходит. */
+.car--cta .btn{align-self:flex-start}
+.car--cta:hover{transform:none;box-shadow:none}
+.car--cta h3{font-size:19px}
+.car--cta p{font-size:14px;line-height:1.65;color:var(--ink-muted)}
+
+/* ==========================================================================
+   БЫСТРЫЙ ПОДБОР
+   ========================================================================== */
+.selector{display:grid;gap:24px;grid-template-columns:repeat(1,minmax(0,1fr))}
+@media (min-width:1024px){ .selector{grid-template-columns:1.35fr 1fr;gap:32px} }
+.selector__form{padding:28px}
+@media (min-width:1024px){ .selector__form{padding:36px} }
+
+.field{margin-top:28px}
+.field:first-of-type{margin-top:0}
+.field__label{
+  display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  margin-bottom:14px;font-size:14px;font-weight:500;color:var(--ink-muted);
+}
+.field__value{font-family:"Unbounded",sans-serif;font-size:18px;font-weight:600;color:var(--accent)}
+
+/* Ползунок бюджета: нативный range на тёмной теме красится браузером сам,
+   поэтому дорожка и бегунок описаны явно. */
+input[type="range"]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:4px;border-radius:999px;background:rgb(255 255 255/.15);
+}
+input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:22px;height:22px;border:0;border-radius:50%;background:var(--accent);cursor:pointer;
+  box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 18%,transparent);
+}
+input[type="range"]::-moz-range-thumb{
+  width:22px;height:22px;border:0;border-radius:50%;background:var(--accent);cursor:pointer;
+  box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 18%,transparent);
+}
+
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip input{position:absolute;opacity:0;width:0;height:0}
+.chip span{
+  display:inline-block;
+  border:1px solid rgb(255 255 255/.15);border-radius:999px;
+  padding:10px 20px;font-size:14px;cursor:pointer;
+  transition:background-color .2s,border-color .2s,color .2s;
+}
+.chip span:hover{border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
+.chip input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--page);font-weight:600}
+.chip input:focus-visible+span{outline:2px solid var(--accent);outline-offset:3px}
+
+.selector__result{
+  display:flex;flex-direction:column;justify-content:space-between;gap:28px;
+  padding:28px;
+}
+@media (min-width:1024px){ .selector__result{padding:36px} }
+.selector__count{font-family:"Unbounded",sans-serif;font-size:64px;line-height:1;font-weight:700;color:var(--accent)}
+@media (min-width:1024px){ .selector__count{font-size:76px} }
+.selector__result h4{margin:12px 0 14px;font-size:18px}
+.selector__result p{font-size:14px;line-height:1.65;color:var(--ink-muted)}
+
+/* ==========================================================================
+   ЭТАПЫ ПОКУПКИ
+   ========================================================================== */
+.steps{display:grid;gap:20px;grid-template-columns:repeat(1,minmax(0,1fr))}
+@media (min-width:640px){ .steps{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (min-width:1024px){ .steps{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px} }
+.step{
+  border:1px solid rgb(255 255 255/.08);border-radius:var(--radius-card);
+  background:var(--page);padding:28px;
+  transition:transform .25s,border-color .25s;
+}
+.step:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+.step__num{
+  display:flex;align-items:center;justify-content:center;
+  width:40px;height:40px;margin-bottom:22px;
+  border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,transparent);
+  font-family:"Unbounded",sans-serif;font-size:15px;font-weight:700;color:var(--accent);
+}
+.step h3{margin-bottom:12px;font-size:17px}
+.step p{font-size:14px;line-height:1.65;color:var(--ink-muted)}
+
+/* ==========================================================================
+   ЭКОСИСТЕМА ПОСЛЕ ПОКУПКИ
+   ========================================================================== */
+.split{display:grid;gap:32px;grid-template-columns:repeat(1,minmax(0,1fr));align-items:start}
+@media (min-width:1024px){ .split{grid-template-columns:.85fr 1.15fr;gap:56px} }
+
+.photo-panel{
+  position:relative;overflow:hidden;
+  min-height:420px;border-radius:var(--radius-card);
+  display:flex;align-items:flex-end;
+}
+@media (min-width:1024px){ .photo-panel{min-height:560px} }
+.photo-panel img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* Подпись лежит на самом светлом участке кадра (диск и суппорт), поэтому
+   нижний стоп почти непрозрачный: приглушённый текст поверх блика нечитаем. */
+.photo-panel__mask{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,
+    color-mix(in srgb,var(--page) 96%,transparent) 0%,
+    color-mix(in srgb,var(--page) 62%,transparent) 50%,
+    color-mix(in srgb,var(--page) 10%,transparent) 100%);
+}
+.photo-panel__copy{position:relative;padding:28px}
+.photo-panel__copy h3{margin-bottom:12px;font-size:22px;line-height:1.25}
+.photo-panel__copy p{font-size:14px;line-height:1.65;color:var(--ink-muted)}
+
+.eco{display:grid;gap:20px;grid-template-columns:repeat(1,minmax(0,1fr));margin-top:36px}
+@media (min-width:640px){ .eco{grid-template-columns:repeat(2,minmax(0,1fr))} }
+/* display:block обязателен: плашки стали ссылками, а инлайновый <a>
+   игнорирует вертикальные отступы и ломает сетку. */
+.eco__card{
+  display:block;
+  border:1px solid rgb(255 255 255/.07);border-radius:var(--radius-card);
+  background:var(--surface);padding:26px;
+  transition:transform .25s,border-color .25s;
+}
+.eco__card:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+.eco__letter{
+  display:flex;align-items:center;justify-content:center;
+  width:48px;height:48px;margin-bottom:20px;
+  border-radius:12px;background:color-mix(in srgb,var(--accent) 14%,transparent);
+  font-family:"Unbounded",sans-serif;font-size:18px;font-weight:700;color:var(--accent);
+}
+.eco__card h3{margin-bottom:10px;font-size:17px}
+.eco__card p{font-size:14px;line-height:1.65;color:var(--ink-muted)}
+
+/* ==========================================================================
+   УСЛУГИ
+
+   Один набор классов на два места: блок «Основные услуги» на главной
+   и полный прайс на странице услуг. Позиции и цены — из `ServiceSeeder`,
+   категории — из `App\Enums\ServiceCategory` (ТО и ремонт, шиномонтаж,
+   детейлинг, доп. сервисы; запчасти живут на своей посадочной).
+   ========================================================================== */
+.services{display:grid;gap:24px;grid-template-columns:repeat(1,minmax(0,1fr))}
+@media (min-width:900px){ .services{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+.service-group{padding:28px}
+@media (min-width:1024px){ .service-group{padding:32px} }
+.service-group__head{display:flex;align-items:center;gap:16px;margin-bottom:8px}
+.service-group__icon{
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  width:40px;height:40px;border-radius:12px;
+  background:color-mix(in srgb,var(--accent) 14%,transparent);
+  font-family:"Unbounded",sans-serif;font-size:15px;font-weight:700;color:var(--accent);
+}
+.service-group__head h3{font-size:17px}
+.service-group__note{margin-bottom:18px;font-size:13px;line-height:1.6;color:var(--ink-muted)}
+
+.service-list{display:flex;flex-direction:column}
+
+/* Строка прайса — ссылка: на рабочем сайте выбор конкретной позиции
+   проставляет источник заявки (`Lead` с полиморфным `source` на `Service`),
+   поэтому строка обязана быть кликабельной, а не просто текстом. */
+.service-row{
+  display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  border-top:1px solid rgb(255 255 255/.08);
+  padding-block:13px;
+  transition:color .2s;
+}
+.service-row:first-child{border-top:0}
+.service-row__title{font-size:15px;line-height:1.4;transition:color .2s}
+.service-row:hover .service-row__title{color:var(--accent)}
+.service-row__price{
+  flex-shrink:0;white-space:nowrap;
+  font-family:"Unbounded",sans-serif;font-size:14px;font-weight:600;color:var(--accent);
+}
+/* «По запросу» — не цена, и набирать её акцентом наравне с суммой значит
+   обещать то, чего в строке нет. */
+.service-row__price--muted{font-family:inherit;font-weight:500;color:var(--ink-muted)}
+
+/* ==========================================================================
+   СТРАНИЦА УСЛУГ
+   ========================================================================== */
+
+/* Шапка внутренней страницы — компонент `x-page-heading`. */
+.page-heading{border-bottom:1px solid rgb(255 255 255/.1);padding-block:48px 40px}
+@media (min-width:1024px){ .page-heading{padding-block:72px 48px} }
+.page-heading h1{font-size:30px;line-height:1.15;text-wrap:pretty}
+@media (min-width:1024px){ .page-heading h1{font-size:38px} }
+.page-heading h1 em{font-style:normal;color:var(--accent)}
+.page-heading__intro{max-width:42rem;margin-top:20px;line-height:1.7;color:var(--ink-muted)}
+
+.anchor-nav{display:flex;flex-wrap:wrap;gap:10px;margin-top:32px}
+
+/* Блок категории на странице услуг: слева заголовок с описанием,
+   справа прайс в две колонки. */
+.service-block{border-top:1px solid rgb(255 255 255/.1);padding-block:52px}
+.service-block:first-of-type{border-top:0}
+@media (min-width:1024px){ .service-block{padding-block:64px} }
+.service-block__grid{display:grid;gap:32px;grid-template-columns:repeat(1,minmax(0,1fr));align-items:start}
+@media (min-width:1024px){ .service-block__grid{grid-template-columns:.8fr 1.2fr;gap:56px} }
+.service-block__head h2{font-size:26px;line-height:1.2}
+@media (min-width:1024px){ .service-block__head h2{font-size:30px} }
+.service-block__head .service-group__icon{margin-bottom:20px}
+.service-block__head p{margin-top:14px;font-size:14px;line-height:1.7;color:var(--ink-muted)}
+
+/* Прайс в две колонки: позиции короткие, и в одну колонку страница
+   превращается в узкую ленту с огромным пустым правым полем. */
+.service-block__list{display:grid;gap:0 40px;grid-template-columns:repeat(1,minmax(0,1fr))}
+@media (min-width:768px){ .service-block__list{grid-template-columns:repeat(2,minmax(0,1fr))} }
+/* В сетке `:first-child` — только первая строка, а верхняя граница лишняя
+   у первой строки КАЖДОЙ колонки. Считать это разметкой нельзя: число
+   позиций в категории меняется в админке. */
+.service-block__list .service-row:first-child,
+.service-block__list .service-row:nth-child(2){border-top:0}
+@media (max-width:767px){
+  .service-block__list .service-row:nth-child(2){border-top:1px solid rgb(255 255 255/.08)}
+}
+
+/* Оговорка о ценах — тот же смысл, что «не публичная оферта» в блоке
+   прозрачности цены на главной. */
+.price-disclaimer{
+  display:flex;flex-wrap:wrap;align-items:center;gap:16px;
+  margin-bottom:24px;
+  border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);
+  border-radius:var(--radius-card);
+  background:color-mix(in srgb,var(--accent) 6%,transparent);
+  padding:22px 26px;
+}
+.price-disclaimer p{font-size:14px;line-height:1.65;color:var(--ink-muted);min-width:16rem;flex:1}
+
+/* ==========================================================================
+   ПРОЗРАЧНОСТЬ ЦЕНЫ
+   ========================================================================== */
+.price{display:grid;gap:24px;grid-template-columns:repeat(1,minmax(0,1fr))}
+@media (min-width:1024px){ .price{grid-template-columns:1.3fr 1fr;gap:32px} }
+.price__list{padding:12px 28px}
+@media (min-width:1024px){ .price__list{padding:16px 36px} }
+.price__row{
+  display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px;
+  border-bottom:1px solid rgb(255 255 255/.08);padding-block:20px;
+}
+.price__row:last-child{border-bottom:0}
+.price__row strong{font-size:15px;font-weight:600}
+.price__row span{font-size:14px;color:var(--ink-muted)}
+/* align-items:flex-start обязателен: в колоночном flex-контейнере тег
+   «не публичная оферта» иначе растягивается на всю ширину карточки,
+   несмотря на inline-block. */
+.price__note{display:flex;flex-direction:column;align-items:flex-start;gap:18px;padding:28px}
+@media (min-width:1024px){ .price__note{padding:36px} }
+.price__note h3{font-size:22px;line-height:1.3}
+.price__note h3 em{font-style:normal;color:var(--accent)}
+.price__note p{font-size:14px;line-height:1.65;color:var(--ink-muted)}
+
+/* ==========================================================================
+   ОТЗЫВЫ
+   ========================================================================== */
+.reviews{display:grid;gap:24px;grid-template-columns:repeat(1,minmax(0,1fr))}
+@media (min-width:768px){ .reviews{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.review{display:flex;flex-direction:column;gap:16px;padding:28px}
+.review__top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.review__top strong{font-size:15px;font-weight:600}
+.review p{font-size:15px;line-height:1.7}
+.review small{margin-top:auto;font-size:13px;color:var(--ink-faint)}
+
+/* ==========================================================================
+   FAQ
+   ========================================================================== */
+.faq{border-top:1px solid rgb(255 255 255/.1)}
+.faq details{border-bottom:1px solid rgb(255 255 255/.1)}
+.faq summary{
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  padding-block:22px;
+  font-size:16px;font-weight:600;cursor:pointer;list-style:none;
+  transition:color .2s;
+}
+@media (min-width:1024px){ .faq summary{font-size:17px} }
+.faq summary::-webkit-details-marker{display:none}
+.faq summary:hover{color:var(--accent)}
+.faq summary::after{
+  content:"+";flex-shrink:0;
+  font-family:"Unbounded",sans-serif;font-size:20px;line-height:1;color:var(--accent);
+  transition:transform .2s;
+}
+.faq details[open] summary::after{content:"–"}
+.faq details p{padding-bottom:24px;max-width:60rem;font-size:15px;line-height:1.7;color:var(--ink-muted)}
+
+/* ==========================================================================
+   СЕКЦИЯ ЗАЯВКИ
+
+   Раскладка компонента `x-lead-section` в двухколоночном режиме: фон-фото,
+   градиентная подложка слева направо, слева заголовок, справа карточка формы.
+   ========================================================================== */
+.lead{position:relative;overflow:hidden;background:var(--page-alt);padding-block:80px}
+@media (min-width:1024px){ .lead{padding-block:120px} }
+.lead__media{position:absolute;inset:0}
+.lead__media img{width:100%;height:100%;object-fit:cover}
+/* Подложка обязательна: без неё текст поверх фотографии нечитаем. */
+.lead__mask{
+  position:absolute;inset:0;
+  background:linear-gradient(to right,
+    color-mix(in srgb,var(--page-alt) 62%,transparent) 0%,
+    color-mix(in srgb,var(--page-alt) 42%,transparent) 45%,
+    color-mix(in srgb,var(--page-alt) 28%,transparent) 100%);
+}
+.lead__grid{position:relative;display:grid;gap:48px;grid-template-columns:repeat(1,minmax(0,1fr));align-items:start}
+@media (min-width:1024px){ .lead__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:80px} }
+/* Тень под текстом — из макета: фотография под ним светлая местами,
+   и одной градиентной подложки не хватает. */
+.lead__copy h2{max-width:30rem;margin-bottom:24px;text-shadow:0 2px 24px rgb(0 0 0/.85)}
+.lead__copy p{max-width:28rem;font-size:15px;line-height:1.7;text-shadow:0 1px 16px rgb(0 0 0/.8)}
+.lead__contacts{display:flex;flex-wrap:wrap;gap:28px;margin-top:36px}
+.lead__contact{font-size:14px}
+.lead__contact span{display:block;margin-bottom:6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-muted)}
+.lead__contact strong{font-family:"Unbounded",sans-serif;font-size:16px;font-weight:600;color:var(--accent)}
+
+.lead__card{
+  border:1px solid rgb(255 255 255/.08);border-radius:20px;
+  background:color-mix(in srgb,var(--page) 50%,transparent);
+  backdrop-filter:blur(6px);
+  padding:24px;
+}
+@media (min-width:1024px){ .lead__card{padding:36px} }
+
+/* Вариант без заголовка секции — страницы разделов. У компонента
+   `x-lead-section` двухколоночную раскладку включает наличие заголовка;
+   без него это центрированная карточка, и фонового фото у неё нет. */
+.lead--plain{background:none;padding-block:64px}
+@media (min-width:1024px){ .lead--plain{padding-block:96px} }
+.lead--plain .lead__card{
+  max-width:42rem;margin-inline:auto;
+  background:var(--page-alt);backdrop-filter:none;
+}
+.lead-form__title{margin-bottom:24px;font-size:22px}
+@media (min-width:1024px){ .lead-form__title{font-size:28px} }
+
+form.lead-form{display:flex;flex-direction:column;gap:16px}
+.lead-form label{display:flex;flex-direction:column;gap:6px}
+.lead-form label>span{font-size:14px;font-weight:500;color:var(--ink-muted)}
+.lead-form input,.lead-form select,.lead-form textarea{
+  border:1px solid rgb(255 255 255/.15);border-radius:var(--radius-field);
+  background:var(--page);
+  padding:16px 18px;font-size:15px;
+  transition:border-color .2s;
+}
+.lead-form input:focus,.lead-form select:focus,.lead-form textarea:focus{
+  border-color:color-mix(in srgb,var(--accent) 70%,transparent);outline:none;
+}
+.lead-form textarea{resize:vertical;min-height:112px}
+.lead-form__row{display:grid;gap:16px;grid-template-columns:repeat(1,minmax(0,1fr))}
+@media (min-width:640px){ .lead-form__row{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.lead-form__note{font-size:12px;line-height:1.55;color:var(--ink-faint)}
+/* Успех набирается акцентом: правило макета — один акцентный цвет на сайт,
+   второй «положительный» разрушил бы систему ради одной строки. */
+.lead-form__success{
+  display:none;
+  border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);border-radius:var(--radius-field);
+  background:color-mix(in srgb,var(--accent) 10%,transparent);
+  padding:12px 16px;font-size:14px;color:var(--accent);
+}
+.lead-form__success[data-visible="true"]{display:block}
+/* Ловушка для ботов: уводится за экран, а не прячется display:none —
+   боты распознают скрытие стилем и пропускают hidden-поля. */
+.honeypot{position:absolute;left:-9999px}
+
+/* ==========================================================================
+   ПОДВАЛ
+   ========================================================================== */
+.footer{border-top:1px solid rgb(255 255 255/.1);padding-block:56px 40px}
+@media (min-width:1024px){ .footer{padding-block:72px 40px} }
+.footer__grid{display:grid;gap:40px;grid-template-columns:repeat(1,minmax(0,1fr));margin-bottom:56px}
+@media (min-width:640px){ .footer__grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (min-width:1024px){ .footer__grid{grid-template-columns:1.3fr 1fr 1fr 1fr 1.1fr;align-items:start} }
+.footer__about p{max-width:260px;margin-top:20px;font-size:14px;line-height:1.6;color:var(--ink-muted)}
+.footer__title{margin-bottom:20px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-muted)}
+.footer__list{display:flex;flex-direction:column;gap:12px;font-size:14px}
+.footer__list a,.footer__list div{color:var(--ink-muted);transition:color .2s}
+.footer__list a:hover{color:var(--accent)}
+.footer__guarantee{border:1px solid rgb(255 255 255/.1);border-radius:var(--radius-card);background:var(--surface);padding:22px}
+.footer__guarantee strong{display:block;margin-bottom:8px;font-size:14px;font-weight:600}
+.footer__guarantee p{margin-bottom:14px;font-size:13px;line-height:1.6;color:var(--ink-muted)}
+.footer__guarantee a{font-size:13px;font-weight:600;color:var(--accent)}
+.footer__bottom{
+  display:flex;flex-direction:column;gap:12px;
+  border-top:1px solid rgb(255 255 255/.1);padding-top:32px;
+  font-size:13px;color:var(--ink-faint);
+}
+@media (min-width:640px){ .footer__bottom{flex-direction:row;justify-content:space-between} }
+
+/* Пометка макета — чтобы статичный файл не спутали с рабочим сайтом. */
+.badge{
+  position:fixed;right:16px;bottom:16px;z-index:150;
+  border:1px solid rgb(255 255 255/.12);border-radius:999px;
+  background:color-mix(in srgb,var(--deep) 88%,transparent);
+  backdrop-filter:blur(8px);
+  padding:7px 13px;font-size:11px;color:var(--ink-muted);
+}
+@media (min-width:1024px){ .badge{padding:9px 16px;font-size:12px} }
+
+/* Ссылка «к содержимому»: четыре пункта меню на каждой странице — это четыре
+   лишних таба до содержимого для того, кто ходит по сайту с клавиатуры. */
+.skip{
+  position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;
+}
+.skip:focus{
+  position:fixed;top:12px;left:12px;z-index:200;
+  width:auto;height:auto;clip-path:none;
+  border-radius:999px;background:var(--accent);color:var(--page);
+  padding:10px 20px;font-size:14px;font-weight:600;
+}

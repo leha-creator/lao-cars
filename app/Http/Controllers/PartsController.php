@@ -60,10 +60,29 @@ final class PartsController extends Controller
         }
 
         return view('parts.index', [
-            'title' => Setting::get('parts_page.intro_title', 'Запчасти'),
+            // Фолбэк через второй аргумент `Setting::get()` срабатывает только
+            // на отсутствующий ключ, а форма настроек пишет пустое значение
+            // как есть — «очистить блок» там рабочий сценарий. Без проверки
+            // на пустоту очищенный заголовок давал бы пустой H1 и заголовок
+            // документа из одного тире: страница выглядела бы сломанной
+            // при живой настройке и без единой ошибки в логе. Парная
+            // нормализация — в `ServicesPageContent::build()`.
+            'title' => self::heading(Setting::get('parts_page.intro_title')),
             'intro' => Setting::get('parts_page.intro_text'),
             'deliveryTerms' => Setting::get('parts_page.delivery_terms'),
             'categories' => $categories,
         ]);
+    }
+
+    /**
+     * Заголовок страницы: непустая настройка или умолчание.
+     *
+     * Проверка пустоты строгая, а не `empty()` — правило `RULES.md`.
+     */
+    private static function heading(mixed $value): string
+    {
+        $title = is_scalar($value) ? trim((string) $value) : '';
+
+        return $title === '' ? 'Запчасти' : $title;
     }
 }

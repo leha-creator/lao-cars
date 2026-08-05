@@ -1,0 +1,761 @@
+<!doctype html>
+<!--
+    ЛАО КАРС — макет главной, версия 2.
+
+    Что это. Статичный макет, собранный из двух источников:
+
+    • ДИЗАЙН — из реализованной вёрстки проекта (`resources/views/**` и токены
+      `resources/css/app.css`, вехи 4.1–4.3). Токены перенесены сюда один
+      в один, включая `oklch()`: не «похожий тёмный», а те же значения, что
+      уже собираются Tailwind'ом на сайте. Компоненты — шапка, подвал, карточка
+      автомобиля, секция заявки, бегущая строка — повторяют реализованные
+      один к одному, чтобы макет можно было переносить в Blade без пересчёта
+      отступов и цветов.
+
+    • НАПОЛНЕНИЕ (состав и порядок блоков) — из `assets/Laocars_website_prototype.html`:
+      хиро с фактами, полоса доверия, каталог с фильтром по статусу, быстрый
+      подбор, этапы покупки, экосистема после покупки, прозрачность цены,
+      отзывы, FAQ, форма заявки.
+
+    Правки этой версии:
+      1. Фон хиро — `assets/hero_bg.png` (здесь: `img/hero-bg.jpg`).
+      2. Фон секции заявки — `assets/contact_form_bg.png` (здесь: `img/contact-bg.jpg`).
+      3. Меню шапки — «Продажа автомобилей · Запчасти · Сервис и детейлинг».
+      4. Блок «Основные услуги» с прайсом и кнопкой на `services.html`.
+
+    Стили и скрипты вынесены в `css/mockup.css` и `js/mockup.js` и общие
+    с `services.html`. Инлайновыми они были ровно до появления второй
+    страницы: две копии шапки, подвала и всей дизайн-системы разъехались бы
+    на первой же правке, а расхождение в макете читается как решение
+    дизайнера, а не как ошибка копипасты.
+
+    Папка самодостаточна: изображения в `img/`, шрифты в `fonts/`. Внешних
+    запросов нет вовсе — макет открывается двойным кликом и работает офлайн.
+
+    Тексты моделей, цен и сроков — рыбa для оценки вёрстки. Перед публикацией
+    заменяются реальными данными из админки.
+-->
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080706">
+<meta name="description" content="Автомобили из Китая в наличии и под заказ, собственный автосервис, детейлинг и запчасти в Москве.">
+<title>ЛАО КАРС — макет главной v2</title>
+
+<link rel="stylesheet" href="css/mockup.css">
+</head>
+
+<body>
+
+<a class="skip" href="#content">Перейти к содержимому</a>
+
+<!-- Бегущая строка над шапкой (наработка главной). Адрес и режим работы
+     из верхней полосы прототипа собраны сюда, чтобы над шапкой не появилось
+     два тонких контейнера подряд. -->
+<div class="ticker" aria-label="Коротко о компании">
+  <div class="ticker__track">
+    <div class="ticker__group">
+      <span class="ticker__item ticker__item--accent">★ Москва, Осенняя улица, 17к1</span>
+      <span class="ticker__item">Ежедневно 10:00 – 20:00</span>
+      <span class="ticker__item ticker__item--accent">★ Автомобили в наличии, в пути и под заказ</span>
+      <span class="ticker__item">Собственный сервис и детейлинг</span>
+      <span class="ticker__item ticker__item--accent">★ Запчасти по VIN</span>
+      <span class="ticker__item">Прозрачный состав цены до сделки</span>
+    </div>
+    <div class="ticker__group" aria-hidden="true">
+      <span class="ticker__item ticker__item--accent">★ Москва, Осенняя улица, 17к1</span>
+      <span class="ticker__item">Ежедневно 10:00 – 20:00</span>
+      <span class="ticker__item ticker__item--accent">★ Автомобили в наличии, в пути и под заказ</span>
+      <span class="ticker__item">Собственный сервис и детейлинг</span>
+      <span class="ticker__item ticker__item--accent">★ Запчасти по VIN</span>
+      <span class="ticker__item">Прозрачный состав цены до сделки</span>
+    </div>
+  </div>
+</div>
+
+<!-- ШАПКА. Меню — три раздела по правке заказчика. -->
+<header class="header">
+  <div class="container header__inner">
+    <a href="#top" aria-label="ЛАО КАРС — на главную">
+      <img class="logo" src="img/logo-white.png" width="440" height="128" alt="ЛАО КАРС">
+    </a>
+
+    <nav class="nav" aria-label="Основная навигация">
+      <a href="#cars" aria-current="page">Продажа автомобилей</a>
+      <a href="#parts">Запчасти</a>
+      <a href="services.html">Сервис и детейлинг</a>
+    </nav>
+
+    <div class="header__actions">
+      <a class="header__phone" href="tel:+79153229618">+7 (915) 322-96-18</a>
+      <a class="icon-btn icon-btn--phone" href="tel:+79153229618" aria-label="Позвонить: +7 (915) 322-96-18">☎</a>
+      <a class="btn btn--accent btn--sm header__cta" href="#lead-form">Получить расчёт</a>
+
+      <button class="burger" type="button" id="burger" aria-label="Открыть меню" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu" data-open="false">
+  <div class="mobile-menu__top">
+    <img class="logo" src="img/logo-white.png" width="440" height="128" alt="ЛАО КАРС">
+    <button class="icon-btn" type="button" id="menuClose" aria-label="Закрыть меню">✕</button>
+  </div>
+  <nav aria-label="Мобильная навигация">
+    <a href="#cars">Продажа автомобилей</a>
+    <a href="#parts">Запчасти</a>
+    <a href="services.html">Сервис и детейлинг</a>
+  </nav>
+  <div class="mobile-menu__foot">
+    <a class="mobile-menu__phone" href="tel:+79153229618">+7 (915) 322-96-18</a>
+    <a class="btn btn--accent btn--wide" href="#lead-form">Оставить заявку</a>
+  </div>
+</div>
+
+<main id="content">
+
+  <!-- ХИРО. Фон — assets/hero_bg.png (правка 1). -->
+  <section class="hero" id="top">
+    <div class="hero__media">
+      <!-- LCP-элемент страницы: fetchpriority="high" и никакого loading="lazy".
+           Изображение декоративное — смысл несёт текст поверх него. -->
+      <img src="img/hero-bg.jpg" width="1920" height="1080" alt="" aria-hidden="true" fetchpriority="high">
+      <div class="hero__mask"></div>
+    </div>
+
+    <div class="hero__body">
+      <div class="container">
+        <div class="eyebrow">Автосалон · сервис · детейлинг в Москве</div>
+
+        <h1>Автомобиль из Китая — <em>под ключ</em></h1>
+
+        <p class="hero__lede">
+          Подбираем, проверяем, доставляем и готовим автомобиль к эксплуатации.
+          После выдачи остаёмся рядом: сервис, детейлинг и запчасти в одном месте.
+        </p>
+
+        <div class="hero__actions">
+          <a class="btn btn--accent" href="#cars">Посмотреть автомобили</a>
+          <a class="btn btn--ghost" href="#selection">Подборка под бюджет</a>
+        </div>
+
+        <div class="hero__facts">
+          <div class="fact"><strong>В наличии</strong><span>автомобили, которые можно посмотреть в салоне</span></div>
+          <div class="fact"><strong>В пути</strong><span>понятный статус и ориентировочный срок</span></div>
+          <div class="fact"><strong>Под заказ</strong><span>подбор комплектации и цвета под задачу</span></div>
+          <div class="fact"><strong>После покупки</strong><span>сервис, детейлинг и расходники</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ПОЛОСА ДОВЕРИЯ -->
+  <div class="container">
+    <div class="trust">
+      <div class="trust__card"><strong>Физический салон в Москве</strong><span>Можно увидеть автомобили и познакомиться с командой.</span></div>
+      <div class="trust__card"><strong>Прозрачный состав цены</strong><span>Показываем основные расходы до заключения сделки.</span></div>
+      <div class="trust__card"><strong>Фото- и видеоотчёт</strong><span>Фиксируем ключевые этапы проверки и доставки.</span></div>
+      <div class="trust__card"><strong>Собственная экосистема</strong><span>Продажа, сервис, детейлинг и запчасти.</span></div>
+    </div>
+  </div>
+
+  <!-- КАТАЛОГ -->
+  <section class="section" id="cars">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Продажа автомобилей</div>
+          <h2 class="h2">Не бесконечный каталог, а понятные <em>предложения</em></h2>
+        </div>
+        <p class="lede">
+          Показываем статус автомобиля и ведём к следующему действию: посмотреть,
+          запросить точный расчёт или подобрать альтернативу.
+        </p>
+      </div>
+
+      <div class="filters" role="group" aria-label="Фильтр по статусу">
+        <button class="filter" type="button" data-filter="all" aria-pressed="true">Все</button>
+        <button class="filter" type="button" data-filter="stock" aria-pressed="false">В наличии</button>
+        <button class="filter" type="button" data-filter="route" aria-pressed="false">В пути</button>
+        <button class="filter" type="button" data-filter="order" aria-pressed="false">Под заказ</button>
+      </div>
+
+      <div class="cars" id="carsGrid">
+        <a class="car" href="#lead-form" data-status="stock">
+          <div class="car__photo"><img src="img/car-hongqi-ehs9.jpg" width="960" height="540" loading="lazy" alt="Hongqi E-HS9 в салоне ЛАО КАРС"></div>
+          <div class="car__body">
+            <div class="car__top">
+              <h3 class="car__title">Hongqi E-HS9, 2024</h3>
+              <span class="tag tag--accent">В наличии</span>
+            </div>
+            <div class="car__specs">Электро · Полный привод · Новый</div>
+            <div class="car__price">9 850 000 ₽</div>
+          </div>
+        </a>
+
+        <a class="car" href="#lead-form" data-status="route">
+          <div class="car__photo"><img src="img/car-bmw-xm.jpg" width="960" height="540" loading="lazy" alt="BMW X5 в салоне ЛАО КАРС"></div>
+          <div class="car__body">
+            <div class="car__top">
+              <h3 class="car__title">BMW X5, 2024</h3>
+              <span class="tag">В пути</span>
+            </div>
+            <div class="car__specs">Бензин · Полный привод · Новый</div>
+            <div class="car__price">12 400 000 ₽</div>
+          </div>
+        </a>
+
+        <a class="car" href="#lead-form" data-status="order">
+          <div class="car__photo"><img src="img/car-mazda-cx.jpg" width="960" height="540" loading="lazy" alt="Mazda CX-60 в салоне ЛАО КАРС"></div>
+          <div class="car__body">
+            <div class="car__top">
+              <h3 class="car__title">Mazda CX-60, 2024</h3>
+              <span class="tag">Под заказ</span>
+            </div>
+            <div class="car__specs">Гибрид · Полный привод · Новый</div>
+            <div class="car__price">Цена по запросу</div>
+          </div>
+        </a>
+
+        <a class="car" href="#lead-form" data-status="stock">
+          <div class="car__photo"><img src="img/car-zeekr-8x.jpg" width="960" height="540" loading="lazy" alt="Zeekr 8X в салоне ЛАО КАРС"></div>
+          <div class="car__body">
+            <div class="car__top">
+              <h3 class="car__title">Zeekr 8X, 2025</h3>
+              <span class="tag tag--accent">В наличии</span>
+            </div>
+            <div class="car__specs">Гибрид · Полный привод · Новый</div>
+            <div class="car__price">8 900 000 ₽</div>
+          </div>
+        </a>
+
+        <a class="car" href="#lead-form" data-status="order">
+          <div class="car__photo"><img src="img/car-hongqi-h9.jpg" width="960" height="540" loading="lazy" alt="Hongqi H9"></div>
+          <div class="car__body">
+            <div class="car__top">
+              <h3 class="car__title">Hongqi H9, 2024</h3>
+              <span class="tag">Под заказ</span>
+            </div>
+            <div class="car__specs">Бензин · Задний привод · Новый</div>
+            <div class="car__price">Цена по запросу</div>
+          </div>
+        </a>
+
+        <div class="car car--cta" data-status="order">
+          <h3>Не нашли модель?</h3>
+          <p>
+            Подберём варианты по бюджету, типу кузова, двигателю и сроку покупки —
+            без необходимости разбираться во всём рынке самостоятельно.
+          </p>
+          <a class="btn btn--accent btn--sm" href="#selection">Получить подборку</a>
+        </div>
+      </div>
+
+      <div class="section-cta">
+        <a class="btn btn--ghost" href="#cars">Весь каталог →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- БЫСТРЫЙ ПОДБОР -->
+  <section class="section section--alt" id="selection">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Быстрый подбор</div>
+          <h2 class="h2">Автомобиль под ваш бюджет и <em>сценарий</em></h2>
+        </div>
+        <p class="lede">
+          Короткая форма вместо длинного каталога: клиент сразу понимает,
+          какой результат получит после заявки.
+        </p>
+      </div>
+
+      <div class="selector">
+        <div class="card selector__form">
+          <div class="field">
+            <div class="field__label">
+              <label for="budget">Бюджет</label>
+              <output class="field__value" id="budgetOutput" for="budget">3,5 млн ₽</output>
+            </div>
+            <input type="range" id="budget" min="2000000" max="15000000" step="100000" value="3500000">
+          </div>
+
+          <div class="field">
+            <div class="field__label"><span>Тип двигателя</span></div>
+            <div class="chips">
+              <label class="chip"><input type="radio" name="engine" value="Бензин" checked><span>Бензин</span></label>
+              <label class="chip"><input type="radio" name="engine" value="Гибрид"><span>Гибрид</span></label>
+              <label class="chip"><input type="radio" name="engine" value="Электро"><span>Электро</span></label>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field__label"><span>Срок покупки</span></div>
+            <div class="chips">
+              <label class="chip"><input type="radio" name="term" value="Сейчас" checked><span>Сейчас</span></label>
+              <label class="chip"><input type="radio" name="term" value="1–2 месяца"><span>1–2 месяца</span></label>
+              <label class="chip"><input type="radio" name="term" value="Изучаю рынок"><span>Изучаю рынок</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card selector__result">
+          <div>
+            <div class="selector__count" id="matchCount">4</div>
+            <h4>подходящих направления</h4>
+            <p id="matchText">
+              В наличии, в пути и под заказ. Менеджер уточнит приоритеты
+              и подготовит персональную подборку.
+            </p>
+          </div>
+          <a class="btn btn--accent btn--wide" href="#lead-form">Получить подборку</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЭТАПЫ ПОКУПКИ -->
+  <section class="section section--deep" id="process">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Как проходит покупка</div>
+          <h2 class="h2">Каждый этап понятен <em>до начала сделки</em></h2>
+        </div>
+        <p class="lede">
+          На рабочем сайте каждый шаг раскрывается: что делает ЛАО КАРС, что требуется
+          от клиента, какие документы формируются и какой статус видит покупатель.
+        </p>
+      </div>
+
+      <div class="steps">
+        <article class="step"><div class="step__num">01</div><h3>Подбор</h3><p>Фиксируем бюджет, требования, срок и предлагаем несколько сопоставимых вариантов.</p></article>
+        <article class="step"><div class="step__num">02</div><h3>Полный расчёт</h3><p>Показываем автомобиль, логистику, оформление и комиссию отдельными строками.</p></article>
+        <article class="step"><div class="step__num">03</div><h3>Проверка</h3><p>Согласовываем конкретный автомобиль, комплектацию и доступные материалы проверки.</p></article>
+        <article class="step"><div class="step__num">04</div><h3>Договор</h3><p>Фиксируем порядок оплаты, обязанности сторон и параметры согласованного автомобиля.</p></article>
+        <article class="step"><div class="step__num">05</div><h3>Доставка</h3><p>Сообщаем ключевые статусы и сопровождаем оформление по действующим правилам.</p></article>
+        <article class="step"><div class="step__num">06</div><h3>Выдача и поддержка</h3><p>Готовим автомобиль и предлагаем дальнейшее обслуживание в ЛАО КАРС.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЭКОСИСТЕМА ПОСЛЕ ПОКУПКИ.
+
+       Фон `--alt`, а не `page`: ниже добавился блок услуг, и без смены тона
+       два смежных раздела про сервис слились бы в один длинный экран.
+       Правило дизайн-системы — не больше двух фоновых оттенков на экране,
+       поэтому чередование идёт page ⇄ alt, а `--deep` остаётся редким
+       акцентом (этапы покупки). -->
+  <section class="section section--alt" id="service">
+    <div class="container split">
+      <div class="photo-panel">
+        <img src="img/service-panel.jpg" width="720" height="961" loading="lazy" alt="" aria-hidden="true">
+        <div class="photo-panel__mask"></div>
+        <div class="photo-panel__copy">
+          <div class="eyebrow">После покупки</div>
+          <h3>Мы не исчезаем после передачи ключей</h3>
+          <p>Собственный сервис превращает разовую покупку в долгосрочные отношения.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="eyebrow">Экосистема ЛАО КАРС</div>
+        <h2 class="h2">Всё для автомобиля <em>в одном месте</em></h2>
+
+        <!-- Плашки — ссылки, а не карточки-иллюстрации: каждое направление
+             обязано вести к следующему действию. Автосервис и детейлинг
+             уходят в свои категории на странице услуг, запчасти и поддержка —
+             в заявку, потому что своей страницы у них пока нет. -->
+        <div class="eco">
+          <a class="eco__card" href="services.html#maintenance"><div class="eco__letter">А</div><h3>Автосервис</h3><p>Диагностика, регламентные работы и подготовка автомобиля к эксплуатации.</p></a>
+          <a class="eco__card" href="services.html#detailing"><div class="eco__letter">Д</div><h3>Детейлинг</h3><p>Защитные покрытия, плёнка, уход за салоном и кузовом.</p></a>
+          <a class="eco__card" href="#lead-form" id="parts"><div class="eco__letter">З</div><h3>Запчасти</h3><p>Расходники и необходимые детали по VIN с понятным каналом заказа.</p></a>
+          <a class="eco__card" href="#lead-form"><div class="eco__letter">П</div><h3>Поддержка</h3><p>Единая точка контакта по автомобилю после покупки.</p></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ОСНОВНЫЕ УСЛУГИ.
+
+       Категории и позиции — из `ServiceSeeder` и `App\Enums\ServiceCategory`,
+       то есть ровно то, что уже лежит в базе. Категория «Запчасти» сюда
+       не входит: у неё своя посадочная страница (см. PHPDoc енама).
+
+       Здесь только по три позиции на категорию — остальное на странице услуг.
+       Полный прайс из восемнадцати строк на главной вытеснил бы всё, ради
+       чего человек на неё пришёл. -->
+  <section class="section" id="services">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Услуги</div>
+          <h2 class="h2">Основные услуги <em>сервиса и детейлинга</em></h2>
+        </div>
+        <p class="lede">
+          Свой сервис, а не партнёрская сеть: работы, шиномонтаж, детейлинг
+          и подготовка автомобиля к эксплуатации выполняются в одной мастерской.
+        </p>
+      </div>
+
+      <div class="services">
+        <article class="card service-group">
+          <div class="service-group__head">
+            <div class="service-group__icon">ТО</div>
+            <h3>ТО и ремонт</h3>
+          </div>
+          <p class="service-group__note">Регламентные работы, диагностика и ремонт для всех марок, включая гибриды.</p>
+          <div class="service-list">
+            <a class="service-row" href="#lead-form" data-service="Плановое ТО">
+              <span class="service-row__title">Плановое ТО</span><span class="service-row__price">от 6 500 ₽</span>
+            </a>
+            <a class="service-row" href="#lead-form" data-service="Замена масла и фильтров">
+              <span class="service-row__title">Замена масла и фильтров</span><span class="service-row__price">3 200 ₽</span>
+            </a>
+            <a class="service-row" href="#lead-form" data-service="Ремонт гибридных установок">
+              <span class="service-row__title">Ремонт гибридных установок</span><span class="service-row__price service-row__price--muted">по запросу</span>
+            </a>
+          </div>
+        </article>
+
+        <article class="card service-group">
+          <div class="service-group__head">
+            <div class="service-group__icon">ШМ</div>
+            <h3>Шиномонтаж</h3>
+          </div>
+          <p class="service-group__note">Сезонная смена, балансировка и хранение комплекта до следующего сезона.</p>
+          <div class="service-list">
+            <a class="service-row" href="#lead-form" data-service="Шиномонтаж легкового автомобиля">
+              <span class="service-row__title">Шиномонтаж легкового автомобиля</span><span class="service-row__price">1 200 ₽ / колесо</span>
+            </a>
+            <a class="service-row" href="#lead-form" data-service="Балансировка колёс">
+              <span class="service-row__title">Балансировка колёс</span><span class="service-row__price">600 ₽ / колесо</span>
+            </a>
+            <a class="service-row" href="#lead-form" data-service="Сезонное хранение шин">
+              <span class="service-row__title">Сезонное хранение шин</span><span class="service-row__price">4 500 ₽ / сезон</span>
+            </a>
+          </div>
+        </article>
+
+        <article class="card service-group">
+          <div class="service-group__head">
+            <div class="service-group__icon">Д</div>
+            <h3>Детейлинг</h3>
+          </div>
+          <p class="service-group__note">Защита кузова и салона: покрытия, полировка и химчистка.</p>
+          <div class="service-list">
+            <a class="service-row" href="#lead-form" data-service="Защитное керамическое покрытие">
+              <span class="service-row__title">Защитное керамическое покрытие</span><span class="service-row__price">от 35 000 ₽</span>
+            </a>
+            <a class="service-row" href="#lead-form" data-service="Полировка кузова">
+              <span class="service-row__title">Полировка кузова</span><span class="service-row__price">от 12 000 ₽</span>
+            </a>
+            <a class="service-row" href="#lead-form" data-service="Химчистка салона">
+              <span class="service-row__title">Химчистка салона</span><span class="service-row__price">от 9 000 ₽</span>
+            </a>
+          </div>
+        </article>
+
+        <article class="card service-group">
+          <div class="service-group__head">
+            <div class="service-group__icon">+</div>
+            <h3>Дополнительные сервисы</h3>
+          </div>
+          <p class="service-group__note">То, что нужно после покупки импортного автомобиля.</p>
+          <div class="service-list">
+            <a class="service-row" href="#lead-form" data-service="Русификация мультимедиа">
+              <span class="service-row__title">Русификация мультимедиа</span><span class="service-row__price">от 8 000 ₽</span>
+            </a>
+            <a class="service-row" href="#lead-form" data-service="Помощь в оформлении и постановке на учёт">
+              <span class="service-row__title">Помощь в оформлении и постановке на учёт</span><span class="service-row__price service-row__price--muted">по запросу</span>
+            </a>
+            <a class="service-row" href="#lead-form" data-service="Трейд-ин">
+              <span class="service-row__title">Трейд-ин</span><span class="service-row__price service-row__price--muted">по запросу</span>
+            </a>
+          </div>
+        </article>
+      </div>
+
+      <div class="section-cta">
+        <a class="btn btn--accent" href="services.html">Посмотреть все услуги</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ПРОЗРАЧНОСТЬ ЦЕНЫ -->
+  <section class="section section--alt">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Прозрачность цены</div>
+          <h2 class="h2">Клиент видит, из чего складывается <em>стоимость</em></h2>
+        </div>
+        <p class="lede">
+          Блок показывает структуру, а не обещает устаревающую цену. Точные суммы
+          рассчитываются под конкретный автомобиль и дату.
+        </p>
+      </div>
+
+      <div class="price">
+        <div class="card price__list">
+          <div class="price__row"><strong>Автомобиль в Китае</strong><span>по предложению поставщика</span></div>
+          <div class="price__row"><strong>Экспортные документы</strong><span>по условиям сделки</span></div>
+          <div class="price__row"><strong>Логистика</strong><span>маршрут и страхование</span></div>
+          <div class="price__row"><strong>Оформление в РФ</strong><span>по действующим требованиям</span></div>
+          <div class="price__row"><strong>Комиссия ЛАО КАРС</strong><span>фиксируется в расчёте</span></div>
+          <div class="price__row"><strong>Дополнительные услуги</strong><span>только по выбору клиента</span></div>
+        </div>
+
+        <div class="card price__note">
+          <span class="tag tag--accent">Не публичная оферта</span>
+          <h3><em>Точный расчёт</em><br>по конкретной комплектации</h3>
+          <p>
+            Кнопка ведёт в короткую заявку. Менеджер отправляет клиенту понятный
+            документ с составом расходов и датой актуальности.
+          </p>
+          <a class="btn btn--accent" href="#lead-form">Получить расчёт</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ОТЗЫВЫ -->
+  <section class="section" id="about">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Доверие</div>
+          <h2 class="h2">Отзывы доказывают результат, а не <em>просто хвалят</em></h2>
+        </div>
+        <p class="lede">
+          Ниже — структура карточек. Перед публикацией тексты-рыбу заменяют
+          проверяемыми отзывами, фотографиями и ссылками на независимые площадки.
+        </p>
+      </div>
+
+      <div class="reviews">
+        <article class="card review">
+          <div class="review__top"><strong>Hongqi E-HS9</strong><span class="tag">Шаблон</span></div>
+          <p>«Указать итоговый срок, совпадение расчёта с фактом и конкретный плюс работы команды».</p>
+          <small>Имя клиента · город · дата · ссылка на источник</small>
+        </article>
+        <article class="card review">
+          <div class="review__top"><strong>BMW X5</strong><span class="tag">Шаблон</span></div>
+          <p>«Добавить факты: как выбирали комплектацию, сколько вариантов показали, как проходила выдача».</p>
+          <small>Имя клиента · город · дата · видео выдачи</small>
+        </article>
+        <article class="card review">
+          <div class="review__top"><strong>Zeekr 8X</strong><span class="tag">Шаблон</span></div>
+          <p>«Показать не только покупку, но и обслуживание: русификация, детейлинг, сервис или запчасти».</p>
+          <small>Имя клиента · город · дата · независимая площадка</small>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section section--alt">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">FAQ</div>
+          <h2 class="h2">Закрываем вопросы <em>до звонка менеджеру</em></h2>
+        </div>
+      </div>
+
+      <div class="faq">
+        <details open>
+          <summary>Может ли итоговая цена измениться?</summary>
+          <p>На рабочем сайте точно описывается, какие элементы фиксируются договором, какие зависят от курса или государственных платежей и как клиент уведомляется об изменениях.</p>
+        </details>
+        <details>
+          <summary>Какие документы получает клиент?</summary>
+          <p>Раздел заполняется вместе с юристом и специалистом по оформлению: перечень документов по выбранной модели сделки, без универсальных обещаний.</p>
+        </details>
+        <details>
+          <summary>Как проверяется автомобиль?</summary>
+          <p>Показываем реальные доступные процедуры: фото, видео, документы, осмотр, фиксацию VIN и проверку комплектации. Не обещаем того, что нельзя выполнить для каждого поставщика.</p>
+        </details>
+        <details>
+          <summary>Какой срок доставки?</summary>
+          <p>Указываем диапазон и дату актуальности. Отдельно объясняем факторы задержки и порядок информирования клиента.</p>
+        </details>
+        <details>
+          <summary>Где обслуживать автомобиль после покупки?</summary>
+          <p>В ЛАО КАРС: собственный автосервис, детейлинг и канал заказа запчастей — одно из главных отличий от посредников без инфраструктуры.</p>
+        </details>
+        <details>
+          <summary>Можно ли заказать другую модель?</summary>
+          <p>Да. Форма подбора собирает бюджет и требования, после чего клиент получает несколько сопоставимых вариантов.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ЗАЯВКА. Фон — assets/contact_form_bg.png (правка 2). -->
+  <section class="lead" id="lead-form">
+    <div class="lead__media">
+      <!-- В отличие от хиро — loading="lazy": блок стоит внизу страницы
+           и в первый экран не попадает. -->
+      <img src="img/contact-bg.jpg" width="1920" height="1080" loading="lazy" alt="" aria-hidden="true">
+      <div class="lead__mask"></div>
+    </div>
+
+    <div class="container lead__grid">
+      <div class="lead__copy">
+        <div class="eyebrow">Заявка</div>
+        <h2 class="h2">Получите подборку автомобилей <em>под ваш запрос</em></h2>
+        <p>
+          Перезвоним в течение 15 минут в рабочее время. Все данные передаются
+          менеджеру напрямую — три поля, понятный результат и возможность
+          продолжить общение в удобном канале.
+        </p>
+
+        <div class="lead__contacts">
+          <div class="lead__contact"><span>Телефон</span><strong>+7 (915) 322-96-18</strong></div>
+          <div class="lead__contact"><span>Почта</span><strong>filin@laocars.ru</strong></div>
+          <div class="lead__contact"><span>Адрес</span><strong>Осенняя ул., 17к1</strong></div>
+        </div>
+      </div>
+
+      <div class="lead__card">
+        <form class="lead-form" id="leadForm" novalidate>
+          <div class="lead-form__success" id="leadSuccess" data-visible="false">
+            Заявка принята. Менеджер свяжется с вами в рабочее время.
+          </div>
+
+          <!-- Ловушка для ботов: уводится за экран, tabindex="-1"
+               и autocomplete="off" — чтобы в неё не заехал живой человек. -->
+          <div class="honeypot" aria-hidden="true">
+            <label>Сайт<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+          </div>
+
+          <label>
+            <span>Имя</span>
+            <input type="text" name="name" required>
+          </label>
+
+          <label>
+            <span>Телефон</span>
+            <input type="tel" name="phone" placeholder="+7 (___) ___-__-__" required>
+          </label>
+
+          <label>
+            <span>Интересует</span>
+            <select name="interest">
+              <option>Нужна подборка</option>
+              <option>Hongqi E-HS9</option>
+              <option>BMW X5</option>
+              <option>Mazda CX-60</option>
+              <option>Zeekr 8X</option>
+              <option>Hongqi H9</option>
+              <option>Сервис и детейлинг</option>
+              <option>Запчасти</option>
+            </select>
+          </label>
+
+          <div class="lead-form__row">
+            <label>
+              <span>Удобный способ связи</span>
+              <select name="contact_method">
+                <option value="">Не важно</option>
+                <option value="phone">Телефон</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="telegram">Telegram</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Удобное время звонка</span>
+              <select name="preferred_time">
+                <option value="">Не важно</option>
+                <option value="morning">Утро</option>
+                <option value="day">День</option>
+                <option value="evening">Вечер</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            <span>Комментарий</span>
+            <textarea name="message" rows="4"></textarea>
+          </label>
+
+          <button class="btn btn--accent btn--wide" type="submit">Отправить заявку</button>
+
+          <p class="lead-form__note">
+            Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.
+            В макете форма ничего не отправляет.
+          </p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ПОДВАЛ -->
+<footer class="footer" id="contacts">
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__about">
+        <img class="logo" src="img/logo-white.png" width="440" height="128" alt="ЛАО КАРС">
+        <p>
+          Автомобили из Китая в наличии и под заказ. Продажа, сервис, детейлинг
+          и запчасти в одной автомобильной экосистеме. Москва, Осенняя улица, 17к1.
+        </p>
+      </div>
+
+      <div>
+        <div class="footer__title">Навигация</div>
+        <div class="footer__list">
+          <a href="#cars">Продажа автомобилей</a>
+          <a href="#parts">Запчасти</a>
+          <a href="services.html">Сервис и детейлинг</a>
+          <a href="#about">О компании</a>
+          <a href="#contacts">Контакты</a>
+        </div>
+      </div>
+
+      <div>
+        <div class="footer__title">Контакты</div>
+        <div class="footer__list">
+          <a href="tel:+79153229618">+7 (915) 322-96-18</a>
+          <a href="mailto:filin@laocars.ru">filin@laocars.ru</a>
+          <div>Ежедневно 10:00 – 20:00</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="footer__title">Соцсети</div>
+        <div class="footer__list">
+          <a href="#contacts">Telegram</a>
+          <a href="#contacts">WhatsApp</a>
+          <a href="#contacts">Дзен</a>
+        </div>
+      </div>
+
+      <div class="footer__guarantee">
+        <strong>Гарантия на автомобиль</strong>
+        <p>Проверка перед выдачей, фото- и видеоотчёт по ключевым этапам и сервис в собственной мастерской.</p>
+        <a href="services.html">Подробнее →</a>
+      </div>
+    </div>
+
+    <div class="footer__bottom">
+      <div>© 2026 ЛАО КАРС. Все права защищены.</div>
+      <div>Цены и сроки на макете не являются публичной офертой.</div>
+    </div>
+  </div>
+</footer>
+
+<div class="badge">Макет v2 · формы не отправляются</div>
+
+<script src="js/mockup.js"></script>
+
+</body>
+</html>
