@@ -209,7 +209,7 @@
 
 ### Фаза 4 — SEO карточки
 
-- [ ] **7. Meta-теги карточки из `meta_title` и `meta_description`** *(зависит от 5)*
+- [x] **7. Meta-теги карточки из `meta_title` и `meta_description`** *(зависит от 5)*
   `resources/views/catalog/show.blade.php` — `@section('title')` и `@section('description')` берут значения из колонок с фолбэком на сборку из полей (решение 13):
   - заголовок: `filled($car->meta_title) ? $car->meta_title : $car->brand->name.' '.$car->model.', '.$car->year.' — '.config('app.name')`;
   - описание: `filled($car->meta_description) ? $car->meta_description : 'Купить …'` — нынешняя строка функционального шаблона годится как фолбэк.
@@ -219,7 +219,7 @@
   Проверка: заполнение `meta_title` в админке меняет `<title>`, очистка возвращает сборку из полей; то же для описания; `<link rel="canonical">` карточки не содержит параметров при заходе с `?utm_source=…`.
   Файлы: `resources/views/catalog/show.blade.php`.
 
-- [ ] **8. Микроразметка Product/Vehicle и хлебных крошек** *(зависит от 7)*
+- [x] **8. Микроразметка Product/Vehicle и хлебных крошек** *(зависит от 7)*
   `app/Services/CarStructuredData.php` — новый `final class` с единственным публичным `for(Car $car): array`, возвращающим список из двух объектов (решение 18). PHPDoc обязан сказать, что сервис не делает собственных запросов и требует загруженных `brand`, `photos`, `attributeValues.attribute` — ровно как `Car::cardAttributes()`.
   Состав объекта `Car` — решение 16; `offers` — решение 17 (нет цены → нет `offers`); `bodyType` — через `$car->attributeValue('body_type')`, отсутствующая характеристика просто не попадает в разметку. Все пустые значения выбрасываются: ключ с `null` в JSON-LD хуже отсутствующего ключа.
   Логирование: WARN «[Каталог] у автомобиля нет ни одного фото — микроразметка уходит без image» с `car_id` и slug-ом, уровень WARN, канал умолчательный (решение 19). Больше эта веха не логирует ничего.

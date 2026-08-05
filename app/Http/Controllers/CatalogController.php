@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CatalogFilterRequest;
 use App\Models\Car;
+use App\Services\CarStructuredData;
 use App\Services\CatalogFilter;
 use App\Services\CatalogFilterOptions;
 use App\Services\SimilarCars;
@@ -63,16 +64,21 @@ final class CatalogController extends Controller
      * карточка остаётся ради истории и SEO (PHPDoc `CarStatus`),
      * и ссылки из выдачи Google не должны превращаться в 404.
      */
-    public function show(Car $car, SimilarCars $similar): View
+    public function show(Car $car, SimilarCars $similar, CarStructuredData $structuredData): View
     {
         // Без `attributeValues.attribute` каждая строка сетки
         // характеристик даёт свой запрос — об этом прямо предупреждает
-        // PHPDoc `Car::cardAttributes()`.
+        // PHPDoc `Car::cardAttributes()`. Эти же связи требует
+        // `CarStructuredData`: собственных запросов он не делает.
         $car->load(['brand', 'photos', 'attributeValues.attribute']);
 
         return view('catalog.show', [
             'car' => $car,
             'similar' => $similar->for($car),
+            // Микроразметку собирает сервис, а не шаблон: словари
+            // schema.org в разметке — это словари, которые никто
+            // не найдёт при следующей переверстке.
+            'structuredData' => $structuredData->for($car),
         ]);
     }
 
