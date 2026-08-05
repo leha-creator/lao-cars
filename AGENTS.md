@@ -109,14 +109,16 @@ laocars/
 │   ├── Services/             # ImageProcessor + StoredImage: WebP, ресайз, превью;
 │   │                         # CatalogCriteria + CatalogFilter + CatalogFilterOptions
 │   │                         # + SimilarCars — выборка и опции каталога;
+│   │                         # CarStructuredData — JSON-LD карточки;
 │   │                         # HomeContent — данные главной;
 │   │                         # LeadData + LeadService + TelegramNotifier —
 │   │                         # приём заявки и уведомление менеджеру
 │   ├── Support/              # ThumbnailPath, MediaSettingKeys, SiteMenu,
 │   │                         # SocialLinks, AttributeFilterIndex — чистые
 │   │                         # правила без слоя и состояния
-│   └── View/Components/      # LeadForm (x-lead-form): один компонент на все
-│                             # формы заявок сайта; SiteHeader и SiteFooter —
+│   └── View/Components/      # LeadForm (x-lead-form) — только <form>;
+│                             # LeadSection (x-lead-section) — секция-обёртка
+│                             # с раскладками; SiteHeader и SiteFooter —
 │                             # каркас, читают настройки сами (см. правила)
 ├── config/images.php         # Пределы обработки изображений и потолок загрузки
 ├── config/catalog.php        # Карточек на странице, размер блока похожих
@@ -138,13 +140,14 @@ laocars/
 │   └── views/
 │       ├── layouts/app.blade.php  # Каркас: SEO-секции, @fonts, шапка,
 │       │                     # подвал, above-header — бегущая строка главной
-│       ├── components/       # lead-form, car-card, page-heading,
-│       │                     # site-header, site-footer
+│       ├── components/       # lead-form, lead-section, car-card,
+│       │                     # page-heading, site-header, site-footer
+│       ├── pagination/       # catalog.blade.php — свой вид пагинации,
+│       │                     # передаётся именем в links()
 │       ├── home/             # index — собрана вехой 4.2
 │       ├── services|parts|contacts/  # index — заглушки на каркасе;
 │       │                     # наполнение вехами 4.4 и 4.5
-│       └── catalog/          # index и show — функциональные шаблоны без
-│                             # дизайна; вёрстка приходит вехой 4.3
+│       └── catalog/          # index и show — свёрстаны вехой 4.3
 ├── tests/
 │   ├── Pest.php              # RefreshDatabase, сброс кеша настроек,
 │   │                         # resetRateLimiters(), countQueries()
@@ -182,7 +185,8 @@ laocars/
 | app/Http/Requests/StoreLeadRequest.php | Контракт формы заявки: правила не мягче колонок, honeypot, `page_url` от сервера |
 | app/Services/LeadService.php | Приём заявки: запись в транзакции и постановка уведомления |
 | app/Services/TelegramNotifier.php | Отправка в Telegram: `e()` на каждом значении, токен не идёт в лог |
-| app/View/Components/LeadForm.php | `x-lead-form` — один компонент на все формы заявок сайта |
+| app/View/Components/LeadForm.php | `x-lead-form` — один компонент на все формы заявок сайта; только `<form>`, раскладки в `LeadSection` |
+| app/Services/CarStructuredData.php | JSON-LD карточки автомобиля: `Car` + `BreadcrumbList`; печатается с `JSON_HEX_TAG` |
 | app/Support/AttributeFilterIndex.php | Длина префикса `left(value, N)`: её берут и миграция, и фильтр, и тест-сторож |
 | app/Models/Lead.php | Заявка со всех форм: полиморфный источник, статусы, комментарии |
 | app/Models/CarAttribute.php | Справочник динамических характеристик: тип, единица, группа, флаги вывода |
@@ -210,7 +214,7 @@ laocars/
 | README | README.md | Landing-страница: запуск окружения, схема данных и демо-данные, тесты, CI, стек |
 | Дизайн-система и каркас | docs/design-system.md | Токены, шрифты, компоненты каркаса, как добавить страницу, диагностика вёрстки |
 | Главная страница | docs/homepage.md | Блоки главной, настройки, подборка авто и лимит, замена фоновых фото |
-| Каталог: фильтры и URL | docs/catalog.md | GET-параметры каталога, сортировки, индексация, фильтруемые характеристики |
+| Каталог: фильтры и URL | docs/catalog.md | GET-параметры каталога, индексация, панель фильтров без JS, галерея, микроразметка карточки |
 | Заявки и уведомления | docs/leads.md | Путь заявки до Telegram, настройка бота, воркер, диагностика, работа менеджера |
 | Админка каталога | docs/admin-catalog.md | Марки, карточки, фото, характеристики, медиабиблиотека |
 | Роли и доступ | docs/admin-roles.md | Права ролей, заведение сотрудников, первый запуск на проде |
@@ -249,7 +253,9 @@ laocars/
 - **Git инициализирован, базовая ветка `master`** (`git.enabled: true`). Ветки под планы автоматически не создаются (`create_branches: false`) — работа идёт в `master`.
 - **Тесты не подменяют драйверы.** `phpunit.xml` намеренно уводит их в реальные PostgreSQL и Redis. Не возвращайте `sqlite`, `array` и `sync`: с ними прогон зеленеет, не проверяя инфраструктуру, а `Queue::size()` перестаёт что-либо значить. По той же причине в проверках очереди не используется `Queue::fake()`.
 - **Конфигурация Tailwind — только через `@theme` в `resources/css/app.css`.** `tailwind.config.js` в стиле v3 не создавать: в v4 его нет, и токены оттуда не подхватятся. Имя нового токена не должно совпадать с ключом другого пространства имён: `--color-*` и `--text-*` дают один класс, и `--color-base` перебил бы размер шрифта `text-base`.
-- **Палитру Tailwind по умолчанию пока не обнулять** (`--color-*: initial`): на `text-gray-*` ещё держатся функциональные шаблоны каталога. Триггер уборки — веха 4.3.
+- **Палитра Tailwind по умолчанию обнулена** (`--color-*: initial`, веха 4.3): классов вида `text-gray-400` в сборке нет, цвет берётся только из токенов. `--color-white` и `--color-black` возвращены вручную сразу за обнулением — на `border-white/8` и `bg-white/6` держатся все обводки проекта, и без них они пропадают молча.
+- **Alpine пишется инлайном в `x-data`**, а не регистрируется через `Alpine.data()` из `@push('scripts')`: `app.js` приходит модулем из `<head>` и сам вызывает `Alpine.start()`, поэтому пушнутый скрипт исполнится либо раньше модуля, либо после `alpine:init`. Оба варианта ломаются молча. Атрибуты событий — полной формой `x-on:click`, а не `@click`: `@` — префикс директив Blade.
+- **Вид пагинации передаётся именем в `links('pagination.catalog')`**, а не ставится через `Paginator::defaultView()`: статик подменяет вид у любого Livewire-компонента с `WithPagination` и не возвращает его обратно.
 - **Шрифты подключаются только самохостингом** через блок `fonts` в `vite.config.js`. Тегом `<link>` с внешнего CDN — нет: `bunny()` из скелета убран осознанно, а Google Fonts в макете подключён так, как на живом сайте делать не надо. `subsets` обязан содержать `cyrillic` — умолчание `['latin']` оставляет русский текст без глифов молча.
 - **Шапка и подвал читают настройки сами** — единственное исключение из «Blade не ходит в БД», и на страницы оно не распространяется. Обоснование и границы — в `ARCHITECTURE.md` и `docs/design-system.md`.
 - **Состав меню правится в одном месте** — `app/Support/SiteMenu.php`. Он же расходится с макетом намеренно: там «Услуги» и «Блог», в проекте «Автосервис» и «Запчасти».
