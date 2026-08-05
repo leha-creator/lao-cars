@@ -204,7 +204,136 @@
         </section>
     @endif
 
-    {{-- Форма без источника: живая точка для сценария «общая форма»,
-         в списке лидов такая заявка помечается «Общая форма». --}}
-    <x-lead-form title="Оставить заявку" submit="Отправить заявку" />
+    {{--
+        Подборка авто с отметкой «показывать на главной».
+
+        Пустая коллекция убирает секцию целиком — вместе с заголовком
+        и ссылкой «Весь каталог →». Заголовок «Рекомендуемые автомобили»
+        над пустой сеткой выглядит не как «мало контента», а как поломка.
+        Фолбэк «показать свежие вместо отмеченных» отклонён: он прячет
+        незаполненную настройку. Вместо него сервис пишет WARN.
+    --}}
+    @if ($cars->isNotEmpty())
+        <section class="px-5 pt-16 pb-20 lg:px-8 lg:pb-30">
+            <div class="mx-auto max-w-page">
+                <div class="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between lg:mb-14">
+                    <div>
+                        <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Каталог</div>
+
+                        <h2 class="font-display text-3xl font-semibold lg:text-[34px]">
+                            Рекомендуемые <span class="text-accent">автомобили</span>
+                        </h2>
+                    </div>
+
+                    <a
+                        href="{{ route('catalog.index') }}"
+                        class="self-start border-b border-white/40 pb-1 text-[15px] transition-colors hover:border-accent hover:text-accent sm:self-auto"
+                    >Весь каталог →</a>
+                </div>
+
+                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach ($cars as $car)
+                        {{-- `heading="h3"` обязателен: у секции свой H2,
+                             и карточка внутри неё должна быть уровнем ниже.
+                             Забыть параметр — типовая ошибка переиспользования,
+                             а иерархия заголовков не оформление: по ней ходят
+                             скринридеры и по ней страницу разбирает поисковик. --}}
+                        <x-car-card :car="$car" heading="h3" />
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
+
+    {{-- Блок «Почему мы». Пустой список убирает секцию: пустая сетка под
+         заголовком читается как поломка, а не как «мало контента». --}}
+    @if ($advantages !== [])
+        <section class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
+            <div class="mx-auto max-w-page">
+                <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Почему мы</div>
+
+                <h2 class="mb-12 max-w-160 font-display text-3xl font-semibold lg:mb-16 lg:text-[34px]">
+                    Преимущества, за которые нас выбирают <span class="text-accent">клиенты</span>
+                </h2>
+
+                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach ($advantages as $advantage)
+                        <div class="rounded-card border border-white/7 bg-surface p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30 lg:px-7 lg:py-9">
+                            @if ($advantage['number'] !== null)
+                                <div class="mb-5.5 flex size-10 items-center justify-center rounded-full bg-accent/14 font-display text-[15px] font-bold text-accent">
+                                    {{ $advantage['number'] }}
+                                </div>
+                            @endif
+
+                            <h3 class="mb-3 text-[17px] font-semibold">{{ $advantage['title'] }}</h3>
+
+                            @if ($advantage['text'] !== null)
+                                <p class="text-sm leading-relaxed text-ink-muted">{{ $advantage['text'] }}</p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
+
+    {{--
+        Два направления.
+
+        Плашек две, а не три из макета: «Детейлинг» и «Доп. сервисы» —
+        это блоки внутри страницы автосервиса, а не отдельные разделы
+        (решение роадмапа). Без этого пояснения третью плашку однажды
+        «вернут по макету».
+
+        Тексты живут в шаблоне, а не в настройках: заводить под два абзаца
+        ключи значило бы расширять веху 3.5 задним числом, а ссылки — это
+        роуты, то есть код. Триггер завести настройку назван: первая
+        просьба заказчика поправить эти тексты.
+    --}}
+    <section class="px-5 py-20 lg:px-8 lg:py-30">
+        <div class="mx-auto max-w-page">
+            <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Направления</div>
+
+            <h2 class="mb-12 max-w-160 font-display text-3xl font-semibold lg:mb-14 lg:text-[34px]">
+                Не только продажа, но и <span class="text-accent">обслуживание</span>
+            </h2>
+
+            <div class="grid gap-8 lg:grid-cols-2">
+                @foreach ([
+                    ['letter' => 'А', 'title' => 'Автосервис', 'url' => route('services.index'), 'text' => 'ТО, диагностика и ремонт для всех марок, включая гибриды. Своя мастерская, шиномонтаж и детейлинг — весь цикл владения в одном месте.'],
+                    ['letter' => 'З', 'title' => 'Запчасти', 'url' => route('parts.index'), 'text' => 'Подбираем оригинальные детали и проверенные аналоги по VIN. Цены и сроки уточняем после запроса — под конкретный автомобиль.'],
+                ] as $direction)
+                    <a
+                        href="{{ $direction['url'] }}"
+                        class="block rounded-card border border-white/10 px-8 py-11 transition duration-250 hover:-translate-y-1 hover:border-accent/50 hover:bg-surface"
+                    >
+                        <div class="mb-5 flex size-12 items-center justify-center rounded-xl bg-accent/14 font-display text-lg font-bold text-accent">
+                            {{ $direction['letter'] }}
+                        </div>
+
+                        <h3 class="mb-4 font-display text-xl font-semibold">{{ $direction['title'] }}</h3>
+
+                        <p class="mb-6 text-sm leading-relaxed text-ink-muted">{{ $direction['text'] }}</p>
+
+                        <div class="text-sm text-accent">Подробнее →</div>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    {{--
+        Форма без источника: живая точка для сценария «общая форма»,
+        в списке лидов такая заявка помечается «Общая форма».
+
+        Двухколоночную раскладку включает `heading`; фон приходит готовым
+        URL, а не путём — компонент не должен знать про `Vite::asset()`.
+    --}}
+    <x-lead-form
+        submit="Отправить заявку"
+        eyebrow="Заявка"
+        heading="Оставьте заявку — подберём авто или запишем на сервис"
+        text="Перезвоним в течение 15 минут в рабочее время. Все данные передаются менеджеру напрямую."
+        :background="Vite::asset('resources/images/lead-bg.webp')"
+    />
 @endsection
