@@ -60,8 +60,20 @@ final class StoreLeadRequest extends FormRequest
             // Список алиасов выписан явно и обязан совпадать с morph map
             // из `AppServiceProvider::boot()`: `Relation::enforceMorphMap()`
             // хранит в `leads.source_type` именно `car` и `service`.
-            'source_type' => ['nullable', 'in:car,service'],
-            'source_id' => ['nullable', 'integer', 'required_with:source_type'],
+            //
+            // Пара проверяется в одну сторону, и односторонность намеренная.
+            // `source_id` без типа — сирота: заявка ссылается на запись,
+            // про которую неизвестно, из какой она таблицы, и записать
+            // такую нельзя. Тип без id, наоборот, безобиден и приходит
+            // ШТАТНО: селект «Интересует» на странице автосервиса (веха 4.4)
+            // стоит рядом со скрытым `source_type=service`, и вариант
+            // «нужна консультация» отправляет тип с пустым id. Требовать
+            // id в этом случае значило бы запретить посетителю НЕ выбирать
+            // услугу — то есть сломать половину сценария формы. Дальше тип
+            // без id отбрасывает `toData()`, чтобы в колонку не попал
+            // полузаполненный указатель.
+            'source_type' => ['nullable', 'in:car,service', 'required_with:source_id'],
+            'source_id' => ['nullable', 'integer'],
 
             // Поля `website` в правилах нет намеренно — см. isSpam().
             // Поля `page_url` в правилах нет намеренно — см. pageUrl().
@@ -155,7 +167,12 @@ final class StoreLeadRequest extends FormRequest
             partBrand: $this->text($validated['part_brand'] ?? null),
             partModel: $this->text($validated['part_model'] ?? null),
             partVin: $this->text($validated['part_vin'] ?? null),
-            sourceType: $this->text($validated['source_type'] ?? null),
+            // Тип без id в колонку не пишется. Значение `service` при пустом
+            // `source_id` дало бы полузаполненный полиморфный указатель:
+            // заявка читалась бы как «Общая форма» (morph с пустым id отдаёт
+            // `null`), а колонка при этом врала бы про источник — и врала бы
+            // только в базе, то есть там, где это заметят позже всего.
+            sourceType: $sourceId === null ? null : $this->text($validated['source_type'] ?? null),
             sourceId: $sourceId === null ? null : (int) $sourceId,
             pageUrl: $this->pageUrl(),
         );

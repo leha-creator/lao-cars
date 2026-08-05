@@ -106,6 +106,71 @@
         @enderror
     </label>
 
+    @if ($hasServiceChoice())
+        {{-- Выбор конкретной услуги (веха 4.4). Форма на странице автосервиса
+             одна, а позиций прайса семнадцать, поэтому источник выбирается
+             здесь, а не проставляется скрытым полем.
+
+             Пара `source_type` + `source_id` — та же, что у остальных
+             сценариев, и валидация вехи 3.7 к ней уже написана: услуга
+             проверяется на существование И на публикацию. Свободный текст
+             вместо селекта (как в макете) отклонён: заявка потеряла бы связь
+             с позицией прайса, а именно она даёт менеджеру
+             `Lead::sourceLabel()` вида «Услуга: Полировка кузова» — и в списке
+             заявок, и в Telegram.
+
+             Вариант «Нужна консультация» отправляет тип с пустым `source_id`,
+             и это штатный путь: `StoreLeadRequest::toData()` отбрасывает тип
+             без id, заявка становится общей. --}}
+        <input type="hidden" name="source_type" value="service">
+
+        <label class="flex flex-col gap-1.5">
+            <span class="text-sm font-medium text-ink-muted">Интересует</span>
+
+            {{-- `x-model` здесь не используется, и это не стилистика. Alpine
+                 при инициализации записывает в контрол значение из состояния
+                 компонента, то есть затирает серверный `@selected` пустой
+                 строкой: после ошибки валидации выбранная услуга молча
+                 пропадала бы — при живой разметке, работающем `old()`
+                 и зелёных тестах, потому что порча происходит в браузере.
+                 Значение проставляет присваивание в обработчике клика
+                 по строке прайса. --}}
+            <select
+                name="source_id"
+                id="lead-service"
+                class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+            >
+                <option value="">Нужна консультация</option>
+
+                {{-- Группировка по категориям, а не плоский список из семнадцати
+                     позиций. Порядок групп наследуется от порядка блоков
+                     прайса: коллекция приходит собранной из них. --}}
+                @foreach ($services->groupBy(fn ($service) => $service->category->label()) as $categoryLabel => $categoryServices)
+                    <optgroup label="{{ $categoryLabel }}">
+                        @foreach ($categoryServices as $service)
+                            {{-- `old()` во всех полях без исключения, и селект
+                                 не исключение: после ошибки валидации (не
+                                 заполнен телефон) посетитель не должен заново
+                                 искать свою позицию в списке. Сравнение через
+                                 приведение к строке: `old()` отдаёт строку,
+                                 ключ — целое. --}}
+                            <option value="{{ $service->getKey() }}" @selected((string) old('source_id') === (string) $service->getKey())>{{ $service->title }}</option>
+                        @endforeach
+                    </optgroup>
+                @endforeach
+            </select>
+
+            {{-- Ошибка выводится РЯДОМ с селектом, а не только внизу формы:
+                 сообщение вехи 3.7 рассчитано на подделку скрытого поля,
+                 и человеку, чью услугу сняли с публикации, пока он заполнял
+                 форму, оно должно указывать на поле, а не висеть над
+                 кнопкой. --}}
+            @error('source_id')
+                <span class="text-sm text-danger">{{ $message }}</span>
+            @enderror
+        </label>
+    @endif
+
     <div class="grid gap-4 sm:grid-cols-2">
         <label class="flex flex-col gap-1.5">
             <span class="text-sm font-medium text-ink-muted">Удобный способ связи</span>
@@ -204,9 +269,15 @@
         @enderror
     </label>
 
-    @error('source_id')
-        <span class="text-sm text-danger">{{ $message }}</span>
-    @enderror
+    {{-- Ошибка источника внизу формы — для сценариев со скрытым полем
+         (карточка автомобиля, запись на конкретную услугу): указывать там
+         не на что, поэтому сообщение стоит над кнопкой. При живом селекте
+         оно выводится рядом с ним, и второй копии здесь быть не должно. --}}
+    @if (! $hasServiceChoice())
+        @error('source_id')
+            <span class="text-sm text-danger">{{ $message }}</span>
+        @enderror
+    @endif
 
     <button
         type="submit"

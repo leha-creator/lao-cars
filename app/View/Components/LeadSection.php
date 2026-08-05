@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\View\Components;
 
+use App\Models\Service;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\View\Component;
 
 /**
@@ -43,6 +45,10 @@ final class LeadSection extends Component
      *                               компонент не должен знать про `Vite::asset()` — завтра фон
      *                               приедет из медиабиблиотеки, и менять придётся вызывающую
      *                               сторону, а не секцию заявки.
+     * @param  ?Collection<int, Service>  $services  Пробрасывается в форму как есть.
+     *                                               Взаимоисключение с `$source` проверяет `LeadForm` — здесь
+     *                                               второй такой же проверки нет намеренно: два места означали бы
+     *                                               два разных сообщения об одной ошибке.
      */
     public function __construct(
         public ?Model $source = null,
@@ -53,6 +59,7 @@ final class LeadSection extends Component
         public ?string $heading = null,
         public ?string $text = null,
         public ?string $background = null,
+        public ?Collection $services = null,
     ) {}
 
     public function render(): View

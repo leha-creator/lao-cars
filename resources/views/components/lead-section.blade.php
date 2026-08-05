@@ -77,6 +77,7 @@
                  получает `null` и не рендерит его вовсе. --}}
             <x-lead-form
                 :source="$source"
+                :services="$services"
                 :parts="$parts"
                 :submit="$submit"
                 :title="$twoColumn ? null : $title"
