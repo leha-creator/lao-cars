@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
-});
+})->name('home');
 
 // Каталог автомобилей (веха 3.6). Роут карточки объявляется после роута
 // списка: `/catalog/{car}` не должен перехватывать `/catalog`.

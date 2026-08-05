@@ -115,6 +115,10 @@ it('does not run a query per attribute row', function () {
 
     $full->syncAttributeValues($values);
 
+    // Иначе первый из двух замеров включит промах кеша настроек,
+    // который платят шапка и подвал, и разница в единицу сойдёт за N+1.
+    warmSettingsCache();
+
     $singleQueries = countQueries(fn () => $this->get('/catalog/'.$single->slug)->assertOk());
     $fullQueries = countQueries(fn () => $this->get('/catalog/'.$full->slug)->assertOk());
 

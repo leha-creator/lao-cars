@@ -145,6 +145,10 @@ it('does not run a query per card', function () {
     $brand = Brand::factory()->create();
     CarPhoto::factory()->for(Car::factory()->for($brand))->create();
 
+    // Иначе первый из двух замеров включит промах кеша настроек,
+    // который платят шапка и подвал, и разница в единицу сойдёт за N+1.
+    warmSettingsCache();
+
     $single = countQueries(fn () => $this->get('/catalog')->assertOk());
 
     Car::factory()->count(30)->for($brand)->create()

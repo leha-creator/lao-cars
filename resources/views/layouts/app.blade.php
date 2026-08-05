@@ -1,13 +1,14 @@
 {{--
-    Базовый каркас публичной части.
+    Каркас публичной части.
 
-    Намеренно минимальный: вёрстка по UI Kit и токены дизайн-системы — веха 4.1.
-    Здесь только то, без чего страницы не собрать, и задел под SEO вех 4.x —
-    сменные title, description и canonical. Публичная часть рендерится на
-    сервере: списки каталога должны индексироваться, а фильтры оставаться
-    обычными GET-параметрами.
+    Собран вехой 4.1 по UI Kit макета: токены дизайн-системы живут
+    в `resources/css/app.css`, шапка и подвал — компоненты `x-site-header`
+    и `x-site-footer`. Панель Filament этот layout не использует — у неё
+    собственная тема.
 
-    Панель Filament этот layout не использует — у неё собственная тема.
+    SEO-задел вех 4.x — сменные title, description, canonical и robots.
+    Публичная часть рендерится на сервере: списки каталога должны
+    индексироваться, а фильтры оставаться обычными GET-параметрами.
 --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -15,6 +16,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    {{-- Цвет адресной строки мобильных браузеров. В hex, а не `oklch()`:
+         поддержка современного синтаксиса цвета в `theme-color` неполная.
+         Значение — точный эквивалент токена `--color-page`
+         (`oklch(0.13 0.004 60)`), пересчитанный один раз. --}}
+    <meta name="theme-color" content="#080706">
 
     <title>@yield('title', config('app.name'))</title>
 
@@ -37,9 +44,38 @@
         <link rel="canonical" href="{{ url()->current() }}">
     @show
 
+    {{-- Шрифты самохостятся сборкой (см. блок `fonts` в `vite.config.js`),
+         а не подключаются с fonts.googleapis.com, как в макете. Директива
+         идёт до `@vite`, чтобы preload-ссылки на woff2 попали в разбор
+         раньше блокирующего CSS. --}}
+    @fonts
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-white text-gray-900 antialiased">
-    @yield('content')
+<body class="min-h-screen antialiased">
+    {{-- Меню из четырёх пунктов на каждой странице — это четыре лишних
+         таба до содержимого для того, кто ходит по сайту с клавиатуры. --}}
+    <a
+        href="#content"
+        class="sr-only rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-page focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-200"
+    >Перейти к содержимому</a>
+
+    {{-- Место для бегущей строки главной (веха 4.2). В макете она стоит выше
+         шапки, то есть технически принадлежит каркасу; по содержанию это
+         настройка `home.ticker`, то есть контент страницы. Секция объявлена
+         здесь, чтобы вехе 4.2 не пришлось править layout ради одного блока. --}}
+    @yield('above-header')
+
+    <x-site-header :overlay="$headerOverlay ?? false" />
+
+    <main id="content">
+        @yield('content')
+    </main>
+
+    <x-site-footer />
+
+    {{-- Задел под страницы со своим JS — например, галерею карточки
+         автомобиля вехи 4.3. --}}
+    @stack('scripts')
 </body>
 </html>
