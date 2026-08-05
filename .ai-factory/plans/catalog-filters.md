@@ -142,7 +142,7 @@
 
 ### Фаза 2 — Страницы каталога
 
-- [ ] **5. `CatalogController::index`, роут и шаблон списка** *(зависит от 1, 2, 4)*
+- [x] **5. `CatalogController::index`, роут и шаблон списка** *(зависит от 1, 2, 4)*
   `config/catalog.php` — `per_page` (9) и `similar_limit` (3), оба через `env()` внутри конфига (правило `ARCHITECTURE.md`: `env()` вне конфига после `config:cache` вернёт `null`). Девять — три ряда трёхколоночной сетки макета; на демо-каталоге из 11 доступных авто пагинация при этом видна сразу, а не только в тестах.
   `app/Http/Controllers/CatalogController.php` — `index(CatalogFilterRequest $request, CatalogFilter $filter, CatalogFilterOptions $options): View`. Контроллер тонкий: получает `CatalogCriteria` из запроса, отдаёт билдер фильтру, вешает `with(['brand', 'mainPhoto'])` (без предзагрузки список из девяти карточек даёт 19 запросов — N+1 назван антипаттерном в `ARCHITECTURE.md`), `paginate(config('catalog.per_page'))->withQueryString()` — без `withQueryString()` вторая страница теряет фильтры.
   **404 на странице за пределами последней**, когда записи есть: `$cars->currentPage() > $cars->lastPage() && $cars->total() > 0`.
@@ -154,7 +154,7 @@
   Логирование: в контроллере не требуется — фильтр уже пишет DEBUG.
   Проверка: `/catalog` открывается и показывает 9 из 11 авто, проданного `Geely Monjaro` в списке нет; вторая страница показывает оставшиеся два; выбор марки в форме перезагружает страницу с параметром в адресе и сохраняет его в ссылках пагинации; `?brand=zzz` уводит на `/catalog`; `?page=99` даёт 404; в исходнике страницы без фильтров `robots` отсутствует, с фильтром — `noindex,follow`, canonical в обоих случаях без параметров фильтра.
 
-- [ ] **6. `SimilarCars`, `CatalogController::show` и шаблон карточки** *(зависит от 5)*
+- [x] **6. `SimilarCars`, `CatalogController::show` и шаблон карточки** *(зависит от 5)*
   `app/Services/SimilarCars.php` — `for(Car $car, ?int $limit = null): Collection` (умолчание из `config('catalog.similar_limit')`).
   Первый круг: `available()`, `whereKeyNot($car)`, та же марка; порядок — `orderByRaw('abs(price - ?)', [$car->price])` при заданной цене, иначе `created_at DESC`. Второй круг выполняется, только если не хватило: любая марка, коридор ±30% цены, исключая уже выбранных (`whereKeyNotIn`), тот же порядок близости. У автомобиля без цены второй круг — просто свежие доступные: коридора вокруг `NULL` не существует, и попытка его посчитать даёт `NULL` в каждом сравнении и пустую выдачу.
   Обе выборки идут с `with(['brand', 'mainPhoto'])` — блок похожих показывает фото, марку и цену.
