@@ -49,5 +49,5 @@
         @endif
     </section>
 
-    <x-lead-form title="Написать нам" submit="Отправить" />
+    <x-lead-section title="Написать нам" submit="Отправить" />
 @endsection

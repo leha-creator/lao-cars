@@ -17,5 +17,5 @@
 @section('content')
     <x-page-heading eyebrow="Услуги" :title="$title" :intro="$intro" />
 
-    <x-lead-form title="Записаться на сервис" submit="Записаться" />
+    <x-lead-section title="Записаться на сервис" submit="Записаться" />
 @endsection

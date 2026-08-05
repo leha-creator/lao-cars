@@ -1,0 +1,86 @@
+{{--
+    Секция заявки — обёртка вокруг `x-lead-form` (веха 4.3).
+
+    Две раскладки, свёрстанные вехой 4.2, переехали сюда дословно:
+    центрированная карточка на страницах разделов (`heading` не задан)
+    и две колонки на фоновом фото на главной (`Home.dc.html`, строки
+    199–216). Ветвление идёт ВОКРУГ формы — внутренности формы инвариантны,
+    и сторож здесь `LeadStoreTest` с `SectionPagesTest`, прошедшие без правок.
+
+    Якорь `#lead-form` — цель кнопки «Оставить заявку» в шапке и умолчание
+    `home.promo.link_url`. Он живёт на `<section>`, а не на самой форме:
+    на карточке автомобиля форма стоит внутри правой колонки без секции,
+    и якорь там висит на её карточке. Два одинаковых `id` на странице
+    увели бы кнопку из шапки не туда.
+--}}
+@php
+    // Двухколоночная раскладка включается наличием заголовка секции:
+    // без него выводить пустую левую колонку не из чего.
+    $twoColumn = $heading !== null;
+@endphp
+
+<section
+    id="lead-form"
+    @class([
+        'px-5 py-16 lg:px-8 lg:py-24',
+        'relative overflow-hidden bg-page-alt lg:py-30' => $twoColumn,
+    ])
+>
+    @if ($background !== null)
+        {{-- В отличие от хиро — `loading="lazy"`: этот блок стоит внизу
+             страницы и в первый экран не попадает. Изображение декоративное,
+             смысл несёт текст поверх него. --}}
+        <img
+            src="{{ $background }}"
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            class="absolute inset-0 size-full object-cover"
+        >
+
+        {{-- Подложка обязательна: без неё текст поверх фотографии нечитаем.
+             Значения стопов — из макета. --}}
+        <div class="absolute inset-0 bg-gradient-to-r from-page-alt/62 via-page-alt/42 via-45% to-page-alt/28"></div>
+    @endif
+
+    <div @class([
+        'relative mx-auto max-w-page',
+        'grid items-start gap-12 lg:grid-cols-2 lg:gap-20' => $twoColumn,
+    ])>
+        @if ($twoColumn)
+            <div>
+                @if ($eyebrow !== null)
+                    <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">{{ $eyebrow }}</div>
+                @endif
+
+                {{-- Тень под текстом — из макета: фотография под ним светлая
+                     местами, и одной градиентной подложки не хватает. --}}
+                <h2 class="mb-6 max-w-120 font-display text-3xl font-semibold [text-shadow:0_2px_24px_rgb(0_0_0/0.85)] lg:text-[34px]">
+                    {{ $heading }}
+                </h2>
+
+                @if ($text !== null)
+                    <p class="max-w-110 text-[15px] leading-[1.7] text-ink [text-shadow:0_1px_16px_rgb(0_0_0/0.8)]">
+                        {{ $text }}
+                    </p>
+                @endif
+            </div>
+        @endif
+
+        <div @class([
+            'rounded-[20px] border border-white/8 p-6 lg:p-9',
+            'mx-auto max-w-2xl bg-page-alt' => ! $twoColumn,
+            'bg-page/50' => $twoColumn,
+        ])>
+            {{-- Заголовок карточки при заданном `heading` не выводится:
+                 иначе это второй H2 подряд про одно и то же. Форма
+                 получает `null` и не рендерит его вовсе. --}}
+            <x-lead-form
+                :source="$source"
+                :parts="$parts"
+                :submit="$submit"
+                :title="$twoColumn ? null : $title"
+            />
+        </div>
+    </div>
+</section>
