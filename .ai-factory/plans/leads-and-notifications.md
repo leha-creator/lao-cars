@@ -119,7 +119,7 @@
 
 ### Фаза 3 — Форма на сайте
 
-- [ ] **5. Blade-компонент `x-lead-form` и монтаж на страницы** *(зависит от 2)*
+- [x] **5. Blade-компонент `x-lead-form` и монтаж на страницы** *(зависит от 2)*
   `app/View/Components/LeadForm.php` (каталог создаётся этой задачей — он объявлен в `ARCHITECTURE.md` «на вырост»): свойства `?Model $source = null`, `string $title`, `string $submit`, `bool $parts = false`. `sourceType(): ?string` возвращает `$this->source?->getMorphClass()` — благодаря `enforceMorphMap` это готовые `'car'` и `'service'`, второй словарь заводить не нужно.
   `resources/views/components/lead-form.blade.php` — функциональный шаблон без дизайна, с шапкой-комментарием по образцу `catalog/show.blade.php`: вёрстка приходит вехой 4.1. Внутри: `@csrf`; скрытые `source_type`/`source_id` при наличии источника; поля `name`, `phone`, `email`, `message`; селекты `contact_method` и `preferred_time` из `ContactMethod::options()` и `PreferredTime::options()`; при `$parts` — `part_brand`, `part_model`, `part_vin`. `old()` во всех полях без исключения — при ошибке валидации клиент не вводит телефон заново. `@error` под каждым полем, `session('status')` — сообщение об успехе.
   Honeypot `website` уводится за пределы экрана (`absolute -left-[9999px]`), а не `class="hidden"` и не `type="hidden"`: `display:none` боты распознают, а hidden-поля пропускают.
