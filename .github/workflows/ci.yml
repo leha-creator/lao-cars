@@ -106,6 +106,19 @@ jobs:
       - name: Установить зависимости Node
         run: npm ci
 
+      # Шрифты скачиваются на сборке (vite.config.js), а не подключаются с CDN
+      # в рантайме. Плагин кеширует скачанное в node_modules/.cache, но
+      # actions/setup-node с `cache: npm` кеширует стор npm, а не этот каталог:
+      # без отдельного шага каждый прогон CI идёт в сеть за woff2, и
+      # недоступность Google красит сборку по причине, не связанной с
+      # изменением.
+      - name: Кеш скачанных шрифтов
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/laravel-vite-plugin/fonts
+          key: fonts-${{ runner.os }}-${{ hashFiles('vite.config.js') }}
+          restore-keys: fonts-${{ runner.os }}-
+
       # Сборка обязана идти до тестов: smoke-тест главной страницы читает
       # манифест Vite, и без него @vite падает.
       - name: Собрать фронтенд
