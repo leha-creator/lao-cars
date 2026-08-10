@@ -440,7 +440,7 @@
 
   Файлы: `tests/Feature/Http/HomePageTest.php`, `tests/Feature/Filament/ManageSiteSettingsTest.php`, `tests/Feature/Database/SeedersTest.php`.
 
-- [ ] **Задача 17: документация и роадмап** (зависит от 16)
+- [x] **Задача 17: документация и роадмап** (зависит от 16)
 
   Обязательный чекпойнт документации (`Docs: yes`):
 
