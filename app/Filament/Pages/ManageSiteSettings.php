@@ -84,6 +84,12 @@ final class ManageSiteSettings extends Page
             'home.ticker',
             'home.promo',
             'home.advantages',
+            // Блоки главной, заведённые вехой 4.6 по макету v2. Форма
+            // значения у всех трёх — репитер, то есть список объектов,
+            // и нормализует их тот же `HomeContent`, что и `advantages`.
+            'home.steps',
+            'home.price_breakdown',
+            'home.faq',
         ],
         'footer' => [
             'footer.guarantee',
@@ -371,6 +377,80 @@ final class ManageSiteSettings extends Page
                 ->reorderable()
                 ->collapsed()
                 ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
+                ->defaultItems(0),
+
+            // Три репитера ниже заведены вехой 4.6. Формат значения дословно
+            // повторяет `home.advantages`: одна нормализация в `HomeContent`
+            // на все списки объектов, а две разные на одинаковых данных
+            // разъехались бы на первой же правке одной из них.
+            //
+            // `itemLabel()` обязателен у каждого: свёрнутый элемент без
+            // подписи — это шесть одинаковых строк «Элемент», в которых
+            // администратор ищет нужную раскрытием по очереди.
+            Repeater::make('home.steps')
+                ->label('Этапы покупки')
+                ->helperText('Блок «Как проходит покупка» на главной.')
+                ->schema([
+                    TextInput::make('number')
+                        ->label('Номер')
+                        ->required(),
+
+                    TextInput::make('title')
+                        ->label('Заголовок')
+                        ->required(),
+
+                    Textarea::make('text')
+                        ->label('Текст')
+                        ->rows(2),
+                ])
+                // Порядок содержателен: этапы идут по времени, и подбор
+                // после доставки читается как ошибка сайта.
+                ->reorderable()
+                ->collapsed()
+                ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
+                ->defaultItems(0),
+
+            Repeater::make('home.price_breakdown')
+                ->label('Состав цены')
+                ->helperText('Блок «Прозрачность цены» на главной. Суммы здесь не указываются — только статьи расходов.')
+                ->schema([
+                    TextInput::make('title')
+                        ->label('Статья расходов')
+                        ->required(),
+
+                    TextInput::make('note')
+                        ->label('Уточнение')
+                        ->helperText('Короткая приписка справа: «по условиям сделки», «фиксируется в расчёте».'),
+                ])
+                // Порядок содержателен и здесь: строки идут по ходу сделки,
+                // от автомобиля у поставщика до дополнительных услуг.
+                ->reorderable()
+                ->collapsed()
+                ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
+                ->defaultItems(0),
+
+            Repeater::make('home.faq')
+                ->label('Частые вопросы')
+                ->helperText('Блок FAQ на главной. Первый вопрос на странице раскрыт.')
+                ->schema([
+                    TextInput::make('question')
+                        ->label('Вопрос')
+                        ->required(),
+
+                    Textarea::make('answer')
+                        ->label('Ответ')
+                        // Обязателен наравне с вопросом: `<summary>` без
+                        // содержимого раскрывается в пустоту, и это читается
+                        // как сломанный аккордеон. Сервис такой элемент
+                        // всё равно отбросит — здесь это видно сразу.
+                        ->required()
+                        ->rows(3),
+                ])
+                // Порядок содержателен: самые частые вопросы стоят выше,
+                // и первый из них раскрыт на странице.
+                ->reorderable()
+                ->collapsed()
+                ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
                 ->defaultItems(0),
         ]);
     }
