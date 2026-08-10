@@ -6,12 +6,16 @@
     над пустой сеткой читается как поломка, а не как «мало контента».
 
     Порядок блоков: бегущая строка → хиро с фактами → полоса доверия →
-    промо → подборка авто с фильтром статусов → быстрый подбор →
-    «Почему мы» → направления → заявка.
+    промо → подборка авто с фильтром статусов → быстрый подбор → этапы
+    покупки → экосистема → основные услуги → прозрачность цены → отзывы →
+    «Почему мы» → FAQ → заявка.
 
     Фоны чередуются `page ⇄ alt` — правило дизайн-системы запрещает больше
     двух оттенков на экране, а не смену тона. Полоса доверия, промо
-    и подборка идут на `page` подряд, как в макете.
+    и подборка идут на `page` подряд, как в макете; `deep` остаётся редким
+    акцентом и достаётся только этапам покупки. «Почему мы» переехал
+    с позиции «после подборки» на «между отзывами и FAQ», а FAQ взят
+    на `page` вместо `alt` из макета — иначе получилось бы два `alt` подряд.
 
     Что из макета сюда НЕ переносится и почему:
 
@@ -1065,8 +1069,99 @@
             </section>
         @endif
 
-        {{-- Блок «Почему мы». Пустой список убирает секцию: пустая сетка под
-             заголовком читается как поломка, а не как «мало контента». --}}
+        {{--
+            Отзывы — первый потребитель модели `Review` и её модерации
+            (веха 3.2). Показываются только опубликованные; путь к этому
+            закрыт скоупом в сервисе, а не условием здесь.
+
+            Карточки-шаблоны макета с подписями «Имя клиента · город · дата»
+            сюда НЕ переносятся: это указание заказчику, чем наполнять блок,
+            а не контент. Пустая коллекция убирает секцию целиком — заголовок
+            «Отзывы» над пустой сеткой читается как поломка.
+        --}}
+        @if ($reviews->isNotEmpty())
+            <section id="about" class="px-5 py-20 lg:px-8 lg:py-30">
+                <div class="mx-auto max-w-page">
+                    <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                        <div>
+                            <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Доверие</div>
+
+                            <h2 class="font-display text-3xl leading-[1.15] font-semibold text-pretty lg:text-[34px]">
+                                Отзывы доказывают результат, а не <span class="text-accent">просто хвалят</span>
+                            </h2>
+                        </div>
+
+                        <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                            Публикуем после проверки: каждый отзыв проходит модерацию
+                            в админке перед тем, как попасть на сайт.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-6 md:grid-cols-3">
+                        @foreach ($reviews as $review)
+                            <article class="flex flex-col gap-4 rounded-card border border-white/8 bg-surface p-7">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex min-w-0 items-center gap-3">
+                                        {{-- Фото необязательно: `media_id`
+                                             объявлен `nullOnDelete()`, и
+                                             удалённое изображение оставляет
+                                             отзыв без фото, а не роняет
+                                             страницу. Снимок декоративный —
+                                             имя автора стоит рядом текстом. --}}
+                                        @if ($review->photo_url !== null)
+                                            <img
+                                                src="{{ $review->photo_url }}"
+                                                width="44"
+                                                height="44"
+                                                loading="lazy"
+                                                alt=""
+                                                aria-hidden="true"
+                                                class="size-11 shrink-0 rounded-full bg-photo object-cover"
+                                            >
+                                        @endif
+
+                                        <div class="min-w-0">
+                                            <div class="text-[15px] font-semibold">{{ $review->author_name }}</div>
+
+                                            @if ($review->author_context !== null)
+                                                <div class="text-[13px] text-ink-faint">{{ $review->author_context }}</div>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    {{-- Звёзды рисуются символами, а не
+                                         изображениями, — но ряд символов
+                                         скринридер прочитает как мусор
+                                         («звезда звезда звезда…»), поэтому
+                                         оценка объявлена целиком:
+                                         `role="img"` плюс `aria-label`
+                                         заменяют содержимое одной фразой. --}}
+                                    @if ($review->rating !== null)
+                                        <div
+                                            role="img"
+                                            aria-label="Оценка: {{ $review->rating }} из 5"
+                                            class="shrink-0 text-sm tracking-[0.08em] text-accent"
+                                        >{{ str_repeat('★', $review->rating).str_repeat('☆', 5 - $review->rating) }}</div>
+                                    @endif
+                                </div>
+
+                                <p class="text-[15px] leading-[1.7]">{{ $review->body }}</p>
+                            </article>
+                        @endforeach
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        {{-- Блок «Почему мы». Вехой 4.6 переехал сюда, между отзывами и FAQ:
+             на прежнем месте (сразу после подборки) он оказался бы третьим
+             `alt`-блоком подряд. Разметка карточек не менялась — она общая
+             по формату с блоком «почему сюда» на `/services`, и две разные
+             карточки на одинаковых данных разъехались бы на первой же правке
+             одной из них.
+
+             Пустой список убирает секцию: пустая сетка под заголовком
+             читается как поломка, а не как «мало контента». --}}
         @if ($advantages !== [])
             <section class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
                 <div class="mx-auto max-w-page">
@@ -1098,6 +1193,60 @@
         @endif
 
         {{--
+            FAQ.
+
+            Нативные `<details>` / `<summary>`, а не Alpine: `<details>` —
+            готовый аккордеон браузера, он работает без скрипта, доступен
+            с клавиатуры и объявляется скринридером сам. Alpine здесь был бы
+            заменой работающего механизма на свой.
+
+            Микроразметки `FAQPage` тут НЕТ намеренно: Google перестал
+            показывать её у коммерческих сайтов, а разметка, которая ничего
+            не даёт в выдаче, — это код без потребителя. Триггер вернуть
+            назван: FAQ снова начинает попадать в сниппеты коммерческих
+            запросов — тогда она собирается тем же приёмом, что
+            `CarStructuredData`.
+
+            Пустой `home.faq` убирает секцию целиком. Элемент без ответа
+            в неё не попадает вовсе — его отбрасывает `HomeContent`.
+        --}}
+        @if ($faq !== [])
+            <section class="px-5 py-20 lg:px-8 lg:py-30">
+                <div class="mx-auto max-w-page">
+                    <div class="mb-12 lg:mb-14">
+                        <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">FAQ</div>
+
+                        <h2 class="max-w-160 font-display text-3xl leading-[1.15] font-semibold text-pretty lg:text-[34px]">
+                            Закрываем вопросы <span class="text-accent">до звонка менеджеру</span>
+                        </h2>
+                    </div>
+
+                    <div class="border-t border-white/10">
+                        @foreach ($faq as $index => $item)
+                            {{-- Первый вопрос раскрыт: закрытый целиком блок
+                                 читается как список ссылок, а не как ответы,
+                                 и человек уходит, не поняв, что здесь есть
+                                 текст. --}}
+                            <details class="group border-b border-white/10" @if ($index === 0) open @endif>
+                                {{-- Маркер браузера гасится обоими способами:
+                                     `list-none` не убирает треугольник
+                                     в WebKit — там за него отвечает
+                                     собственный псевдоэлемент. Вместо маркера
+                                     акцентный «+», превращающийся в «–»
+                                     на раскрытом элементе. --}}
+                                <summary class="flex cursor-pointer list-none items-center justify-between gap-5 py-5.5 text-base font-semibold transition-colors hover:text-accent [&::-webkit-details-marker]:hidden after:shrink-0 after:font-display after:text-xl after:leading-none after:text-accent after:content-['+'] group-open:after:content-['–'] lg:text-[17px]">
+                                    {{ $item['question'] }}
+                                </summary>
+
+                                <p class="max-w-240 pb-6 text-[15px] leading-[1.7] text-ink-muted">{{ $item['answer'] }}</p>
+                            </details>
+                        @endforeach
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        {{--
             Секция заявки. `:services` включает селект «Интересует» — тот же
             четвёртый сценарий формы, что на `/services` (веха 4.4): скрытое
             `source_type=service` плюс селект `source_id`. Именно он делает
@@ -1106,6 +1255,21 @@
             Двухколоночную раскладку включает `heading`; фон приходит готовым
             URL, а не путём — компонент не должен знать про `Vite::asset()`.
         --}}
+        @php
+            // Контакт с пустым значением не рендерится вовсе: подпись
+            // «Телефон» над пустотой хуже отсутствующего блока — то же
+            // правило, что защищает подвал тестом вехи 4.1.
+            //
+            // Проверка строгая (`!== null`), а не `array_filter()` без
+            // колбэка: правило `RULES.md` — нестрогая проверка выбрасывает
+            // и значения-нули, а сервис уже привёл пустые строки к `null`.
+            $leadContacts = array_values(array_filter([
+                ['label' => 'Телефон', 'value' => $contacts['phone']],
+                ['label' => 'Почта', 'value' => $contacts['email']],
+                ['label' => 'Адрес', 'value' => $contacts['address']],
+            ], fn (array $contact): bool => $contact['value'] !== null));
+        @endphp
+
         <x-lead-section
             :services="$services"
             submit="Отправить заявку"
@@ -1113,6 +1277,28 @@
             heading="Получите подборку автомобилей под ваш запрос"
             text="Перезвоним в течение 15 минут в рабочее время. Все данные передаются менеджеру напрямую."
             :background="Vite::asset('resources/images/lead-bg.webp')"
-        />
+        >
+            @if ($leadContacts !== [])
+                <x-slot:below>
+                    {{-- Значения печатаются текстом, а не ссылками `tel:`
+                         и `mailto:`, — намеренно. Нормализация телефона
+                         в адрес живёт в `SiteHeader` и `SiteFooter`, и третья
+                         её копия здесь разъехалась бы с ними; тапнуть номер
+                         на мобильном при этом есть где — подвал стоит прямо
+                         под этой секцией. Триггер пересмотра: понадобится
+                         четвёртое место — тогда нормализация переезжает
+                         в `app/Support/`, а не копируется ещё раз. --}}
+                    <div class="flex flex-wrap gap-7">
+                        @foreach ($leadContacts as $contact)
+                            <div>
+                                <div class="mb-1.5 text-xs tracking-[0.1em] text-ink-muted uppercase">{{ $contact['label'] }}</div>
+
+                                <div class="font-display text-base font-semibold text-accent">{{ $contact['value'] }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </x-slot:below>
+            @endif
+        </x-lead-section>
     </div>
 @endsection
