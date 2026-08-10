@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\EngineType;
+use App\Enums\ServiceCategory;
 use App\Models\Car;
 use App\Models\Media;
+use App\Models\Review;
+use App\Models\Service;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Данные главной страницы (веха 4.2).
+ * Данные главной страницы (вехи 4.2 и 4.6).
  *
  * `ARCHITECTURE.md` разрешает контроллеру читать модель напрямую, когда
  * речь про чистое чтение и прослойка была бы пустым файлом. Здесь она
@@ -22,6 +26,12 @@ use Illuminate\Support\Facades\Log;
  * так же собирает данные одной страницы в массив и так же не принимает
  * `Request`, поэтому блоки главной проверяются без HTTP.
  *
+ * Вехой 4.6 к ним добавились ещё шесть: три репитера макета v2 (этапы,
+ * состав цены, FAQ), отзывы, витрина прайса и данные быстрого подбора.
+ * Последние две — как раз то, ради чего сервис и существует: витрина
+ * группируется и усекается в PHP из одного запроса, а подбор считает
+ * границы бюджета по каталогу, а не по числам из макета.
+ *
  * Нормализация здесь, а не в шаблоне, по одной причине: форма настроек
  * (веха 3.5) пишет свои ключи безусловно, даже пустыми — «очистить блок»
  * там рабочий сценарий, — а репитер при удалении всех элементов отдаёт
@@ -31,21 +41,86 @@ use Illuminate\Support\Facades\Log;
 final class HomeContent
 {
     /**
+     * Порог, после которого выборка быстрого подбора становится дороже
+     * остального документа.
+     *
+     * Массив автомобилей уезжает в разметку целиком (решение 4 вехи 4.6):
+     * это цена честного счётчика без запроса к серверу на каждый сдвиг
+     * ползунка. На пяти сотнях записей узкая выборка — это ещё десятки
+     * килобайт, дальше блок пора переводить на отдельный endpoint.
+     *
+     * Константа, а не число в условии: иначе порог придётся искать
+     * по тексту предупреждения, которое его и называет.
+     */
+    private const int SELECTOR_CARS_WARNING_THRESHOLD = 500;
+
+    /**
+     * `CatalogFilterOptions` внедряется через конструктор, а не создаётся
+     * `new` внутри: правило `ARCHITECTURE.md` — иначе его не подменить
+     * в тесте. Границы бюджета и список двигателей быстрого подбора
+     * берутся оттуда же, откуда их берёт форма фильтра каталога: второй
+     * источник тех же данных разошёлся бы с первым, и слайдер начал бы
+     * обещать автомобили, которых каталог не покажет.
+     */
+    public function __construct(private readonly CatalogFilterOptions $filterOptions) {}
+
+    /**
      * @return array{
      *     cars: EloquentCollection<int, Car>,
      *     ticker: list<string>,
      *     promo: ?array{title: ?string, text: ?string, link_text: ?string, link_url: ?string, image_url: ?string},
      *     advantages: list<array{number: ?string, title: string, text: ?string}>,
+     *     steps: list<array{number: ?string, title: string, text: ?string}>,
+     *     priceBreakdown: list<array{title: string, note: ?string}>,
+     *     faq: list<array{question: string, answer: string}>,
+     *     reviews: EloquentCollection<int, Review>,
+     *     serviceGroups: list<array{category: ServiceCategory, badge: string, note: ?string, items: EloquentCollection<int, Service>}>,
+     *     services: EloquentCollection<int, Service>,
+     *     selector: array{cars: list<array{price: ?int, engine: ?string, status: string}>, engines: list<array{value: string, label: string}>, price_min: ?int, price_max: ?int, total: int},
+     *     contacts: array{phone: ?string, email: ?string, address: ?string},
      *     seo: array{title: ?string, description: ?string},
      * }
      */
     public function build(): array
     {
+        $cars = $this->cars();
+        $steps = $this->steps();
+        $priceBreakdown = $this->priceBreakdown();
+        $faq = $this->faq();
+        $reviews = $this->reviews();
+        $price = $this->servicePrice();
+
+        // Одно сообщение на всю сборку, а не по одному на блок: по нему
+        // видно, КАКОЙ блок исчез со страницы, — а именно этот вопрос
+        // и возникает, когда главная выглядит короче, чем вчера.
+        //
+        // WARN здесь нет намеренно: пустые `steps`, `price_breakdown`
+        // и `faq` — рабочий сценарий «блок выключен», как у `promo`
+        // и `advantages`. Предупреждение о пустой подборке авто пишет
+        // `cars()`, о пустой витрине услуг — `servicePrice()`: там пустота
+        // означает незаполненную админку, а не выключенный блок.
+        Log::debug('[Главная] контент собран', [
+            'cars' => $cars->count(),
+            'steps' => count($steps),
+            'price_breakdown' => count($priceBreakdown),
+            'faq' => count($faq),
+            'reviews' => $reviews->count(),
+            'service_groups' => count($price['groups']),
+        ]);
+
         return [
-            'cars' => $this->cars(),
+            'cars' => $cars,
             'ticker' => $this->ticker(),
             'promo' => $this->promo(),
             'advantages' => $this->advantages(),
+            'steps' => $steps,
+            'priceBreakdown' => $priceBreakdown,
+            'faq' => $faq,
+            'reviews' => $reviews,
+            'serviceGroups' => $price['groups'],
+            'services' => $price['services'],
+            'selector' => $this->selector(),
+            'contacts' => $this->contacts(),
             'seo' => $this->seo(),
         ];
     }
@@ -202,6 +277,305 @@ final class HomeContent
         }
 
         return $advantages;
+    }
+
+    /**
+     * Этапы покупки. Элемент без заголовка выпадает по тому же правилу,
+     * что и в `advantages()`: карточка из одного номера выглядит
+     * как поломка вёрстки, а не как «не дописали текст».
+     *
+     * @return list<array{number: ?string, title: string, text: ?string}>
+     */
+    private function steps(): array
+    {
+        $steps = [];
+
+        foreach ($this->listFrom(Setting::get('home.steps')) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $title = $this->string($item['title'] ?? null);
+
+            if ($title === null) {
+                continue;
+            }
+
+            $steps[] = [
+                'number' => $this->string($item['number'] ?? null),
+                'title' => $title,
+                'text' => $this->string($item['text'] ?? null),
+            ];
+        }
+
+        return $steps;
+    }
+
+    /**
+     * Состав цены. Элемент без названия статьи выпадает: строка из одного
+     * уточнения («по условиям сделки») не сообщает, к чему оно относится.
+     *
+     * @return list<array{title: string, note: ?string}>
+     */
+    private function priceBreakdown(): array
+    {
+        $rows = [];
+
+        foreach ($this->listFrom(Setting::get('home.price_breakdown')) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $title = $this->string($item['title'] ?? null);
+
+            if ($title === null) {
+                continue;
+            }
+
+            $rows[] = [
+                'title' => $title,
+                'note' => $this->string($item['note'] ?? null),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Частые вопросы.
+     *
+     * Здесь обязательны ОБА поля, в отличие от остальных репитеров: `<summary>`
+     * без содержимого раскрывается в пустоту, и это читается как сломанный
+     * аккордеон, а не как отсутствующий ответ. Вопрос без ответа удаляется
+     * целиком, а не показывается нераскрываемым.
+     *
+     * @return list<array{question: string, answer: string}>
+     */
+    private function faq(): array
+    {
+        $faq = [];
+
+        foreach ($this->listFrom(Setting::get('home.faq')) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $question = $this->string($item['question'] ?? null);
+            $answer = $this->string($item['answer'] ?? null);
+
+            if ($question === null || $answer === null) {
+                continue;
+            }
+
+            $faq[] = [
+                'question' => $question,
+                'answer' => $answer,
+            ];
+        }
+
+        return $faq;
+    }
+
+    /**
+     * Отзывы клиентов — первый потребитель модели `Review` (веха 3.2)
+     * и её модерации.
+     *
+     * Только опубликованные: немодерированный отзыв на сайте — это дефект,
+     * и путь к нему закрыт скоупом, а не условием в шаблоне. `with('media')`
+     * обязателен — карточка показывает фото автора, и без него сетка из трёх
+     * отзывов стоит четыре запроса вместо двух.
+     *
+     * Пустая выдача убирает секцию целиком (правило проекта о блоках,
+     * управляемых данными), и WARN здесь не пишется: отзывов может
+     * не быть просто потому, что их ещё не собрали.
+     *
+     * @return EloquentCollection<int, Review>
+     */
+    private function reviews(): EloquentCollection
+    {
+        return Review::query()
+            ->published()
+            ->ordered()
+            ->with('media')
+            ->limit((int) config('home.reviews_limit'))
+            ->get();
+    }
+
+    /**
+     * Витрина прайса и полный список позиций для селекта формы — из одного
+     * запроса.
+     *
+     * Два значения возвращаются вместе намеренно: они обязаны быть построены
+     * из одной выборки. Витрина усечена до `home.services_per_category`
+     * позиций на категорию, селект — нет, и асимметрия здесь работает
+     * в ОДНУ сторону: селект надмножество витрины (решение 3 вехи 4.6).
+     * Клик по любой видимой строке гарантированно находит свою опцию,
+     * а посетитель, пришедший за позицией вне витрины, находит её в списке.
+     * Обратное было бы дефектом — клик подставлял бы несуществующую опцию,
+     * и Alpine молча ничего не сделал бы.
+     *
+     * Состав и порядок категорий задаёт `ServiceCategory::serviceCategories()`,
+     * а не список здесь: запчасти исключает сам енам (`isParts()`), у них
+     * своя посадочная страница. Порядок селекта наследуется от категорий,
+     * поэтому `<optgroup>` в форме выстраиваются так же, как блоки витрины.
+     *
+     * Описание категории берётся из `services_page.notes` — тех же четырёх
+     * текстов, что показывает страница услуг. Второй набор ключей под те же
+     * описания разошёлся бы с первым при первой правке одного из них.
+     *
+     * @return array{
+     *     groups: list<array{category: ServiceCategory, badge: string, note: ?string, items: EloquentCollection<int, Service>}>,
+     *     services: EloquentCollection<int, Service>,
+     * }
+     */
+    private function servicePrice(): array
+    {
+        $notes = Setting::get('services_page.notes');
+        $notes = is_array($notes) ? $notes : [];
+
+        // Один запрос на весь блок, группировка в PHP. Запрос на категорию
+        // означал бы четыре запроса ради четырёх карточек плюс пятый
+        // на селект формы — тот же приём, что в `ServicesPageContent`.
+        $published = Service::query()->published()->ordered()->get();
+
+        if ($published->isEmpty()) {
+            // WARN на каждый рендер — по прецеденту `ServicesPageContent`:
+            // снаружи главная выглядит рабочей, просто без блока услуг,
+            // и заметить незаполненный прайс больше нечем.
+            Log::warning('[Главная] на витрине услуг нет ни одной опубликованной позиции', [
+                'hint' => 'опубликуйте услуги в разделе «Услуги и запчасти» админки',
+            ]);
+        }
+
+        $limit = (int) config('home.services_per_category');
+
+        $groups = [];
+
+        /** @var EloquentCollection<int, Service> $services */
+        $services = new EloquentCollection;
+
+        foreach (ServiceCategory::serviceCategories() as $category) {
+            $items = $published->where('category', $category);
+
+            // Категория без опубликованных позиций выпадает: карточка
+            // с заголовком «Шиномонтаж» и пустым списком читается
+            // как поломка, а не как «пока ничего не завели».
+            if ($items->isEmpty()) {
+                continue;
+            }
+
+            // Селект наполняется ДО усечения — в этом и состоит асимметрия.
+            $services = $services->concat($items);
+
+            $groups[] = [
+                'category' => $category,
+                'badge' => $category->badge(),
+                'note' => $this->string($notes[$category->value] ?? null),
+                'items' => $items->take($limit),
+            ];
+        }
+
+        return ['groups' => $groups, 'services' => $services];
+    }
+
+    /**
+     * Данные быстрого подбора: выборка каталога, варианты двигателя
+     * и границы бюджета.
+     *
+     * Счёт идёт по РЕАЛЬНОМУ каталогу, а не по формуле из макета
+     * (`js/mockup.js` считает «направления» выражением вида
+     * `value < 3000000 ? 2 : …`). Цифра на живом сайте, не подкреплённая
+     * данными, — это обещание, которого нет.
+     *
+     * Выборка нарочно узкая: три скаляра на автомобиль, ни связей, ни фото.
+     * Массив уезжает в разметку через `@js(...)`, и каждое лишнее поле
+     * умножается на число доступных автомобилей.
+     *
+     * Границы бюджета берутся из `CatalogFilterOptions`, а не из макета
+     * (`min="2000000" max="15000000"`): жёсткие числа рассинхронизируются
+     * с каталогом при первом же автомобиле дороже верхней границы —
+     * слайдер физически не сможет его выбрать, и блок начнёт врать.
+     * Обе границы `null` означают пустой или бесценовой каталог, и шаблон
+     * в этом случае не рендерит секцию вовсе.
+     *
+     * @return array{cars: list<array{price: ?int, engine: ?string, status: string}>, engines: list<array{value: string, label: string}>, price_min: ?int, price_max: ?int, total: int}
+     */
+    private function selector(): array
+    {
+        $options = $this->filterOptions->build();
+
+        $cars = Car::query()
+            ->available()
+            ->get(['price', 'engine_type', 'status'])
+            ->map(static fn (Car $car): array => [
+                'price' => $car->price === null ? null : (int) $car->price,
+                'engine' => $car->engine_type?->value,
+                'status' => $car->status->value,
+            ])
+            ->all();
+
+        $total = count($cars);
+
+        if ($total > self::SELECTOR_CARS_WARNING_THRESHOLD) {
+            Log::warning('[Главная] выборка быстрого подбора превысила порог', [
+                'cars' => $total,
+                'threshold' => self::SELECTOR_CARS_WARNING_THRESHOLD,
+                'hint' => 'массив уезжает в HTML целиком — блок пора переводить на отдельный endpoint с запросом на каждое изменение фильтра',
+            ]);
+        }
+
+        // По этому сообщению видно, почему секция не отрендерилась: пустая
+        // выборка и обе границы `null` — это каталог без цен, а не ошибка
+        // шаблона.
+        Log::debug('[Главная] быстрый подбор', [
+            'cars' => $total,
+            'price_min' => $options['prices']['min'],
+            'price_max' => $options['prices']['max'],
+        ]);
+
+        return [
+            'cars' => $cars,
+            // Варианты, реально встречающиеся в каталоге, а не все четыре
+            // кейса `EngineType`: чип, дающий ноль автомобилей, — это
+            // сломанное доверие к подбору, ровно то же основание,
+            // по которому их отбирает форма фильтра каталога.
+            'engines' => array_map(
+                static fn (EngineType $engine): array => [
+                    'value' => $engine->value,
+                    'label' => $engine->label(),
+                ],
+                $options['engines'],
+            ),
+            'price_min' => $options['prices']['min'],
+            'price_max' => $options['prices']['max'],
+            // Серверное значение счётчика: без JavaScript блок читается
+            // как «В каталоге N автомобилей → Перейти в каталог».
+            'total' => $total,
+        ];
+    }
+
+    /**
+     * Контакты для левой колонки секции заявки.
+     *
+     * Читает сервис, а не Blade: исключение «компонент ходит в БД»
+     * распространяется только на `SiteHeader` и `SiteFooter`
+     * (`ARCHITECTURE.md`) — их рендерит layout на каждой странице,
+     * и прокидывать контакты из каждого контроллера было бы опаснее.
+     * У секции заявки такого оправдания нет: она живёт на одной странице
+     * и данные получает от контроллера, как все.
+     *
+     * Пустое значение остаётся `null` и убирает свой контакт в шаблоне:
+     * подпись «Телефон» над пустотой хуже отсутствующего блока.
+     *
+     * @return array{phone: ?string, email: ?string, address: ?string}
+     */
+    private function contacts(): array
+    {
+        return [
+            'phone' => $this->string(Setting::get('contacts.phone')),
+            'email' => $this->string(Setting::get('contacts.email')),
+            'address' => $this->string(Setting::get('contacts.address')),
+        ];
     }
 
     /**
