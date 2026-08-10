@@ -32,6 +32,7 @@
     что веха вышла за свои границы.
 --}}
 @use(App\Enums\CarStatus)
+@use(App\Enums\ServiceCategory)
 
 @extends('layouts.app')
 
@@ -718,32 +719,49 @@
         </section>
     @endif
 
-    {{-- Блок «Почему мы». Пустой список убирает секцию: пустая сетка под
-         заголовком читается как поломка, а не как «мало контента». --}}
-    @if ($advantages !== [])
-        <section class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
+    {{--
+        Этапы покупки. Единственный блок страницы на фоне `deep` — по правилу
+        дизайн-системы это редкий акцент, а не третий рабочий оттенок.
+        Стоит между двумя `alt`-секциями намеренно: без него быстрый подбор
+        и экосистема слились бы в один длинный экран одного тона.
+
+        Пустой `home.steps` убирает секцию целиком, вместе с шапкой блока.
+    --}}
+    @if ($steps !== [])
+        <section id="process" class="bg-deep px-5 py-20 lg:px-8 lg:py-30">
             <div class="mx-auto max-w-page">
-                <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Почему мы</div>
+                <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                    <div>
+                        <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Как проходит покупка</div>
 
-                <h2 class="mb-12 max-w-160 font-display text-3xl font-semibold lg:mb-16 lg:text-[34px]">
-                    Преимущества, за которые нас выбирают <span class="text-accent">клиенты</span>
-                </h2>
+                        <h2 class="font-display text-3xl leading-[1.15] font-semibold text-pretty lg:text-[34px]">
+                            Каждый этап понятен <span class="text-accent">до начала сделки</span>
+                        </h2>
+                    </div>
 
-                <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    @foreach ($advantages as $advantage)
-                        <div class="rounded-card border border-white/7 bg-surface p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30 lg:px-7 lg:py-9">
-                            @if ($advantage['number'] !== null)
+                    <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                        Что делает ЛАО КАРС, что требуется от клиента и какой статус
+                        он видит на каждом шаге.
+                    </p>
+                </div>
+
+                {{-- Карточки на фоне `page`, а не `surface`: секция уже
+                     на `deep`, и `surface` дал бы третий оттенок на экране. --}}
+                <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+                    @foreach ($steps as $step)
+                        <article class="rounded-card border border-white/8 bg-page p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30">
+                            @if ($step['number'] !== null)
                                 <div class="mb-5.5 flex size-10 items-center justify-center rounded-full bg-accent/14 font-display text-[15px] font-bold text-accent">
-                                    {{ $advantage['number'] }}
+                                    {{ $step['number'] }}
                                 </div>
                             @endif
 
-                            <h3 class="mb-3 text-[17px] font-semibold">{{ $advantage['title'] }}</h3>
+                            <h3 class="mb-3 text-[17px] font-semibold">{{ $step['title'] }}</h3>
 
-                            @if ($advantage['text'] !== null)
-                                <p class="text-sm leading-relaxed text-ink-muted">{{ $advantage['text'] }}</p>
+                            @if ($step['text'] !== null)
+                                <p class="text-sm leading-[1.65] text-ink-muted">{{ $step['text'] }}</p>
                             @endif
-                        </div>
+                        </article>
                     @endforeach
                 </div>
             </div>
@@ -751,62 +769,350 @@
     @endif
 
     {{--
-        Два направления.
+        Экосистема после покупки — на месте блока «Два направления» вехи 4.2.
 
-        Плашек две, а не три из макета: «Детейлинг» и «Доп. сервисы» —
-        это блоки внутри страницы автосервиса, а не отдельные разделы
-        (решение роадмапа). Без этого пояснения третью плашку однажды
-        «вернут по макету».
+        Плашек четыре, а не две, и это НЕ отмена прежнего решения. Веха 4.2
+        заменила три плашки макета v1 двумя, потому что «Детейлинг»
+        и «Доп. сервисы» — блоки внутри страницы автосервиса, а не отдельные
+        разделы. Здесь плашки ведут на ЯКОРЯ этих блоков (`/services#detailing`),
+        а не заводят разделы: якоря настоящие, их выдаёт
+        `ServiceCategory::anchor()` вехи 4.4. Плашка ведёт к блоку —
+        противоречия нет.
 
-        Тексты живут в шаблоне, а не в настройках: заводить под два абзаца
-        ключи значило бы расширять веху 3.5 задним числом, а ссылки — это
-        роуты, то есть код. Триггер завести настройку назван: первая
-        просьба заказчика поправить эти тексты.
+        Запчасти, в отличие от макета, ведут на собственную страницу `/parts`,
+        а не в заявку: у нас она есть, а у макета-одностраничника не было.
+
+        Тексты живут в шаблоне, а не в настройках: заводить под четыре абзаца
+        ключи значило бы расширять веху 3.5 задним числом, а адреса — это
+        роуты, то есть код. Триггер завести настройку назван: первая просьба
+        заказчика поправить эти тексты.
     --}}
-    <section class="px-5 py-20 lg:px-8 lg:py-30">
-        <div class="mx-auto max-w-page">
-            <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Направления</div>
+    <section id="service" class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
+        <div class="mx-auto grid max-w-page items-start gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
+            <div class="relative flex min-h-105 items-end overflow-hidden rounded-card lg:min-h-140">
+                {{--
+                    Тот же кадр, что на `/services`: второй копии
+                    не заводим — одна фотография мастерской на сайт.
 
-            <h2 class="mb-12 max-w-160 font-display text-3xl font-semibold lg:mb-14 lg:text-[34px]">
-                Не только продажа, но и <span class="text-accent">обслуживание</span>
-            </h2>
+                    Изображение декоративное, смысл несёт текст поверх него,
+                    поэтому пустой `alt` и `aria-hidden`. В отличие от хиро —
+                    `loading="lazy"`: блок стоит глубоко ниже первого экрана,
+                    и правило LCP из `RULES.md` к нему не относится.
+                --}}
+                <img
+                    src="{{ Vite::asset('resources/images/service-panel.webp') }}"
+                    width="720"
+                    height="961"
+                    loading="lazy"
+                    alt=""
+                    aria-hidden="true"
+                    class="absolute inset-0 size-full object-cover"
+                >
 
-            <div class="grid gap-8 lg:grid-cols-2">
-                @foreach ([
-                    ['letter' => 'А', 'title' => 'Автосервис', 'url' => route('services.index'), 'text' => 'ТО, диагностика и ремонт для всех марок, включая гибриды. Своя мастерская, шиномонтаж и детейлинг — весь цикл владения в одном месте.'],
-                    ['letter' => 'З', 'title' => 'Запчасти', 'url' => route('parts.index'), 'text' => 'Подбираем оригинальные детали и проверенные аналоги по VIN. Цены и сроки уточняем после запроса — под конкретный автомобиль.'],
-                ] as $direction)
-                    <a
-                        href="{{ $direction['url'] }}"
-                        class="block rounded-card border border-white/10 px-8 py-11 transition duration-250 hover:-translate-y-1 hover:border-accent/50 hover:bg-surface"
-                    >
-                        <div class="mb-5 flex size-12 items-center justify-center rounded-xl bg-accent/14 font-display text-lg font-bold text-accent">
-                            {{ $direction['letter'] }}
-                        </div>
+                {{-- Маска: подпись лежит на самом светлом участке кадра,
+                     поэтому нижний стоп почти непрозрачный — приглушённый
+                     текст поверх блика нечитаем. --}}
+                <div class="absolute inset-0 bg-gradient-to-t from-page/96 via-page/62 to-page/10"></div>
 
-                        <h3 class="mb-4 font-display text-xl font-semibold">{{ $direction['title'] }}</h3>
+                <div class="relative p-7">
+                    <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">После покупки</div>
 
-                        <p class="mb-6 text-sm leading-relaxed text-ink-muted">{{ $direction['text'] }}</p>
+                    <h3 class="mb-3 font-display text-[22px] leading-[1.25] font-semibold">
+                        Мы не исчезаем после передачи ключей
+                    </h3>
 
-                        <div class="text-sm text-accent">Подробнее →</div>
-                    </a>
-                @endforeach
+                    <p class="text-sm leading-[1.65] text-ink-muted">
+                        Собственный сервис превращает разовую покупку в долгосрочные отношения.
+                    </p>
+                </div>
+            </div>
+
+            <div>
+                <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Экосистема ЛАО КАРС</div>
+
+                <h2 class="font-display text-3xl leading-[1.15] font-semibold text-pretty lg:text-[34px]">
+                    Всё для автомобиля <span class="text-accent">в одном месте</span>
+                </h2>
+
+                {{-- Плашки — ссылки, а не карточки-иллюстрации: каждое
+                     направление обязано вести к следующему действию.
+
+                     `block` обязателен: инлайновый `<a>` игнорирует
+                     вертикальные отступы и ломает сетку. --}}
+                <div class="mt-9 grid gap-5 sm:grid-cols-2">
+                    @foreach ([
+                        ['letter' => 'А', 'title' => 'Автосервис', 'url' => route('services.index').'#'.ServiceCategory::Maintenance->anchor(), 'text' => 'Диагностика, регламентные работы и подготовка автомобиля к эксплуатации.'],
+                        ['letter' => 'Д', 'title' => 'Детейлинг', 'url' => route('services.index').'#'.ServiceCategory::Detailing->anchor(), 'text' => 'Защитные покрытия, полировка, уход за салоном и кузовом.'],
+                        ['letter' => 'З', 'title' => 'Запчасти', 'url' => route('parts.index'), 'text' => 'Оригинальные детали и проверенные аналоги по VIN с понятным каналом заказа.'],
+                        ['letter' => 'П', 'title' => 'Поддержка', 'url' => '#lead-form', 'text' => 'Единая точка контакта по автомобилю после покупки.'],
+                    ] as $card)
+                        <a
+                            href="{{ $card['url'] }}"
+                            class="block rounded-card border border-white/7 bg-surface p-6.5 transition duration-250 hover:-translate-y-1 hover:border-accent/30"
+                        >
+                            <div class="mb-5 flex size-12 items-center justify-center rounded-xl bg-accent/14 font-display text-lg font-bold text-accent">
+                                {{ $card['letter'] }}
+                            </div>
+
+                            <h3 class="mb-2.5 text-[17px] font-semibold">{{ $card['title'] }}</h3>
+
+                            <p class="text-sm leading-[1.65] text-ink-muted">{{ $card['text'] }}</p>
+                        </a>
+                    @endforeach
+                </div>
             </div>
         </div>
     </section>
 
     {{--
-        Форма без источника: живая точка для сценария «общая форма»,
-        в списке лидов такая заявка помечается «Общая форма».
+        ОБЩАЯ ОБЁРТКА ALPINE открывается здесь и закрывается ПОСЛЕ секции
+        заявки. Между прайсом и формой лежат четыре блока (прозрачность цены,
+        отзывы, «Почему мы», FAQ), и это ровно тот случай, ради которого
+        правило записано: область `x-data` — поддерево DOM, а не страница.
+        Обработчик на строке прайса за пределами обёртки не сработал бы
+        ВОВСЕ, а симптом читается как «Alpine не работает» и ищется
+        в скрипте, а не в разметке. Две соседние обёртки — одна на прайс,
+        другая на форму — та же ошибка под другим соусом.
 
-        Двухколоночную раскладку включает `heading`; фон приходит готовым
-        URL, а не путём — компонент не должен знать про `Vite::asset()`.
+        Компонент делает ровно одно: подставляет выбранную позицию в селект
+        формы. `x-data` инлайном, а не через `Alpine.data()` из
+        `@push('scripts')` — правило `RULES.md`.
     --}}
-    <x-lead-section
-        submit="Отправить заявку"
-        eyebrow="Заявка"
-        heading="Оставьте заявку — подберём авто или запишем на сервис"
-        text="Перезвоним в течение 15 минут в рабочее время. Все данные передаются менеджеру напрямую."
-        :background="Vite::asset('resources/images/lead-bg.webp')"
-    />
+    <div
+        x-data="{
+            pick(id) {
+                const select = document.getElementById('lead-service');
+
+                if (select !== null) {
+                    select.value = id;
+                }
+            },
+        }"
+    >
+        {{--
+            Основные услуги. Витрина усечена до трёх позиций на категорию
+            (`home.services_per_category`): полный прайс из восемнадцати
+            строк вытеснил бы с главной всё, ради чего человек на неё пришёл.
+            Селект формы усечению НЕ подлежит и остаётся надмножеством
+            витрины — иначе клик по видимой строке подставлял бы
+            несуществующую опцию, и Alpine молча ничего не сделал бы.
+
+            Пустой `serviceGroups` убирает секцию целиком. WARN про пустой
+            прайс пишет `HomeContent`.
+        --}}
+        @if ($serviceGroups !== [])
+            <section id="services" class="px-5 py-20 lg:px-8 lg:py-30">
+                <div class="mx-auto max-w-page">
+                    <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                        <div>
+                            <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Услуги</div>
+
+                            <h2 class="font-display text-3xl leading-[1.15] font-semibold text-pretty lg:text-[34px]">
+                                Основные услуги <span class="text-accent">сервиса и детейлинга</span>
+                            </h2>
+                        </div>
+
+                        <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                            Свой сервис, а не партнёрская сеть: работы, шиномонтаж, детейлинг
+                            и подготовка автомобиля выполняются в одной мастерской.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-6 min-[900px]:grid-cols-2">
+                        @foreach ($serviceGroups as $group)
+                            <article class="rounded-card border border-white/8 bg-surface p-7 lg:p-8">
+                                <div class="mb-2 flex items-center gap-4">
+                                    <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/14 font-display text-[15px] font-bold text-accent">
+                                        {{ $group['badge'] }}
+                                    </div>
+
+                                    <h3 class="text-[17px] font-semibold">{{ $group['category']->label() }}</h3>
+                                </div>
+
+                                {{-- Пустое описание убирает абзац, но не
+                                     карточку: прайс важнее текста. --}}
+                                @if ($group['note'] !== null)
+                                    <p class="mb-4.5 text-[13px] leading-[1.6] text-ink-muted">{{ $group['note'] }}</p>
+                                @endif
+
+                                <div class="flex flex-col">
+                                    @foreach ($group['items'] as $service)
+                                        {{-- Строка — обычная ссылка на форму,
+                                             а не кнопка: без скрипта клик
+                                             доводит до формы, и посетитель
+                                             выбирает позицию сам. Alpine лишь
+                                             подставляет её в селект, поэтому
+                                             `x-on:click` идёт БЕЗ `.prevent` —
+                                             переход к форме нужен и с ним.
+
+                                             Полная форма `x-on:click`, а не
+                                             `@click`: `@` — префикс директив
+                                             Blade (правило `ARCHITECTURE.md`). --}}
+                                        <a
+                                            href="#lead-form"
+                                            x-on:click="pick({{ $service->getKey() }})"
+                                            class="group flex items-baseline justify-between gap-4 border-t border-white/8 py-3.5 first:border-t-0"
+                                        >
+                                            <span class="text-[15px] leading-[1.4] transition-colors group-hover:text-accent">{{ $service->title }}</span>
+
+                                            {{-- «По запросу» — не цена,
+                                                 и набирать её акцентом наравне
+                                                 с суммой значит обещать то,
+                                                 чего в строке нет. Развилка
+                                                 идёт по `hasPrice()`, а не
+                                                 по сравнению вывода со строкой
+                                                 «по запросу»: иначе
+                                                 формулировка жила бы
+                                                 в двух местах. --}}
+                                            <span
+                                                @class([
+                                                    'shrink-0 whitespace-nowrap text-sm',
+                                                    'font-display font-semibold text-accent' => $service->hasPrice(),
+                                                    'font-medium text-ink-muted' => ! $service->hasPrice(),
+                                                ])
+                                            >{{ $service->priceLabel() }}</span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-11 flex justify-center">
+                        <a
+                            href="{{ route('services.index') }}"
+                            class="rounded-full bg-accent px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                        >Посмотреть все услуги</a>
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        {{--
+            Прозрачность цены. Блок показывает СТРУКТУРУ расходов, а не суммы:
+            цена зависит от автомобиля и даты, и вписанная сюда устареет молча.
+
+            Пустой `home.price_breakdown` убирает секцию целиком, вместе
+            с картой-нотой: нота без состава цены ничего не сообщает — она
+            объясняет, что будет с тем, чего на странице нет.
+        --}}
+        @if ($priceBreakdown !== [])
+            <section class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
+                <div class="mx-auto max-w-page">
+                    <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                        <div>
+                            <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Прозрачность цены</div>
+
+                            <h2 class="font-display text-3xl leading-[1.15] font-semibold text-pretty lg:text-[34px]">
+                                Клиент видит, из чего складывается <span class="text-accent">стоимость</span>
+                            </h2>
+                        </div>
+
+                        <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                            Точные суммы рассчитываются под конкретный автомобиль и дату —
+                            здесь только состав расходов.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-6 lg:grid-cols-[1.3fr_1fr] lg:gap-8">
+                        <div class="rounded-card border border-white/8 bg-surface px-7 py-3 lg:px-9 lg:py-4">
+                            @foreach ($priceBreakdown as $row)
+                                {{-- Граница снизу у каждой строки и погашена
+                                     у последней: иначе список заканчивается
+                                     линией, повторяющей край карточки. --}}
+                                <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-white/8 py-5 last:border-b-0">
+                                    <div class="text-[15px] font-semibold">{{ $row['title'] }}</div>
+
+                                    @if ($row['note'] !== null)
+                                        <div class="text-sm text-ink-muted">{{ $row['note'] }}</div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+
+                        {{-- `items-start` обязателен: в колоночном flex-
+                             контейнере плашка растянулась бы на всю ширину
+                             карточки вопреки `inline-block`, и оговорка стала
+                             бы похожа на заголовок блока. --}}
+                        <div class="flex flex-col items-start gap-4.5 rounded-card border border-white/8 bg-surface p-7 lg:p-9">
+                            {{-- Та же разметка, что у оговорки цен
+                                 на `/services`: смысл один — «это не оферта», —
+                                 и две по-разному набранные плашки читались бы
+                                 как две разные по силе оговорки. --}}
+                            <span class="inline-block shrink-0 rounded-full border border-accent/40 px-2.5 py-1 text-[11px] tracking-[0.08em] text-accent uppercase">
+                                Не публичная оферта
+                            </span>
+
+                            <h3 class="font-display text-[22px] leading-[1.3] font-semibold">
+                                <span class="text-accent">Точный расчёт</span><br>по конкретной комплектации
+                            </h3>
+
+                            {{-- Текст живёт в шаблоне: он описывает, что
+                                 произойдёт после нажатия кнопки, и меняется
+                                 только вместе с ней. --}}
+                            <p class="text-sm leading-[1.65] text-ink-muted">
+                                Кнопка ведёт в короткую заявку. Менеджер отправляет понятный
+                                документ с составом расходов и датой актуальности.
+                            </p>
+
+                            <a
+                                href="#lead-form"
+                                class="rounded-full bg-accent px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                            >Получить расчёт</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        {{-- Блок «Почему мы». Пустой список убирает секцию: пустая сетка под
+             заголовком читается как поломка, а не как «мало контента». --}}
+        @if ($advantages !== [])
+            <section class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
+                <div class="mx-auto max-w-page">
+                    <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Почему мы</div>
+
+                    <h2 class="mb-12 max-w-160 font-display text-3xl font-semibold lg:mb-16 lg:text-[34px]">
+                        Преимущества, за которые нас выбирают <span class="text-accent">клиенты</span>
+                    </h2>
+
+                    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                        @foreach ($advantages as $advantage)
+                            <div class="rounded-card border border-white/7 bg-surface p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30 lg:px-7 lg:py-9">
+                                @if ($advantage['number'] !== null)
+                                    <div class="mb-5.5 flex size-10 items-center justify-center rounded-full bg-accent/14 font-display text-[15px] font-bold text-accent">
+                                        {{ $advantage['number'] }}
+                                    </div>
+                                @endif
+
+                                <h3 class="mb-3 text-[17px] font-semibold">{{ $advantage['title'] }}</h3>
+
+                                @if ($advantage['text'] !== null)
+                                    <p class="text-sm leading-relaxed text-ink-muted">{{ $advantage['text'] }}</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        {{--
+            Секция заявки. `:services` включает селект «Интересует» — тот же
+            четвёртый сценарий формы, что на `/services` (веха 4.4): скрытое
+            `source_type=service` плюс селект `source_id`. Именно он делает
+            работающей подстановку по клику из прайса выше.
+
+            Двухколоночную раскладку включает `heading`; фон приходит готовым
+            URL, а не путём — компонент не должен знать про `Vite::asset()`.
+        --}}
+        <x-lead-section
+            :services="$services"
+            submit="Отправить заявку"
+            eyebrow="Заявка"
+            heading="Получите подборку автомобилей под ваш запрос"
+            text="Перезвоним в течение 15 минут в рабочее время. Все данные передаются менеджеру напрямую."
+            :background="Vite::asset('resources/images/lead-bg.webp')"
+        />
+    </div>
 @endsection
