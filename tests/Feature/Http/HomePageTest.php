@@ -104,12 +104,12 @@ it('does not add a query per car in the homepage selection', function () {
     Car::factory()->onHomepage()->count(2)->create()
         ->each(fn (Car $car) => CarPhoto::factory()->for($car)->create());
 
-    $few = countQueries(fn () => $this->get('/')->assertOk()->assertSee('Рекомендуемые'));
+    $few = countQueries(fn () => $this->get('/')->assertOk()->assertSee('Не бесконечный каталог'));
 
     Car::factory()->onHomepage()->count(4)->create()
         ->each(fn (Car $car) => CarPhoto::factory()->for($car)->create());
 
-    $many = countQueries(fn () => $this->get('/')->assertOk()->assertSee('Рекомендуемые'));
+    $many = countQueries(fn () => $this->get('/')->assertOk()->assertSee('Не бесконечный каталог'));
 
     // Нижняя граница обязательна — правило `RULES.md`: выборка, не поймавшая
     // ни одного запроса, иначе проходит вхолостую.
@@ -123,10 +123,12 @@ it('drops the selection section entirely when nothing is flagged', function () {
     // Проверка по заголовку секции, а не по классу: класс переживёт правку
     // вёрстки, заголовок и есть содержание. Ссылка «Весь каталог →» уходит
     // вместе с секцией — заголовок над пустой сеткой и ссылка в никуда
-    // читаются как поломка.
+    // читаются как поломка. Вместе с ними уходит и карточка-приглашение:
+    // «Не нашли модель?» над пустой сеткой обещает подбор из ничего.
     $this->get('/')
         ->assertOk()
-        ->assertDontSee('Рекомендуемые')
+        ->assertDontSee('Не бесконечный каталог')
+        ->assertDontSee('Не нашли модель?')
         ->assertDontSee('Весь каталог');
 });
 

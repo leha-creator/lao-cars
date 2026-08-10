@@ -1,15 +1,38 @@
 {{--
-    Главная (веха 4.2).
+    Главная (вехи 4.2 и 4.6), переверстана по `assets/mockup-v2/index.html`.
 
-    Данные собирает `App\Services\HomeContent`: подборка авто с отметкой
-    «показывать на главной», бегущая строка, промо-баннер, преимущества
-    и SEO-заголовки. Блоки, управляемые настройками, при пустом значении
-    не рендерятся вовсе — заголовок над пустой сеткой читается как поломка,
-    а не как «мало контента».
+    Данные собирает `App\Services\HomeContent`. Блоки, управляемые данными
+    или настройками, при пустом значении не рендерятся вовсе — заголовок
+    над пустой сеткой читается как поломка, а не как «мало контента».
 
-    Порядок блоков — из макета: бегущая строка → хиро → промо → подборка
-    авто → преимущества → направления → заявка.
+    Порядок блоков: бегущая строка → хиро с фактами → полоса доверия →
+    промо → подборка авто с фильтром статусов → быстрый подбор →
+    «Почему мы» → направления → заявка.
+
+    Фоны чередуются `page ⇄ alt` — правило дизайн-системы запрещает больше
+    двух оттенков на экране, а не смену тона. Полоса доверия, промо
+    и подборка идут на `page` подряд, как в макете.
+
+    Что из макета сюда НЕ переносится и почему:
+
+    - состав меню шапки («Продажа автомобилей · Запчасти · Сервис
+      и детейлинг») и якорные адреса его пунктов. Навигация живёт
+      в `App\Support\SiteMenu`, у нас `/catalog` и `/parts` — отдельные
+      страницы, а не якоря главной. Макет v2 нарисован для одностраничника,
+      и его структура просачивается по частям. Сторож — `LayoutTest`;
+    - смешанный селект «Интересует» (автомобили вместе с услугами).
+      Он потребовал бы составного значения `car:12` / `service:5` и разбора
+      пары в `StoreLeadRequest`, то есть правки контракта вехи 3.7 и её
+      тестов ради одного поля. Карточки автомобилей ведут на `/catalog/{car}`,
+      где стоит форма с источником-автомобилем: точнее по данным и лучше
+      для SEO, чем якорь на главной. Сторожа — `LeadStoreTest`
+      и `SectionPagesTest`, обязанные проходить без единой правки.
+
+    Правка любого из названных тестов «чтобы совпало с макетом» — сигнал,
+    что веха вышла за свои границы.
 --}}
+@use(App\Enums\CarStatus)
+
 @extends('layouts.app')
 
 {{--
@@ -104,8 +127,16 @@
 
         Высота задана в `svh`, а не `vh`: на мобильных `vh` не учитывает
         сворачивание адресной строки, и первый экран прыгает при скролле.
+
+        ФИКСИРОВАННОЙ высоты на мобильном при этом быть не должно — только
+        минимальная. Блок фактов, добавленный вехой 4.6, делает содержимое
+        первого экрана выше 88svh на узких экранах, и пара `height` +
+        `overflow-hidden` обрезала бы два последних факта МОЛЧА: полосы
+        прокрутки внутри секции не появится, ошибок в консоли не будет,
+        а на десктопе, где верстают, всё видно целиком. Поэтому `h-[92svh]`
+        задан только от `lg`, где содержимое встаёт в четыре колонки.
     --}}
-    <section class="relative -mt-[66px] flex h-[88svh] min-h-[560px] flex-col overflow-hidden lg:-mt-[76px] lg:min-h-[640px]">
+    <section class="relative -mt-[66px] flex min-h-[88svh] flex-col overflow-hidden lg:-mt-[76px] lg:h-[92svh] lg:min-h-[680px]">
         <div class="absolute inset-0">
             {{--
                 LCP-элемент страницы, и обращаться с ним надо соответственно:
@@ -134,31 +165,88 @@
             <div class="absolute inset-0 bg-gradient-to-b from-page/10 via-page/55 via-55% to-page/96"></div>
         </div>
 
-        <div class="relative z-2 flex flex-1 items-end px-5 pt-[66px] pb-16 lg:px-8 lg:pt-[76px] lg:pb-22">
+        <div class="relative z-2 flex flex-1 items-end px-5 pt-[66px] pb-14 lg:px-8 lg:pt-[76px] lg:pb-18">
             <div class="mx-auto w-full max-w-page">
-                <div class="mb-5 text-[13px] tracking-[0.22em] text-accent uppercase lg:mb-5.5">Импорт · Сервис · Экспертиза</div>
+                <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Автосалон · сервис · детейлинг в Москве</div>
 
-                <h1 class="mb-6 max-w-4xl font-display text-4xl leading-[1.14] font-semibold text-pretty lg:mb-6.5 lg:text-[56px]">
-                    Автомобили из <span class="text-accent">Китая и Европы</span>. Под ключ.
+                <h1 class="mb-6 max-w-4xl font-display text-[34px] leading-[1.14] font-semibold text-pretty sm:text-[44px] lg:mb-6.5 lg:text-[56px]">
+                    Автомобиль из Китая — <span class="text-accent">под ключ</span>
                 </h1>
 
-                <p class="mb-10 max-w-xl text-lg leading-relaxed text-ink-muted">
-                    Подбор, растаможка и доставка автомобиля любой сложности — и полный автосервис
-                    для вашего парка. Один партнёр от заказа до обслуживания.
+                <p class="mb-9 max-w-[38rem] text-lg leading-[1.65] text-ink-muted">
+                    Подбираем, проверяем, доставляем и готовим автомобиль к эксплуатации.
+                    После выдачи остаёмся рядом: сервис, детейлинг и запчасти в одном месте.
                 </p>
 
-                <div class="flex flex-wrap gap-4 lg:gap-5">
+                <div class="mb-11 flex flex-wrap gap-4 lg:gap-5">
+                    {{-- Главная кнопка ведёт в КАТАЛОГ, а не на якорь `#cars`,
+                         как в макете. Расхождение осознанное: макет нарисован
+                         для одностраничника, у которого отдельного каталога
+                         нет вовсе, а здесь главная кнопка сайта не должна
+                         приводить к шести карточкам вместо всей выдачи.
+                         Без этой записи её однажды «поправят по макету». --}}
                     <a
                         href="{{ route('catalog.index') }}"
                         class="rounded-full bg-accent px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
-                    >Подобрать авто</a>
+                    >Посмотреть автомобили</a>
 
                     <a
-                        href="#lead-form"
+                        href="#selection"
                         class="rounded-full border border-white/35 px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] transition hover:-translate-y-0.5 hover:border-white/70"
-                    >Оставить заявку</a>
+                    >Подборка под бюджет</a>
+                </div>
+
+                {{-- Факты первого экрана. Тексты живут в шаблоне, а не
+                     в настройках: это по одной строке на карточку, жёстко
+                     привязанной к вёрстке блока, и репитер под них означал бы
+                     форму настроек, в которой заказчик ломает первый экран.
+                     Триггер завести настройку назван: первая просьба
+                     заказчика поправить эти тексты.
+
+                     Первые три пункта — статусы каталога словами покупателя,
+                     а не значениями `CarStatus`: «В пути» здесь про ожидание,
+                     а не про статус в базе (его в проекте нет вовсе). --}}
+                <div class="grid grid-cols-2 gap-5 lg:grid-cols-4 lg:gap-7">
+                    @foreach ([
+                        ['title' => 'В наличии', 'text' => 'автомобили, которые можно посмотреть в салоне'],
+                        ['title' => 'В пути', 'text' => 'понятный статус и ориентировочный срок'],
+                        ['title' => 'Под заказ', 'text' => 'подбор комплектации и цвета под задачу'],
+                        ['title' => 'После покупки', 'text' => 'сервис, детейлинг и расходники'],
+                    ] as $fact)
+                        <div class="border-t border-white/18 pt-3.5">
+                            <div class="mb-1 text-sm font-semibold text-accent">{{ $fact['title'] }}</div>
+
+                            <div class="text-[13px] leading-[1.5] text-ink-muted">{{ $fact['text'] }}</div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
+        </div>
+    </section>
+
+    {{--
+        Полоса доверия. Тексты — в шаблоне по той же причине, что и факты
+        хиро: одна строка на карточку, привязанная к вёрстке блока.
+
+        Секция на фоне `page`, и следующие за ней промо-баннер с подборкой —
+        тоже: в макете полоса доверия и каталог стоят на одном фоне, а
+        правило дизайн-системы запрещает не смену тона, а больше двух
+        оттенков на экране.
+    --}}
+    <section class="px-5 py-14 lg:px-8 lg:py-18">
+        <div class="mx-auto grid max-w-page gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            @foreach ([
+                ['title' => 'Физический салон в Москве', 'text' => 'Можно увидеть автомобили и познакомиться с командой.'],
+                ['title' => 'Прозрачный состав цены', 'text' => 'Показываем основные расходы до заключения сделки.'],
+                ['title' => 'Фото- и видеоотчёт', 'text' => 'Фиксируем ключевые этапы проверки и доставки.'],
+                ['title' => 'Собственная экосистема', 'text' => 'Продажа, сервис, детейлинг и запчасти.'],
+            ] as $item)
+                <div class="rounded-card border border-white/7 bg-surface px-6.5 py-6 transition duration-250 hover:-translate-y-1 hover:border-accent/30">
+                    <div class="mb-2 text-[15px] font-semibold">{{ $item['title'] }}</div>
+
+                    <div class="text-sm leading-[1.6] text-ink-muted">{{ $item['text'] }}</div>
+                </div>
+            @endforeach
         </div>
     </section>
 
@@ -224,32 +312,407 @@
         незаполненную настройку. Вместо него сервис пишет WARN.
     --}}
     @if ($cars->isNotEmpty())
-        <section class="px-5 pt-16 pb-20 lg:px-8 lg:pb-30">
-            <div class="mx-auto max-w-page">
-                <div class="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between lg:mb-14">
-                    <div>
-                        <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Каталог</div>
+        @php
+            // Кнопки фильтра строятся из статусов, ФАКТИЧЕСКИ встреченных
+            // в подборке, а не из полного enum-а. Кнопка «Под заказ»,
+            // не дающая ни одной карточки, — это пустая выдача по клику,
+            // то есть сломанное доверие к фильтру.
+            //
+            // Порядок берётся из порядка кейсов enum-а, а не из порядка
+            // появления в подборке: иначе кнопки менялись бы местами
+            // от одной перестановки карточек в админке к другой.
+            //
+            // Статуса «В пути» из макета в проекте нет вовсе — `CarStatus`
+            // знает `InStock`, `OnOrder` и `Sold`, а проданные в подборку
+            // не попадают (`HomeContent::cars()` пересекает `onHomepage()`
+            // с `available()`).
+            $statuses = array_values(array_filter(
+                CarStatus::cases(),
+                fn (CarStatus $status): bool => $cars->contains('status', $status),
+            ));
+        @endphp
 
-                        <h2 class="font-display text-3xl font-semibold lg:text-[34px]">
-                            Рекомендуемые <span class="text-accent">автомобили</span>
+        <section id="cars" class="px-5 pt-4 pb-20 lg:px-8 lg:pb-30">
+            <div class="mx-auto max-w-page">
+                <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                    <div>
+                        <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Продажа автомобилей</div>
+
+                        <h2 class="font-display text-3xl leading-[1.15] font-semibold text-pretty lg:text-[34px]">
+                            Не бесконечный каталог, а понятные <span class="text-accent">предложения</span>
                         </h2>
                     </div>
 
-                    <a
-                        href="{{ route('catalog.index') }}"
-                        class="self-start border-b border-white/40 pb-1 text-[15px] transition-colors hover:border-accent hover:text-accent sm:self-auto"
-                    >Весь каталог →</a>
+                    <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                        Показываем статус автомобиля и ведём к следующему действию: посмотреть,
+                        запросить точный расчёт или подобрать альтернативу.
+                    </p>
                 </div>
 
-                <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                    @foreach ($cars as $car)
-                        {{-- `heading="h3"` обязателен: у секции свой H2,
-                             и карточка внутри неё должна быть уровнем ниже.
-                             Забыть параметр — типовая ошибка переиспользования,
-                             а иерархия заголовков не оформление: по ней ходят
-                             скринридеры и по ней страницу разбирает поисковик. --}}
-                        <x-car-card :car="$car" heading="h3" />
-                    @endforeach
+                {{--
+                    Фильтр по статусу — единственный Alpine-компонент этой
+                    секции. `x-data` инлайном, а не через `Alpine.data()`
+                    из `@push('scripts')`: правило `RULES.md`.
+                --}}
+                <div x-data="{ status: 'all' }">
+                    {{--
+                        Панель фильтров скрыта до инициализации Alpine: без
+                        скрипта кнопки не делают НИЧЕГО, а контрол, который
+                        ничего не делает, обманывает (то же основание, по
+                        которому вехой 4.3 скрыты стрелки фотогалереи).
+                        Без JS панели нет, и видны все карточки подборки.
+
+                        Это НЕ противоречит решению «фильтры каталога работают
+                        без JavaScript»: там фильтр — GET-форма, и её выдачу
+                        обязан видеть робот. Здесь — показ и скрытие шести
+                        уже отрендеренных карточек, то есть чисто клиентское
+                        удобство, и роботу скрывать нечего.
+
+                        При единственном статусе панели нет вовсе:
+                        фильтровать нечего, а две кнопки «Все» и «В наличии»
+                        над одинаковой выдачей выглядят сломанными.
+                    --}}
+                    @if (count($statuses) > 1)
+                        <div x-cloak class="mb-10 flex flex-wrap gap-2.5" role="group" aria-label="Фильтр по статусу">
+                            {{-- Обработчики полной формой `x-on:click`,
+                                 а не `@click`: `@` — префикс директив Blade
+                                 (правило `ARCHITECTURE.md`).
+
+                                 `aria-pressed` печатается строкой, а не
+                                 булевым: `aria-pressed` — не булев атрибут
+                                 HTML, и его отсутствие означает не «не
+                                 нажата», а «не переключатель». Заливку
+                                 активной кнопки несёт сам атрибут
+                                 (`aria-pressed:` — вариант Tailwind),
+                                 поэтому состояние и оформление не могут
+                                 разойтись. --}}
+                            <button
+                                type="button"
+                                aria-pressed="true"
+                                x-on:click="status = 'all'"
+                                x-bind:aria-pressed="status === 'all' ? 'true' : 'false'"
+                                class="rounded-full border border-white/15 px-5 py-2.5 text-sm transition-colors hover:border-accent/50 hover:text-accent aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:font-semibold aria-pressed:text-page"
+                            >Все</button>
+
+                            @foreach ($statuses as $status)
+                                <button
+                                    type="button"
+                                    aria-pressed="false"
+                                    x-on:click="status = '{{ $status->value }}'"
+                                    x-bind:aria-pressed="status === '{{ $status->value }}' ? 'true' : 'false'"
+                                    class="rounded-full border border-white/15 px-5 py-2.5 text-sm transition-colors hover:border-accent/50 hover:text-accent aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:font-semibold aria-pressed:text-page"
+                                >{{ $status->label() }}</button>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach ($cars as $car)
+                            {{-- Директива висит на ОБЁРТКЕ, а не на самой
+                                 карточке: `x-car-card` общий с каталогом
+                                 и блоком похожих, и `x-show` внутри него
+                                 уехал бы на три страницы сразу — там,
+                                 где никакого фильтра нет.
+
+                                 `heading="h3"` обязателен: у секции свой H2,
+                                 и карточка внутри неё должна быть уровнем
+                                 ниже. Иерархия заголовков не оформление:
+                                 по ней ходят скринридеры и по ней страницу
+                                 разбирает поисковик. --}}
+                            <div x-show="status === 'all' || status === '{{ $car->status->value }}'">
+                                <x-car-card :car="$car" heading="h3" />
+                            </div>
+                        @endforeach
+
+                        {{-- Карточка-приглашение седьмой ячейкой сетки.
+                             Под фильтр она НЕ попадает намеренно: это
+                             не автомобиль, а выход из ситуации «нужного
+                             нет», и именно суженная фильтром выдача —
+                             момент, когда предложение подобрать нужнее
+                             всего. --}}
+                        <div class="flex flex-col justify-center gap-5 rounded-card border border-dashed border-white/16 p-8">
+                            <h3 class="font-display text-[19px] font-semibold">Не нашли модель?</h3>
+
+                            <p class="text-sm leading-[1.65] text-ink-muted">
+                                Подберём варианты по бюджету, типу двигателя и сроку покупки —
+                                без необходимости разбираться во всём рынке самостоятельно.
+                            </p>
+
+                            {{-- `self-start` обязателен: в колоночном flex-
+                                 контейнере элементы растягиваются по ширине
+                                 по умолчанию, и кнопка стала бы во всю
+                                 карточку. Заголовок и абзац при этом должны
+                                 остаться полной ширины, поэтому `items-start`
+                                 на контейнере здесь не подходит. --}}
+                            <a
+                                href="#selection"
+                                class="self-start rounded-full bg-accent px-6 py-3 text-sm font-semibold text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                            >Получить подборку</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-11 flex justify-center">
+                    <a
+                        href="{{ route('catalog.index') }}"
+                        class="rounded-full border border-white/35 px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] transition hover:-translate-y-0.5 hover:border-white/70"
+                    >Весь каталог →</a>
+                </div>
+            </div>
+        </section>
+    @endif
+
+    {{--
+        Быстрый подбор.
+
+        Секция рендерится только при известных границах цены: обе `null`
+        означают пустой или бесценовой каталог, и слайдер «от null до null»
+        был бы контролом без данных (правило проекта о блоках, управляемых
+        данными).
+
+        Счёт идёт по РЕАЛЬНОМУ каталогу, а не по формуле макета
+        (`js/mockup.js` считает «направления» выражением
+        `value < 3000000 ? 2 : …`). Цифра на живом сайте, не подкреплённая
+        данными, — это обещание, которого нет.
+    --}}
+    @if ($selector['price_min'] !== null && $selector['price_max'] !== null)
+        @php
+            // Шаг ползунка — решение вёрстки, поэтому живёт в шаблоне.
+            $step = 100000;
+
+            // Границы округляются ДО кратных шагу, и это не косметика.
+            // Допустимые значения `input[type=range]` — это `min + n * step`,
+            // и при некратном `max` верхнее значение недостижимо: ползунок
+            // упирается в предпоследнюю ступень. Состояние «бюджет на
+            // максимуме», от которого зависит, уходит ли `price_to` в адрес
+            // каталога, стало бы недостижимым — молча, потому что визуально
+            // ползунок всё равно доезжает до правого края.
+            $sliderMin = (int) (floor($selector['price_min'] / $step) * $step);
+            $sliderMax = (int) (ceil($selector['price_max'] / $step) * $step);
+
+            // Один шаг хода гарантирован: при единственной цене в каталоге
+            // границы совпали бы и ползунок оказался бы мёртвым контролом.
+            $sliderMax = max($sliderMax, $sliderMin + $step);
+        @endphp
+
+        <section id="selection" class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
+            <div class="mx-auto max-w-page">
+                <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                    <div>
+                        <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Быстрый подбор</div>
+
+                        <h2 class="font-display text-3xl leading-[1.15] font-semibold text-pretty lg:text-[34px]">
+                            Автомобиль под ваш бюджет и <span class="text-accent">сценарий</span>
+                        </h2>
+                    </div>
+
+                    <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                        Короткая форма вместо длинного каталога: видно, сколько автомобилей
+                        подходит под запрос, ещё до заявки.
+                    </p>
+                </div>
+
+                {{--
+                    Данные уезжают в `x-data` через `@js(...)`, а не
+                    конкатенацией строк: директива кодирует значение
+                    с `JSON_HEX_*`, то есть кавычки и угловые скобки
+                    не могут разорвать атрибут.
+
+                    Фильтрация повторяет правила `CatalogFilter` — иначе
+                    счётчик обещал бы одно, а каталог по той же ссылке
+                    показывал другое. Автомобиль без цены при заданном
+                    бюджете НЕ считается: `CatalogFilter` применяет
+                    `price_to` как `where('price', '<=', …)`, и записи
+                    с `price = null` из выдачи выпадают. Счётчик, который
+                    их включает, обещает больше, чем покажет каталог,
+                    и расхождение выглядело бы как баг фильтра.
+                --}}
+                <div
+                    class="grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:gap-8"
+                    x-data="{
+                        cars: @js($selector['cars']),
+                        budget: {{ $sliderMax }},
+                        sliderMax: {{ $sliderMax }},
+                        engine: '',
+                        term: '',
+
+                        get capped() {
+                            return this.budget < this.sliderMax;
+                        },
+
+                        get matches() {
+                            return this.cars.filter((car) => {
+                                if (this.engine !== '' && car.engine !== this.engine) {
+                                    return false;
+                                }
+
+                                if (this.term !== '' && car.status !== this.term) {
+                                    return false;
+                                }
+
+                                if (this.capped && (car.price === null || car.price > this.budget)) {
+                                    return false;
+                                }
+
+                                return true;
+                            }).length;
+                        },
+
+                        get budgetLabel() {
+                            return new Intl.NumberFormat('ru-RU').format(this.budget) + ' ₽';
+                        },
+
+                        get href() {
+                            const params = new URLSearchParams();
+
+                            if (this.capped) {
+                                params.set('price_to', this.budget);
+                            }
+
+                            if (this.engine !== '') {
+                                params.set('engine', this.engine);
+                            }
+
+                            if (this.term !== '') {
+                                params.set('status', this.term);
+                            }
+
+                            const query = params.toString();
+
+                            return '{{ route('catalog.index') }}' + (query === '' ? '' : '?' + query);
+                        },
+                    }"
+                >
+                    {{--
+                        Карточка формы целиком скрыта до инициализации
+                        Alpine: ползунок и чипы без скрипта не делают
+                        ничего. Без JS от блока остаётся правая карточка —
+                        серверное число доступных автомобилей и кнопка
+                        в каталог, то есть «В каталоге N автомобилей →
+                        Перейти в каталог». Честно и полезно; со скриптом
+                        становится подбором.
+                    --}}
+                    <div x-cloak class="rounded-card border border-white/8 bg-surface p-7 lg:p-9">
+                        <div>
+                            <div class="mb-3.5 flex items-baseline justify-between gap-4">
+                                <label for="selection-budget" class="text-sm font-medium text-ink-muted">Бюджет</label>
+
+                                <output
+                                    for="selection-budget"
+                                    class="font-display text-lg font-semibold text-accent"
+                                    x-text="budgetLabel"
+                                >{{ number_format($sliderMax, 0, ',', ' ') }} ₽</output>
+                            </div>
+
+                            {{-- `x-model` здесь уместен, в отличие от селекта
+                                 услуги: значение контрола НЕ задаёт сервер
+                                 через `old()`, а начальное состояние
+                                 компонента совпадает с атрибутом `value`.
+                                 Затирать серверный выбор нечем.
+
+                                 Нативный range на тёмной теме браузер красит
+                                 сам, поэтому дорожка и бегунок заданы явно
+                                 произвольными значениями. --}}
+                            <input
+                                type="range"
+                                id="selection-budget"
+                                min="{{ $sliderMin }}"
+                                max="{{ $sliderMax }}"
+                                step="{{ $step }}"
+                                value="{{ $sliderMax }}"
+                                x-model.number="budget"
+                                class="h-1 w-full appearance-none rounded-full bg-white/15 [&::-moz-range-thumb]:size-5.5 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-accent [&::-moz-range-thumb]:shadow-[0_0_0_6px_rgb(249_194_39/0.18)] [&::-webkit-slider-thumb]:size-5.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-[0_0_0_6px_rgb(249_194_39/0.18)]"
+                            >
+                        </div>
+
+                        {{-- Чипы: `input` визуально скрыт, состояние несёт
+                             соседний `span` через `peer-checked`. Именно
+                             `input`, а не кнопка: группа радиокнопок
+                             доступна с клавиатуры и объявляется скринридером
+                             как выбор из набора без единой строки ARIA. --}}
+                        @foreach ([
+                            [
+                                'legend' => 'Тип двигателя',
+                                'model' => 'engine',
+                                'name' => 'selection-engine',
+                                // Варианты, реально встречающиеся в каталоге,
+                                // плюс «Не важно» первым: чип, дающий ноль
+                                // автомобилей, ломает доверие к подбору.
+                                'options' => [['value' => '', 'label' => 'Не важно'], ...$selector['engines']],
+                            ],
+                            [
+                                'legend' => 'Срок покупки',
+                                'model' => 'term',
+                                'name' => 'selection-term',
+                                // Значения — статусы каталога, а не выдуманные
+                                // сроки: кнопка ведёт в каталог с параметром
+                                // `status`, и подпись обязана соответствовать
+                                // тому, что человек там увидит.
+                                'options' => [
+                                    ['value' => CarStatus::InStock->value, 'label' => 'Сейчас'],
+                                    ['value' => CarStatus::OnOrder->value, 'label' => '1–2 месяца'],
+                                    ['value' => '', 'label' => 'Изучаю рынок'],
+                                ],
+                            ],
+                        ] as $field)
+                            <fieldset class="mt-7">
+                                <legend class="mb-3.5 text-sm font-medium text-ink-muted">{{ $field['legend'] }}</legend>
+
+                                <div class="flex flex-wrap gap-2.5">
+                                    @foreach ($field['options'] as $option)
+                                        <label class="cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="{{ $field['name'] }}"
+                                                value="{{ $option['value'] }}"
+                                                x-model="{{ $field['model'] }}"
+                                                class="peer sr-only"
+                                            >
+
+                                            <span class="inline-block rounded-full border border-white/15 px-5 py-2.5 text-sm transition-colors hover:border-accent/50 peer-checked:border-accent peer-checked:bg-accent peer-checked:font-semibold peer-checked:text-page peer-focus-visible:outline-2 peer-focus-visible:outline-offset-[3px] peer-focus-visible:outline-accent">{{ $option['label'] }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </fieldset>
+                        @endforeach
+                    </div>
+
+                    <div class="flex flex-col justify-between gap-7 rounded-card border border-white/8 bg-surface p-7 lg:p-9">
+                        <div>
+                            {{-- Счётчик печатается поверх серверного числа,
+                                 а не вместо него: без скрипта здесь остаётся
+                                 количество доступных автомобилей каталога. --}}
+                            <div
+                                class="font-display text-[64px] leading-none font-bold text-accent lg:text-[76px]"
+                                x-text="matches"
+                            >{{ $selector['total'] }}</div>
+
+                            {{-- Подпись намеренно не согласуется с числом:
+                                 «автомобиля» верно для 2 и неверно для 1 и 5,
+                                 а склонять число на клиенте и на сервере
+                                 значит завести два места, где живёт одно
+                                 правило русской грамматики, — и разойтись
+                                 в них. Фраза без существительного в счётной
+                                 форме верна при любом значении. --}}
+                            <div class="mt-3 mb-3.5 text-lg font-semibold">в подборке под ваш запрос</div>
+
+                            <p class="text-sm leading-[1.65] text-ink-muted">
+                                Менеджер уточнит приоритеты и подготовит персональную подборку
+                                с расчётом по каждому варианту.
+                            </p>
+                        </div>
+
+                        {{-- Серверный `href` ведёт в каталог без параметров,
+                             Alpine навешивает поверх адрес с фильтрами.
+                             Имена параметров — из контракта вехи 3.6
+                             (`price_to`, `engine`, `status`), менять их
+                             нельзя: каталог разбирает ровно эти. --}}
+                        <a
+                            href="{{ route('catalog.index') }}"
+                            x-bind:href="href"
+                            class="rounded-full bg-accent px-9 py-4.5 text-center text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                        >Получить подборку</a>
+                    </div>
                 </div>
             </div>
         </section>
