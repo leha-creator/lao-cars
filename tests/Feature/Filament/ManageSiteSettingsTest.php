@@ -172,6 +172,33 @@ it('keeps the services notes an object with a field per service category', funct
     expect($notes)->not->toHaveKey(ServiceCategory::Parts->value);
 });
 
+it('keeps the new home repeaters lists of objects', function () {
+    // Форматы, от которых зависят блоки главной вехи 4.6: этапы покупки,
+    // состав цены и FAQ. Ломается это молча — репитер, дегидрированный
+    // в другую форму, даёт `foreach` по неверной структуре уже на проде.
+    //
+    // Проверка идёт после сохранения НЕТРОНУТОЙ формы: именно так значение
+    // проходит полный круг «сид → заполнение формы → дегидрация → запись»,
+    // на котором форма и расходится с сидом.
+    livewire(ManageSiteSettings::class)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $steps = Setting::get('home.steps');
+    $priceBreakdown = Setting::get('home.price_breakdown');
+    $faq = Setting::get('home.faq');
+
+    expect($steps)->toHaveCount(6)
+        ->and(array_is_list($steps))->toBeTrue()
+        ->and($steps[0])->toHaveKeys(['number', 'title', 'text'])
+        ->and($priceBreakdown)->toHaveCount(6)
+        ->and(array_is_list($priceBreakdown))->toBeTrue()
+        ->and($priceBreakdown[0])->toHaveKeys(['title', 'note'])
+        ->and($faq)->toHaveCount(6)
+        ->and(array_is_list($faq))->toBeTrue()
+        ->and($faq[0])->toHaveKeys(['question', 'answer']);
+});
+
 it('keeps the media key list pointing at real settings', function () {
     // Список медийных ключей читает `Media::usages()`; ключ, которого нет
     // в реестре страницы, никогда не совпадёт и проверка использования

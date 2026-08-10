@@ -84,6 +84,13 @@ it('seeds the settings keys the layout depends on', function () {
     expect(Setting::get('contacts.phone'))->not->toBeNull()
         ->and(Setting::get('home.ticker'))->toBeArray()
         ->and(Setting::get('home.advantages'))->toBeArray()
+        // Блоки главной вехи 4.6: без умолчаний в сиде свежезасеянная база
+        // даёт главную без этапов, состава цены и FAQ — то есть без трёх
+        // из четырнадцати блоков, и выглядит это не как пустая настройка,
+        // а как недоделанная страница.
+        ->and(Setting::get('home.steps'))->toBeArray()
+        ->and(Setting::get('home.price_breakdown'))->toBeArray()
+        ->and(Setting::get('home.faq'))->toBeArray()
         ->and(Setting::get('footer.guarantee'))->toHaveKey('title')
         ->and(Setting::get('seo.default_title'))->not->toBeNull();
 });
