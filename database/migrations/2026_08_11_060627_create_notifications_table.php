@@ -12,8 +12,21 @@ use Illuminate\Support\Facades\Schema;
  * отношению. До вехи 4.7 у трейта `Notifiable` в `User` не было ни одного
  * потребителя, поэтому таблицы и не было.
  *
- * Схема — ровно та, что генерирует `make:notifications-table`, и менять
- * её нельзя: колонки читает сам фреймворк.
+ * Схема — та, что генерирует `make:notifications-table`, с ОДНОЙ правкой:
+ * `data` объявлена `jsonb`, а не `text`.
+ *
+ * Правка вынужденная и ловится только на PostgreSQL. Колокольчик Filament
+ * считает непрочитанные условием `data->>'format' = 'filament'`, а оператор
+ * `->>` к типу `text` в PostgreSQL неприменим вовсе: запрос падает
+ * `SQLSTATE[42883] operator does not exist: text ->> unknown`. На MySQL,
+ * под который написана штатная миграция, `->>` работает и с текстовой
+ * колонкой, поэтому в апстриме проблемы нет — и поэтому она не находится
+ * поиском по документации Laravel.
+ *
+ * `jsonb`, а не `json`: по этой колонке идёт условие в каждом опросе
+ * колокольчика (раз в 30 секунд на вкладку), а `jsonb` его и разбирает
+ * быстрее, и индексируется. Каст модели (`data` → `array`) работает
+ * с обоими типами одинаково.
  */
 return new class extends Migration
 {
@@ -23,7 +36,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('type');
             $table->morphs('notifiable');
-            $table->text('data');
+            $table->jsonb('data');
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
         });

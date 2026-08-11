@@ -17,26 +17,30 @@ use RuntimeException;
  * время ответа формы становится заложником чужого сервиса.
  *
  * Два вида отказа различаются намеренно:
- *   - несконфигурированный бот (пустой токен или chat_id) — WARN и выход
+ *   - несконфигурированный бот (пустой токен) — WARN и выход
  *     без исключения: на локальной машине и в CI бота нет, и заваливать
  *     `failed_jobs` пятью попытками на каждый тестовый лид незачем;
  *   - недоступный API — исключение: это временный сбой, ради которого
  *     ретраи и существуют.
+ *
+ * Вехой 4.7 адрес получателя приходит ПАРАМЕТРОМ, а не читается
+ * из конфига: получателей стало сколько сотрудников, и выбирает их
+ * `LeadNotifier`. Из конфига здесь остался только токен, поэтому
+ * и проверка «не сконфигурирован» сузилась до него: пустой `chatId`
+ * сюда не доезжает вовсе — отбор делает вызывающая сторона.
  */
 final class TelegramNotifier
 {
-    public function send(Lead $lead): void
+    public function send(Lead $lead, string $chatId): void
     {
         // Через config(), а не env(): вызов env() вне config-файлов после
         // `php artisan config:cache` вернёт null (ARCHITECTURE.md).
         $token = (string) config('services.telegram.token');
-        $chatId = (string) config('services.telegram.chat_id');
 
-        if ($token === '' || $chatId === '') {
+        if ($token === '') {
             Log::channel('leads')->warning('[Lead] Telegram не сконфигурирован, уведомление пропущено', [
                 'lead_id' => $lead->id,
-                // Что именно не заполнено — видно, а значения не пишутся.
-                'missing' => $token === '' ? 'token' : 'chat_id',
+                'missing' => 'token',
             ]);
 
             return;
@@ -69,6 +73,10 @@ final class TelegramNotifier
 
         Log::channel('leads')->info('[Lead] уведомление доставлено в Telegram', [
             'lead_id' => $lead->id,
+            // Хвост адреса, а не полный id: при нескольких получателях
+            // без него непонятно, кому дошло, а полный chat_id — это
+            // персональные данные сотрудника.
+            'chat_id_tail' => mb_substr($chatId, -4),
         ]);
     }
 

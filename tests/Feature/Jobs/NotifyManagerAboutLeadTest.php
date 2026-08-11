@@ -24,7 +24,17 @@ use Illuminate\Support\Facades\Queue;
  *
  * Поэтому HTTP-путь проверяется на настоящей очереди, а поведение при
  * недоступном Telegram — прямым вызовом `handle()`.
+ *
+ * Вехой 4.7 у задачи появился второй параметр — адрес получателя. Адрес
+ * стал параметром, потому что получателей теперь столько, сколько заведено
+ * сотрудников, и на каждого уходит СВОЯ задача: цикл по списку внутри одной
+ * задачи упал бы на пятом и увёл бы в ретрай первых четырёх. Сторож этого
+ * решения живёт в `LeadNotifierTest`, здесь проверяется только то, что
+ * переданный адрес доезжает до API и не подменяется конфигурационным.
  */
+
+/** Адрес получателя для тестов, где важна не адресация, а что-то другое. */
+const CHAT_ID = '100500';
 
 /*
  * Этот файл тоже отправляет форму, значит тоже упирается в лимитер соседей:
@@ -65,7 +75,7 @@ it('throws when the telegram api is down so the retries can happen', function ()
 
     // Исключение здесь — правильное поведение, а не баг: без него
     // задача считается выполненной и ретраев не будет.
-    expect(fn () => (new NotifyManagerAboutLead($lead))->handle(app(TelegramNotifier::class)))
+    expect(fn () => (new NotifyManagerAboutLead($lead, CHAT_ID))->handle(app(TelegramNotifier::class)))
         ->toThrow(RuntimeException::class);
 
     // Заявка на месте — это и есть инвариант вехи.
@@ -82,7 +92,7 @@ it('does not leak the bot token into the exception message', function () {
     // унесло бы его в лог — файл, который живёт 30 дней и попадает
     // в бэкапы.
     try {
-        (new NotifyManagerAboutLead($lead))->handle(app(TelegramNotifier::class));
+        (new NotifyManagerAboutLead($lead, CHAT_ID))->handle(app(TelegramNotifier::class));
         $message = '';
     } catch (RuntimeException $e) {
         $message = $e->getMessage();
@@ -99,7 +109,7 @@ it('logs the final failure without the full phone number', function () {
 
     $lead = Lead::factory()->general()->create(['phone' => '+7 999 123-45-67']);
 
-    (new NotifyManagerAboutLead($lead))->failed(new RuntimeException('Telegram недоступен'));
+    (new NotifyManagerAboutLead($lead, CHAT_ID))->failed(new RuntimeException('Telegram недоступен'));
 
     Log::shouldHaveReceived('error')
         ->withArgs(function (string $message, array $context) use ($lead): bool {
@@ -126,7 +136,7 @@ it('skips the notification with a warning when telegram is not configured', func
 
     // Без исключения: на локальной машине и в CI бота нет, и заваливать
     // failed_jobs пятью попытками на каждый тестовый лид незачем.
-    (new NotifyManagerAboutLead($lead))->handle(app(TelegramNotifier::class));
+    (new NotifyManagerAboutLead($lead, CHAT_ID))->handle(app(TelegramNotifier::class));
 
     Log::shouldHaveReceived('warning')
         ->withArgs(fn (string $message, array $context): bool => $message === '[Lead] Telegram не сконфигурирован, уведомление пропущено'
@@ -145,7 +155,7 @@ it('escapes angle brackets coming from the client', function () {
         'message' => 'Сравните a < b > c',
     ]);
 
-    app(TelegramNotifier::class)->send($lead);
+    app(TelegramNotifier::class)->send($lead, CHAT_ID);
 
     // При `parse_mode: HTML` пропущенный `e()` даёт 400 от Telegram,
     // пять ретраев и запись в failed_jobs — по вине формата сообщения,
@@ -161,13 +171,29 @@ it('escapes angle brackets coming from the client', function () {
     });
 });
 
+it('sends to the chat id it was given, not to the configured one', function () {
+    // Сторож персональной адресации (веха 4.7). Конфигурационный адрес
+    // намеренно отличается от переданного: возврат к `config()` внутри
+    // `TelegramNotifier` выглядит упрощением («зачем таскать параметр,
+    // если он есть в конфиге») и отправляет заявки всех сотрудников
+    // в один чат — молча и с зелёными остальными тестами.
+    config(['services.telegram.token' => 'token', 'services.telegram.chat_id' => 'общий-чат']);
+    Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+
+    $lead = Lead::factory()->general()->create();
+
+    app(TelegramNotifier::class)->send($lead, 'персональный-чат');
+
+    Http::assertSent(fn (Request $request): bool => $request['chat_id'] === 'персональный-чат');
+});
+
 it('links to the lead card in the admin panel', function () {
     config(['services.telegram.token' => 'token', 'services.telegram.chat_id' => '1']);
     Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
 
     $lead = Lead::factory()->general()->create();
 
-    app(TelegramNotifier::class)->send($lead);
+    app(TelegramNotifier::class)->send($lead, CHAT_ID);
 
     // Менеджер попадает в панель одним касанием, а не ищет заявку в списке.
     Http::assertSent(fn (Request $request): bool => str_contains(
@@ -185,7 +211,7 @@ it('logs a successful delivery', function () {
 
     $lead = Lead::factory()->general()->create();
 
-    (new NotifyManagerAboutLead($lead))->handle(app(TelegramNotifier::class));
+    (new NotifyManagerAboutLead($lead, CHAT_ID))->handle(app(TelegramNotifier::class));
 
     // Четвёртое из событий, перечисленных в шапке канала `leads`.
     Log::shouldHaveReceived('info')
@@ -195,7 +221,7 @@ it('logs a successful delivery', function () {
 });
 
 it('retries five times with growing pauses', function () {
-    $job = new NotifyManagerAboutLead(Lead::factory()->general()->create());
+    $job = new NotifyManagerAboutLead(Lead::factory()->general()->create(), CHAT_ID);
 
     // Четыре паузы на пять попыток — не опечатка: Laravel повторяет
     // последнее значение для всех последующих попыток.

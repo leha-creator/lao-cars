@@ -16,6 +16,13 @@ use Throwable;
  *
  * Задача существует ради одного инварианта: заявка первична, уведомление
  * вторично. Telegram лежит — лид уже в БД, а задача уходит в ретраи.
+ *
+ * Вехой 4.7 адрес получателя стал ПАРАМЕТРОМ задачи, а не значением
+ * из конфига. Одна задача на одного получателя: цикл по списку внутри
+ * задачи упал бы на пятом и увёл бы в ретрай первых четырёх, то есть
+ * четверо получили бы заявку повторно — и тем чаще, чем хуже связь.
+ * Кого именно уведомлять, решает `LeadNotifier`; сюда адрес приходит
+ * уже непустым.
  */
 final class NotifyManagerAboutLead implements ShouldQueue
 {
@@ -39,12 +46,15 @@ final class NotifyManagerAboutLead implements ShouldQueue
      * в очередь только id и подтягивает свежую запись при выполнении —
      * уведомление уйдёт с актуальными данными, а не с копией, снятой
      * в момент отправки формы.
+     *
+     * `$chatId` — строка, а не модель `User`: адресом может оказаться
+     * общий чат из окружения, у которого никакого пользователя нет.
      */
-    public function __construct(public Lead $lead) {}
+    public function __construct(public Lead $lead, public string $chatId) {}
 
     public function handle(TelegramNotifier $telegram): void
     {
-        $telegram->send($this->lead);
+        $telegram->send($this->lead, $this->chatId);
     }
 
     /**
@@ -59,6 +69,11 @@ final class NotifyManagerAboutLead implements ShouldQueue
             // в лог не идут (запрет в шапке канала), но менеджеру нужно
             // опознать заявку, о которой он не узнал.
             'phone_tail' => mb_substr((string) $this->lead->phone, -4),
+            // Получателей теперь несколько, и без адреса непонятно, кому
+            // именно не дошло: одна и та же заявка может уйти пятерым,
+            // и упасть — только у одного. Хвост, а не полный id: адрес
+            // чата — это персональные данные сотрудника.
+            'chat_id_tail' => mb_substr($this->chatId, -4),
             'error' => $e->getMessage(),
         ]);
     }
