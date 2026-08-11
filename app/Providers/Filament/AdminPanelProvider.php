@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\NavigationGroup;
+use App\Filament\Pages\Auth\EditProfile;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -41,7 +42,12 @@ class AdminPanelProvider extends PanelProvider
             // любого аутентифицированного, и здесь это верно — править можно
             // только себя, а штатная `EditProfile` требует подтверждения
             // текущим паролем.
-            ->profile()
+            //
+            // Вехой 4.7 страница стала своей — ради секции «Уведомления»,
+            // — но осталась НАСЛЕДНИКОМ штатной: поля имени, e-mail
+            // и пароля приходят вызовом родительской схемы, а не копией
+            // её кода.
+            ->profile(EditProfile::class)
             // Без строгого режима отсутствие политики означает «разрешено»:
             // `Filament\get_authorization_response()` при отсутствующей
             // политике или отсутствующем методе доходит до `Response::allow()`
