@@ -83,14 +83,25 @@ laocars/
 │   │                         # + HasLabels, HasColors
 │   ├── Http/
 │   │   ├── Controllers/      # CatalogController: список и карточка авто;
-│   │   │                     # LeadController: приём заявок со всех форм;
+│   │   │                     # LeadController: приём заявок со всех форм,
+│   │   │                     # два формата ответа по заголовкам запроса;
+│   │   │                     # PushSubscriptionController: подписка браузера;
 │   │   │                     # Home/Service/Parts/ContactController —
-│   │   │                     # страницы разделов, до вех 4.2–4.5 заглушки
+│   │   │                     # страницы разделов, до вехи 4.5 заглушка
 │   │   └── Requests/         # CatalogFilterRequest: валидация GET-контракта,
 │   │                         # битый параметр уводит на чистый /catalog;
-│   │                         # StoreLeadRequest: валидация формы + toData()
+│   │                         # StoreLeadRequest: валидация формы + toData();
+│   │                         # StorePushSubscriptionRequest: форма Push API
 │   ├── Jobs/                 # NotifyManagerAboutLead: уведомление вне
-│   │                         # HTTP-цикла, 5 попыток с растущими паузами
+│   │                         # HTTP-цикла, 5 попыток с растущими паузами.
+│   │                         # Адрес получателя — параметр задачи: одна
+│   │                         # задача на человека, иначе ретрай шлёт дубли
+│   ├── Listeners/            # LogPushDelivery / LogFailedPushDelivery —
+│   │                         # логи доставки push и уборки протухших
+│   │                         # подписок. Находятся автодискавери
+│   ├── Notifications/        # NewLeadNotification: каналы database
+│   │                         # (колокольчик панели) и webpush. Телефона
+│   │                         # и комментария клиента в push нет
 │   ├── Filament/             # Админка: NavigationGroup + Resources/<Множ.>/
 │   │   ├── Forms/Components/ # MediaPicker: выбор из библиотеки, со связью и без
 │   │   ├── Pages/            # ManageSiteSettings: настройки сайта через content()
@@ -114,8 +125,10 @@ laocars/
 │   │                         # ServicesPageContent — данные автосервиса
 │   │                         # (у страницы запчастей парного сервиса нет —
 │   │                         # намеренно, см. PHPDoc контроллеров);
-│   │                         # LeadData + LeadService + TelegramNotifier —
-│   │                         # приём заявки и уведомление менеджеру
+│   │                         # LeadData + LeadService + LeadNotifier
+│   │                         # + TelegramNotifier — приём заявки
+│   │                         # и уведомления сотрудникам. LeadNotifier —
+│   │                         # единственное место, знающее адресатов
 │   ├── Support/              # ThumbnailPath, MediaSettingKeys, SiteMenu,
 │   │                         # SocialLinks, AttributeFilterIndex — чистые
 │   │                         # правила без слоя и состояния
@@ -190,16 +203,20 @@ laocars/
 | app/Services/HomeContent.php | Данные главной: подборка авто, промо, лента, преимущества, этапы, состав цены, FAQ, отзывы, витрина прайса, быстрый подбор, контакты, SEO; нормализация jsonb-настроек |
 | app/Services/ServicesPageContent.php | Данные автосервиса: прайс одним запросом с группировкой по категориям, описания, оговорка, преимущества |
 | app/Http/Requests/StoreLeadRequest.php | Контракт формы заявки: правила не мягче колонок, honeypot, `page_url` от сервера, сторож пары «тип + id» источника |
-| app/Services/LeadService.php | Приём заявки: запись в транзакции и постановка уведомления |
-| app/Services/TelegramNotifier.php | Отправка в Telegram: `e()` на каждом значении, токен не идёт в лог |
+| app/Services/LeadService.php | Приём заявки: запись в транзакции и постановка уведомлений |
+| app/Services/LeadNotifier.php | Единственное место, знающее получателей заявки: своя задача на человека, общий чат — фолбэк |
+| app/Services/TelegramNotifier.php | Отправка в Telegram: адрес приходит параметром, `e()` на каждом значении, токен не идёт в лог |
+| app/Notifications/NewLeadNotification.php | Push и колокольчик панели. В push нет телефона и комментария — он виден на экране блокировки |
+| resources/js/lead-form.js | Единственная регистрация `Alpine.data()` в проекте: `fetch` поверх обычной POST-формы |
+| public/sw.js | Service worker уведомлений. Без `fetch`-обработчика и без кеша — кеш переживает деплой |
 | app/View/Components/LeadForm.php | `x-lead-form` — один компонент на все формы заявок сайта; только `<form>`, раскладки в `LeadSection`; `:source` и `:services` взаимоисключающи |
 | app/Services/CarStructuredData.php | JSON-LD карточки автомобиля: `Car` + `BreadcrumbList`; печатается с `JSON_HEX_TAG` |
 | app/Support/AttributeFilterIndex.php | Длина префикса `left(value, N)`: её берут и миграция, и фильтр, и тест-сторож |
 | app/Models/Lead.php | Заявка со всех форм: полиморфный источник, статусы, комментарии |
 | app/Models/CarAttribute.php | Справочник динамических характеристик: тип, единица, группа, флаги вывода |
 | app/Models/Setting.php | Настройки сайта: key-value с jsonb и кешем в Redis |
-| app/Providers/AppServiceProvider.php | Morph map источников заявки (`car`, `service`), синглтон `ImageManager` на GD |
-| app/Providers/Filament/AdminPanelProvider.php | Конфигурация админ-панели: путь, брендинг, ресурсы, порядок групп меню, строгий режим авторизации, страница профиля |
+| app/Providers/AppServiceProvider.php | Morph map (`car`, `service`, `user` — карта `enforce`), синглтон `ImageManager` на GD, два формата ответа лимитера заявок |
+| app/Providers/Filament/AdminPanelProvider.php | Конфигурация админ-панели: путь, брендинг, ресурсы, порядок групп меню, строгий режим авторизации, своя страница профиля, колокольчик уведомлений |
 | app/Filament/NavigationGroup.php | Разделы меню админки и конвенции раскладки ресурсов Filament v5 |
 | app/Policies/AdminOnlyPolicy.php | Матрица прав администратора; парный `StaffPolicy` — права обеих ролей |
 | app/Filament/Pages/ManageSiteSettings.php | Страница настроек: реестр ключей, вкладки, сохранение через `data_get` |
@@ -223,7 +240,8 @@ laocars/
 | Главная страница | docs/homepage.md | Блоки главной, настройки, подборка авто и лимит, замена фоновых фото |
 | Каталог: фильтры и URL | docs/catalog.md | GET-параметры каталога, индексация, панель фильтров без JS, галерея, микроразметка карточки |
 | Автосервис и запчасти | docs/services-and-parts.md | Блоки прайса и их источники, поля админки, выбор услуги в форме, поведение без JS |
-| Заявки и уведомления | docs/leads.md | Путь заявки до Telegram, настройка бота, воркер, диагностика, работа менеджера |
+| Заявки и уведомления | docs/leads.md | Путь заявки, два формата ответа формы, защита, настройка бота, работа менеджера |
+| Уведомления сотрудникам | docs/notifications.md | Три канала, получатели, настройка в кабинете, VAPID и HTTPS, диагностика |
 | Админка каталога | docs/admin-catalog.md | Марки, карточки, фото, характеристики, медиабиблиотека |
 | Роли и доступ | docs/admin-roles.md | Права ролей, заведение сотрудников, первый запуск на проде |
 | Контент и настройки | docs/admin-content.md | Услуги и запчасти, команда, модерация отзывов, настройки сайта |
