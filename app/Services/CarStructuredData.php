@@ -79,7 +79,12 @@ final class CarStructuredData
             ],
             'model' => $car->model,
             'vehicleModelDate' => (string) $car->year,
-            'image' => $photos->map(fn (CarPhoto $photo): string => $photo->url)->all(),
+            // `url()` здесь обязателен: `$photo->url` относительный (диск
+            // `public` в config/filesystems.php), а schema.org требует
+            // абсолютный адрес картинки — относительный робот не заберёт.
+            // Для абсолютного значения (ASSET_URL с CDN) хелпер вернёт его
+            // как есть, так что обёртка безопасна в обоих случаях.
+            'image' => $photos->map(fn (CarPhoto $photo): string => url($photo->url))->all(),
             'description' => $car->description,
             // Пробег `null` — это автомобиль под заказ, у которого пробега
             // нет вовсе (комментарий миграции вехи 3.2), то есть новый.

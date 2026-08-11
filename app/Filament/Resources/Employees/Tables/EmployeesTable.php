@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Employees\Tables;
 
+use App\Models\Employee;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\ImageColumn;
@@ -22,6 +23,12 @@ final class EmployeesTable
                 // без предзагрузки эта колонка даёт запрос на строку.
                 ImageColumn::make('media.thumb_url')
                     ->label('Фото')
+                    // `url()` обязателен: относительный адрес из аксессора
+                    // Filament принял бы за путь на диске и отдал пустой
+                    // `src` (см. `ImageColumn::getImageUrl()`).
+                    ->state(fn (Employee $record): ?string => $record->media === null
+                        ? null
+                        : url($record->media->thumb_url))
                     ->circular()
                     ->height(56),
 

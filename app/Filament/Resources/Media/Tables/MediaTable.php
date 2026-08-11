@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Media\Tables;
 
 use App\Filament\Resources\Media\Actions\DeleteMediaAction;
+use App\Models\Media;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -18,6 +19,10 @@ final class MediaTable
             ->columns([
                 ImageColumn::make('thumb_url')
                     ->label('Превью')
+                    // `url()` обязателен: относительный адрес из аксессора
+                    // Filament принял бы за путь на диске и отдал пустой
+                    // `src` (см. `ImageColumn::getImageUrl()`).
+                    ->state(fn (Media $record): string => url($record->thumb_url))
                     ->square()
                     ->height(64),
 

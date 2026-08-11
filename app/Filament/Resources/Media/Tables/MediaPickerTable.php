@@ -33,6 +33,10 @@ final class MediaPickerTable
             ->columns([
                 ImageColumn::make('thumb_url')
                     ->label('Превью')
+                    // `url()` обязателен: относительный адрес из аксессора
+                    // Filament принял бы за путь на диске и отдал пустой
+                    // `src` (см. `ImageColumn::getImageUrl()`).
+                    ->state(fn (Media $record): string => url($record->thumb_url))
                     ->square()
                     ->height(64),
 

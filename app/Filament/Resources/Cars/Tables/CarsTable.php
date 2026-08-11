@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Cars\Tables;
 
 use App\Enums\CarStatus;
 use App\Enums\EngineType;
+use App\Models\Car;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
@@ -34,6 +35,14 @@ final class CarsTable
                 // если обработка не удалась или фото залито до вехи 3.4.
                 ImageColumn::make('mainPhoto.thumb_url')
                     ->label('Фото')
+                    // `url()` обязателен: всё, что не абсолютный URL,
+                    // `ImageColumn::getImageUrl()` считает путём на диске
+                    // и, не найдя такого файла, отдаёт пустой `src` вместо
+                    // ошибки. Аксессор же отдаёт относительный адрес
+                    // (диск `public` в config/filesystems.php).
+                    ->state(fn (Car $record): ?string => $record->mainPhoto === null
+                        ? null
+                        : url($record->mainPhoto->thumb_url))
                     ->square()
                     ->height(56),
 

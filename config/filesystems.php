@@ -41,7 +41,20 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Относительный `/storage`, а не абсолютный от APP_URL. Абсолютный
+            // прибивает медиа к одному хосту и порту: стоит приложению
+            // подняться не там, где указывает APP_URL (`artisan serve --port`,
+            // Herd, туннель, превью-стенд), как каждый <img src> уходит
+            // на чужой адрес и падает в ERR_CONNECTION_REFUSED — при живых
+            // файлах на диске и рабочем симлинке public/storage.
+            //
+            // Относительный URL браузер разрешает от origin текущей страницы,
+            // то есть он верен на любом адресе без правки окружения.
+            //
+            // ASSET_URL оставлен осознанным обходом для CDN: там домен
+            // статики намеренно отличается от домена сайта. Пусто —
+            // выражение схлопывается ровно в `/storage`.
+            'url' => rtrim((string) env('ASSET_URL', ''), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

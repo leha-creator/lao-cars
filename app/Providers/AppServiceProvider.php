@@ -50,6 +50,45 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         $this->configureRateLimiting();
+        $this->warnOnUnreachableMediaUrl();
+    }
+
+    /**
+     * Предупреждение о медиа-URL, который ведёт не туда.
+     *
+     * Диск `public` отдаёт относительный `/storage`, и промахнуться там
+     * нечем. Но ASSET_URL возвращает абсолютный адрес — а его легко
+     * оставить от другого стенда, и тогда картинки пропадают молча:
+     * файлы на месте, симлинк цел, в консоли браузера только
+     * ERR_CONNECTION_REFUSED без единой строки в логе приложения.
+     *
+     * Только вне прода и только при расхождении: это подсказка
+     * разработчику на старте, а не постоянный шум.
+     */
+    private function warnOnUnreachableMediaUrl(): void
+    {
+        if ($this->app->isProduction() || $this->app->runningInConsole()) {
+            return;
+        }
+
+        $configured = (string) config('filesystems.disks.public.url');
+
+        // Относительный URL проверять не от чего: его разрешает браузер.
+        if (parse_url($configured, PHP_URL_HOST) === null) {
+            return;
+        }
+
+        $current = request()->getSchemeAndHttpHost();
+
+        if (str_starts_with($configured, $current)) {
+            return;
+        }
+
+        Log::warning('[FIX] адрес медиа не совпадает с адресом сайта — картинки не загрузятся', [
+            'media_url' => $configured,
+            'site_url' => $current,
+            'hint' => 'ASSET_URL указывает на другой хост или порт',
+        ]);
     }
 
     /**
