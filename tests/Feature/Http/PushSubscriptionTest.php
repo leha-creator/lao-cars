@@ -141,6 +141,45 @@ it('rejects a payload that could never deliver anything', function () {
     expect(PushSubscription::query()->count())->toBe(0);
 });
 
+it('answers an unknown content encoding with 422 instead of falling over', function () {
+    $user = User::factory()->create();
+
+    // Значение уходит в `ContentEncoding::from()` внутри трейта пакета,
+    // а тот на незнакомой строке бросает `ValueError`. Без правила
+    // по enum-у ручка отвечала 500: правило мягче потребителя превращает
+    // ошибку клиента в ошибку сервера — то же, что правило мягче колонки.
+    // `array_merge`, а не `+`: объединение массивов оставляет значение
+    // ЛЕВОГО операнда, и подмена ключа, который в наборе уже есть,
+    // молча не применяется — тест проходит, ничего не проверив.
+    $this->actingAs($user)
+        ->postJson(route('push-subscriptions.store'), array_merge(subscriptionPayload(), [
+            'contentEncoding' => 'gzip',
+        ]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('contentEncoding');
+
+    expect(PushSubscription::query()->count())->toBe(0);
+});
+
+it('accepts both encodings the standard allows', function () {
+    $user = User::factory()->create();
+
+    // `aesgcm` — историческая кодировка, её всё ещё присылают старые
+    // сборки браузеров. Отсечь её значило бы отказать им в подписке
+    // ошибкой валидации, которую человек прочитать не может.
+    foreach (['aes128gcm', 'aesgcm'] as $index => $encoding) {
+        $this->actingAs($user)
+            ->postJson(route('push-subscriptions.store'), [
+                'endpoint' => 'https://fcm.googleapis.com/fcm/send/enc-'.$index,
+                'keys' => subscriptionPayload()['keys'],
+                'contentEncoding' => $encoding,
+            ])
+            ->assertCreated();
+    }
+
+    expect(PushSubscription::query()->count())->toBe(2);
+});
+
 it('takes the subscriptions of a deleted employee with him', function () {
     $user = User::factory()->create();
 

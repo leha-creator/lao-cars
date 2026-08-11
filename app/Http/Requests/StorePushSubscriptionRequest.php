@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Minishlink\WebPush\ContentEncoding;
 
 /**
  * Подписка браузера на push-уведомления (веха 4.7).
@@ -45,7 +47,14 @@ final class StorePushSubscriptionRequest extends FormRequest
 
             // Кодировка приходит не от всех браузеров: старые Firefox
             // её не сообщают, и пакет подставляет умолчание сам.
-            'contentEncoding' => ['nullable', 'string', 'max:32'],
+            //
+            // Правило именно по enum-у, а не `string|max:32`: значение
+            // уходит в `ContentEncoding::from()` внутри трейта пакета,
+            // а тот на незнакомой строке бросает `ValueError`. Правило
+            // мягче потребителя означает 500 вместо сообщения об ошибке
+            // — то же самое, что правило мягче колонки у `endpoint` выше,
+            // только падает не драйвер БД, а enum.
+            'contentEncoding' => ['nullable', Rule::enum(ContentEncoding::class)],
         ];
     }
 }

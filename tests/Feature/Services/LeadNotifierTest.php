@@ -8,6 +8,7 @@ use App\Services\LeadNotifier;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use NotificationChannels\WebPush\WebPushChannel;
 
 /*
  * Кому уходит новая заявка (веха 4.7).
@@ -142,6 +143,52 @@ it('marks the fallback in the log so its last day is visible', function () {
     Log::shouldHaveReceived('info')
         ->withArgs(fn (string $message, array $context): bool => $message === '[Lead] уведомления поставлены в очередь'
             && $context['fallback'] === true)
+        ->once();
+});
+
+it('adds the push channel only when the vapid keys are there', function () {
+    config(['webpush.vapid.public_key' => 'public', 'webpush.vapid.private_key' => 'private']);
+
+    $user = User::factory()->create();
+
+    app(LeadNotifier::class)->notify(Lead::factory()->general()->create());
+
+    // `Notification::fake()` вычисляет `via()` — то есть состав каналов
+    // проверяем именно так, а не по факту доставки.
+    Notification::assertSentTo(
+        $user,
+        NewLeadNotification::class,
+        fn (NewLeadNotification $notification, array $channels): bool => in_array(WebPushChannel::class, $channels, true)
+            && in_array('database', $channels, true),
+    );
+});
+
+it('drops the push channel with a warning when the vapid keys are empty', function () {
+    config(['webpush.vapid.public_key' => null, 'webpush.vapid.private_key' => null]);
+
+    $log = Log::spy();
+    $log->shouldReceive('channel')->with('leads')->andReturnSelf();
+
+    $user = User::factory()->create();
+
+    app(LeadNotifier::class)->notify($lead = Lead::factory()->general()->create());
+
+    // СТОРОЖ РЕШЕНИЯ ПРО НЕСКОНФИГУРИРОВАННЫЙ КАНАЛ. Упрощение `via()`
+    // до безусловного возврата канала оставит остальные тесты зелёными,
+    // а на локальной машине и в CI каждая заявка начнёт биться
+    // о push-сервис без подписи — то есть штатное состояние станет
+    // потоком ошибок.
+    Notification::assertSentTo(
+        $user,
+        NewLeadNotification::class,
+        fn (NewLeadNotification $notification, array $channels): bool => $channels === ['database'],
+    );
+
+    // Пропуск обязан быть видимым событием, а не тишиной. Запись одна
+    // на уведомление, а не на получателя.
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => $message === '[Push] ключи VAPID не заданы, push пропущены'
+            && $context['lead_id'] === $lead->getKey())
         ->once();
 });
 
