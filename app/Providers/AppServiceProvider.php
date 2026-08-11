@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Car;
 use App\Models\Service;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -34,9 +35,18 @@ class AppServiceProvider extends ServiceProvider
         // Полиморфный источник заявки хранится короткими алиасами, а не
         // FQCN: иначе перенос класса в другой namespace задним числом
         // ломает все существующие строки в leads.source_type.
+        //
+        // Карта именно ENFORCE: модель, которой в ней нет, роняет любое
+        // полиморфное отношение исключением, а не пишет в колонку FQCN
+        // тихо. Поэтому вехе 4.7 пришлось добавить сюда `user` — он стал
+        // полиморфным с двух сторон сразу: `push_subscriptions.subscribable`
+        // и `notifications.notifiable` (колокольчик панели). Обе таблицы
+        // заведены той же вехой, то есть переписывать существующие
+        // значения не понадобилось.
         Relation::enforceMorphMap([
             'car' => Car::class,
             'service' => Service::class,
+            'user' => User::class,
         ]);
 
         $this->configureRateLimiting();

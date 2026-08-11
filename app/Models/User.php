@@ -9,16 +9,19 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
-#[Fillable(['name', 'email', 'password', 'role'])]
+#[Fillable(['name', 'email', 'password', 'role', 'telegram_chat_id', 'notify_telegram', 'notify_push'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, HasPushSubscriptions, Notifiable;
 
     /**
      * Доступ к админ-панели.
@@ -50,6 +53,54 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * Получатели Telegram-уведомлений о новой заявке (веха 4.7).
+     *
+     * Скоуп живёт в модели, а не в `LeadNotifier`: логика выборки
+     * принадлежит модели — правило `ARCHITECTURE.md`.
+     *
+     * Оба условия обязательны и проверяют разное. Флаг — это «хочу
+     * получать», заполненный `chat_id` — «есть куда отправить». Выборка
+     * по одному флагу дала бы задачу с пустым адресом: она не упала бы,
+     * а тихо ушла бы в никуда, и в логе осталась бы запись об успешной
+     * постановке.
+     */
+    #[Scope]
+    protected function receivingTelegram(Builder $query): void
+    {
+        $query->where('notify_telegram', true)
+            ->whereNotNull('telegram_chat_id')
+            ->where('telegram_chat_id', '!=', '');
+    }
+
+    /**
+     * Получатели браузерных push-уведомлений (веха 4.7).
+     *
+     * Наличие подписки здесь НЕ проверяется намеренно, в отличие
+     * от `chat_id` выше. Канал `database` (колокольчик в панели) уходит
+     * тому же уведомлению и работает без всякой подписки: сотрудник,
+     * включивший флаг и не разрешивший уведомления в браузере, должен
+     * видеть заявку в колокольчике. Отсев по отсутствию подписки
+     * отобрал бы у него и колокольчик — молча.
+     */
+    #[Scope]
+    protected function receivingPush(Builder $query): void
+    {
+        $query->where('notify_push', true);
+    }
+
+    protected static function booted(): void
+    {
+        // Подписка связана с пользователем полиморфно, а внешнего ключа
+        // у морфа нет — значит и каскада БД нет. Без этого удалённый
+        // сотрудник оставляет свои подписки навсегда, и push продолжают
+        // уходить на его устройства до тех пор, пока браузер сам
+        // не отзовёт разрешение.
+        self::deleting(static function (self $user): void {
+            $user->pushSubscriptions()->delete();
+        });
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -60,6 +111,8 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'notify_telegram' => 'boolean',
+            'notify_push' => 'boolean',
         ];
     }
 }

@@ -12,7 +12,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Куда отправлять гостя, попавшего под `auth` (веха 4.7).
         //
+        // Штатное умолчание — `route('login')`, а такого имени в проекте
+        // нет: вход живёт в панели и зовётся `filament.admin.auth.login`.
+        // Без этой строки единственный маршрут под `auth` за пределами
+        // панели — эндпоинт подписки на push — отдал бы гостю не редирект,
+        // а `RouteNotFoundException`, то есть 500 вместо страницы входа.
+        $middleware->redirectGuestsTo(fn () => route('filament.admin.auth.login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Условие `expectsJson()` добавлено вехой 4.7 и обязательно.

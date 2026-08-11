@@ -67,4 +67,31 @@ class UserFactory extends Factory
             'role' => UserRole::Manager,
         ]);
     }
+
+    /**
+     * Сотрудник с персональным адресом Telegram (веха 4.7).
+     *
+     * Умолчания флагов уведомлений в `definition()` нет намеренно: они
+     * стоят на колонках (`true`), и второй источник истины разошёлся бы
+     * с первым — та же причина, по которой в фабрике нет статуса заявки.
+     */
+    public function withTelegram(string $chatId = '123456789'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'telegram_chat_id' => $chatId,
+            'notify_telegram' => true,
+        ]);
+    }
+
+    /**
+     * Сотрудник, отключивший все уведомления.
+     */
+    public function withoutNotifications(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'notify_telegram' => false,
+            'notify_push' => false,
+            'telegram_chat_id' => null,
+        ]);
+    }
 }

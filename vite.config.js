@@ -50,7 +50,15 @@ const fonts = [
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            // Вторая точка входа — подписка на push в панели (веха 4.7).
+            // Отдельная, а не импорт в app.js: панель Filament работает
+            // на собственной сборке и бандл публичной части не подключает,
+            // а публичным страницам этот код не нужен вовсе.
+            input: [
+                'resources/css/app.css',
+                'resources/js/app.js',
+                'resources/js/push-subscribe.js',
+            ],
             refresh: true,
             fonts,
         }),

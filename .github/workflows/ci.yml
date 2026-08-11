@@ -70,7 +70,13 @@ jobs:
           # умолчанию его нет — без этой строки тесты обработки
           # изображений падают только на CI, уже после зелёной локальной
           # сборки.
-          extensions: mbstring, intl, bcmath, zip, pdo_pgsql, pgsql, gd
+          # gmp — подпись VAPID для push-уведомлений (веха 4.7). Расширение
+          # НЕ обязательное: `minishlink/web-push` v10 объявляет его
+          # `suggest`, а не `require`, и без него длинная арифметика идёт
+          # через bcmath (он в списке выше) или через brick/math на чистом
+          # PHP. Стоит здесь ради скорости эллиптической подписи и ради
+          # того, чтобы CI считал её тем же способом, что и прод.
+          extensions: mbstring, intl, bcmath, zip, pdo_pgsql, pgsql, gd, gmp
           coverage: none
 
       - name: Установить Node

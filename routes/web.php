@@ -5,6 +5,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PartsController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ServiceController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,3 +29,23 @@ Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.ind
 Route::post('/leads', [LeadController::class, 'store'])
     ->middleware('throttle:leads')
     ->name('leads.store');
+
+/*
+ * Подписка браузера сотрудника на push-уведомления (веха 4.7).
+ *
+ * Здесь, а не в провайдере панели Filament: это эндпоинт, а не страница,
+ * и спрятанный в провайдере роут теряется при первом же поиске
+ * по маршрутам.
+ *
+ * `throttle` обязателен: ручка пишет в базу по запросу из браузера,
+ * а браузер перерегистрирует подписку сам и без спроса. Лимит общий
+ * (`throttle:30,1`), а не именованный, как у заявок: тонкой настройки
+ * тут не нужно — за ним стоит `auth`, то есть анонимного трафика нет.
+ */
+Route::middleware(['auth', 'throttle:30,1'])->group(function (): void {
+    Route::post('/admin/push-subscriptions', [PushSubscriptionController::class, 'store'])
+        ->name('push-subscriptions.store');
+
+    Route::delete('/admin/push-subscriptions', [PushSubscriptionController::class, 'destroy'])
+        ->name('push-subscriptions.destroy');
+});

@@ -181,7 +181,15 @@
 
 ### Фаза 2 — Инфраструктура браузерных уведомлений
 
-- [ ] **Задача 6: пакет Web Push, конфигурация VAPID и расширение `gmp` в CI**
+- [x] **Задача 6: пакет Web Push, конфигурация VAPID и расширение `gmp` в CI**
+
+  **Результат проверки и два отклонения от плана.**
+
+  1. **Совместимость подтверждена, запасной путь не понадобился.** `laravel-notification-channels/webpush` 11.0.0 объявляет `illuminate/notifications ^12.0|^13.0`. Установка потребовала `-W -m`: транзитивный `web-token/jwt-library` ограничивает `brick/math` до `^0.17`, а в проекте стоял `0.18.0`. Понижение безопасно — `laravel/framework` 13.23 допускает `^0.14.2 || … || ^0.18`. Флаг `-m` (minimal changes) выбран намеренно вместо голого `-W`: последний тянул за собой обновление самого фреймворка и десятка пакетов Symfony, а веха про уведомления, а не про обновление зависимостей. Побочно обновился `league/commonmark` 2.8.3 → 2.9.2, и это закрыло шесть открытых advisory (`composer audit` был красным ДО вехи и стал зелёным).
+
+  2. **Посылка про `gmp` неверна для установленной версии.** `minishlink/web-push` v10 требует только `ext-curl`, `ext-json`, `ext-mbstring`, `ext-openssl`; `gmp` и `bcmath` объявлены в `suggest` как «optional for performance». Красного `composer install` без `gmp` не было бы: длинная арифметика уходит в `bcmath` (он в CI уже есть) или в `brick/math` на чистом PHP. Требование `gmp` пришло из версий v6–v7, где оно было жёстким. Строка в CI всё же добавлена — ради скорости эллиптической подписи и одинакового способа счёта на CI и на проде, — но с честной формулировкой. **Задачи 18 и 19 обязаны описать `gmp` как рекомендацию, а не как обязательное требование прод-образа.**
+
+  3. Конфиг опубликован и правлен в двух местах против апстрима: `model` указывает на свою `App\Models\PushSubscription` (задача 7), а умолчание `database_connection` изменено с `mysql` на `pgsql` — с закешированным конфигом и незаданной `WEBPUSH_DB_CONNECTION` пакет ушёл бы в несуществующее соединение.
 
   Выбрать и установить пакет. Первый кандидат — `laravel-notification-channels/webpush`: он даёт готовый канал для Laravel Notifications, модель подписки, трейт для `User` и команду генерации ключей, то есть закрывает задачи 7, 9 и 11 наполовину. **Совместимость с Laravel 13 обязательно проверить до установки** (`composer require --dry-run`): если пакет ограничен более ранними версиями, ставится его же основа `minishlink/web-push`, а канал уведомлений пишется свой — это плюс один небольшой класс, а не смена подхода. Выбор и причину записать в PHPDoc канала.
 
@@ -193,7 +201,15 @@
 
   **Файлы:** `composer.json`, `composer.lock`, `config/webpush.php`, `.env.example`, `.github/workflows/ci.yml`
 
-- [ ] **Задача 7: миграции**
+- [x] **Задача 7: миграции**
+
+  **Три отклонения, все вынужденные устройством пакета.**
+
+  1. **Связь полиморфная (`subscribable`), а не `user_id`.** Пакетная миграция публикуется с `morphs('subscribable')`, и на этих же именах построены модель, трейт `HasPushSubscriptions` и канал доставки. Своя колонка `user_id` означала бы свой канал вместо пакетного. Плата — внешнего ключа у морфа нет, поэтому каскад «удалили сотрудника → ушли его подписки» переехал в `User::booted()` на событие `deleting`.
+
+  2. **`Relation::enforceMorphMap()` пришлось дополнить `'user' => User::class`.** Карта в проекте именно `enforce`, то есть модель вне её роняет любое полиморфное отношение исключением. `User` стал полиморфным сразу с двух сторон: `push_subscriptions.subscribable` и `notifications.notifiable`. Поймалось это падением `UserResourceTest` («No morph map defined»), а не на новом коде — то есть штатно. Обе таблицы заведены этой же вехой, переписывать существующие значения не понадобилось. Добавленный файл: `app/Providers/AppServiceProvider.php`.
+
+  3. **Скоуп `receivingPush` не проверяет наличие подписки** — в отличие от `receivingTelegram`, где заполненный `chat_id` обязателен. Причина: одно и то же уведомление идёт двумя каналами, и `database` (колокольчик панели) работает без всякой подписки браузера. Отсев по её отсутствию отобрал бы у сотрудника ещё и колокольчик — молча.
 
   Три миграции:
   1. Штатная таблица нотификаций Laravel (`php artisan make:notifications-table`) — без неё колокольчик Filament не работает.
@@ -209,7 +225,7 @@
   **Файлы:** `database/migrations/*_create_notifications_table.php`, `database/migrations/*_create_push_subscriptions_table.php`, `database/migrations/*_add_notification_settings_to_users_table.php`, `app/Models/User.php`, `app/Models/PushSubscription.php` (если пишем свою), `database/factories/UserFactory.php`
   **Зависит от:** задачи 6
 
-- [ ] **Задача 8: service worker**
+- [x] **Задача 8: service worker**
 
   `public/sw.js` — статический файл, не через Vite (решение 12). Два обработчика:
   - `push`: разбор JSON-полезной нагрузки и `self.registration.showNotification(title, { body, icon, tag, data: { url } })`. Тег обязателен и строится по id заявки — иначе повторная доставка одного уведомления даёт два всплывающих окна;
@@ -223,7 +239,9 @@
 
   **Файлы:** `public/sw.js`, иконка в `public/`
 
-- [ ] **Задача 9: роуты и контроллер подписки**
+- [x] **Задача 9: роуты и контроллер подписки**
+
+  **Дополнение:** гостю под `auth` некуда было идти. Штатное умолчание `Authenticate` — `route('login')`, а такого имени в проекте нет: вход живёт в панели и зовётся `filament.admin.auth.login`. Без `redirectGuestsTo()` эндпоинт подписки отдавал бы гостю `RouteNotFoundException`, то есть 500 вместо страницы входа. Добавленный файл: `bootstrap/app.php`.
 
   `POST /admin/push-subscriptions` и `DELETE /admin/push-subscriptions` в `routes/web.php` под middleware `auth` (и `throttle` — эндпоинт пишет в БД по запросу из браузера). Контроллер `app/Http/Controllers/PushSubscriptionController.php`, тонкий по правилу проекта: валидация — в `StorePushSubscriptionRequest` (`endpoint` — обязательный валидный URL до 500 символов, `keys.p256dh` и `keys.auth` — обязательные строки), запись — `updateOrCreate` по `endpoint` для текущего пользователя.
 
@@ -236,7 +254,9 @@
   **Файлы:** `routes/web.php`, `app/Http/Controllers/PushSubscriptionController.php`, `app/Http/Requests/StorePushSubscriptionRequest.php`
   **Зависит от:** задачи 7
 
-- [ ] **Задача 10: регистрация service worker и запрос разрешения в панели**
+- [x] **Задача 10: регистрация service worker и запрос разрешения в панели**
+
+  **Уточнение:** хук взят `PanelsRenderHook::HEAD_END`, а не `BODY_END`. Причина: в шаблоне печатается `<meta>` с публичным ключом, а `<meta>` за пределами `<head>` — невалидная разметка. `@vite` отдаёт модуль, а модуль в `<head>` исполняется отложенно сам — ровно так подключён `app.js` публичной части, то есть отклонение возвращает нас к существующей конвенции проекта, а не заводит новую.
 
   Скрипт `resources/js/push-subscribe.js`, подключаемый в панель через render hook `PanelsRenderHook::BODY_END` в `AdminPanelProvider` (шаблон `resources/views/filament/push-subscribe.blade.php`). Панель Filament работает на собственной сборке и бандл публичной части не подключает — это отдельная точка входа, а не импорт в `app.js`.
 
