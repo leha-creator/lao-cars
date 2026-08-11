@@ -257,8 +257,8 @@
 
     {{--
         Промо-баннер. Управляется настройкой `home.promo` целиком: очищены
-        и заголовок, и текст — секции нет вовсе. Пустая карточка с одним
-        значком «%» читалась бы не как «мало контента», а как поломка.
+        и заголовок, и текст — секции нет вовсе. Пустая карточка с одной
+        иконкой читалась бы не как «мало контента», а как поломка.
     --}}
     @if ($promo !== null)
         <section class="px-5 py-14 lg:px-8">
@@ -278,7 +278,13 @@
                         <div class="absolute inset-0 bg-page/78"></div>
                     @endif
 
-                    <div class="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-accent font-display text-base font-bold text-page">%</div>
+                    {{-- Кружок с заливкой `bg-accent`, поэтому иконка идёт
+                         по тёмному: `text-page` красит её через
+                         `currentColor` — цвет берётся от родителя, а не
+                         задаётся внутри компонента. --}}
+                    <div class="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-accent text-page">
+                        <x-ui.icon name="percent" class="size-5.5" />
+                    </div>
 
                     <div class="relative min-w-60 flex-1">
                         @if ($promo['title'] !== null)
@@ -841,21 +847,29 @@
                 {{-- Плашки — ссылки, а не карточки-иллюстрации: каждое
                      направление обязано вести к следующему действию.
 
+                     Иконки трёх плашек берутся у `ServiceCategory`, а не
+                     пишутся строками здесь: плашка ведёт в блок категории,
+                     и значок обязан совпасть с тем, что человек увидит
+                     на той стороне. Записанное строкой имя разъедется
+                     с блоком молча — обе иконки существуют, просто разные.
+                     «Поддержка» категорией не является (ведёт в форму),
+                     поэтому её имя стоит на месте.
+
                      `block` обязателен: инлайновый `<a>` игнорирует
                      вертикальные отступы и ломает сетку. --}}
                 <div class="mt-9 grid gap-5 sm:grid-cols-2">
                     @foreach ([
-                        ['letter' => 'А', 'title' => 'Автосервис', 'url' => route('services.index').'#'.ServiceCategory::Maintenance->anchor(), 'text' => 'Диагностика, регламентные работы и подготовка автомобиля к эксплуатации.'],
-                        ['letter' => 'Д', 'title' => 'Детейлинг', 'url' => route('services.index').'#'.ServiceCategory::Detailing->anchor(), 'text' => 'Защитные покрытия, полировка, уход за салоном и кузовом.'],
-                        ['letter' => 'З', 'title' => 'Запчасти', 'url' => route('parts.index'), 'text' => 'Оригинальные детали и проверенные аналоги по VIN с понятным каналом заказа.'],
-                        ['letter' => 'П', 'title' => 'Поддержка', 'url' => '#lead-form', 'text' => 'Единая точка контакта по автомобилю после покупки.'],
+                        ['icon' => ServiceCategory::Maintenance->icon(), 'title' => 'Автосервис', 'url' => route('services.index').'#'.ServiceCategory::Maintenance->anchor(), 'text' => 'Диагностика, регламентные работы и подготовка автомобиля к эксплуатации.'],
+                        ['icon' => ServiceCategory::Detailing->icon(), 'title' => 'Детейлинг', 'url' => route('services.index').'#'.ServiceCategory::Detailing->anchor(), 'text' => 'Защитные покрытия, полировка, уход за салоном и кузовом.'],
+                        ['icon' => ServiceCategory::Parts->icon(), 'title' => 'Запчасти', 'url' => route('parts.index'), 'text' => 'Оригинальные детали и проверенные аналоги по VIN с понятным каналом заказа.'],
+                        ['icon' => 'headset', 'title' => 'Поддержка', 'url' => '#lead-form', 'text' => 'Единая точка контакта по автомобилю после покупки.'],
                     ] as $card)
                         <a
                             href="{{ $card['url'] }}"
                             class="block rounded-card border border-white/7 bg-surface p-6.5 transition duration-250 hover:-translate-y-1 hover:border-accent/30"
                         >
-                            <div class="mb-5 flex size-12 items-center justify-center rounded-xl bg-accent/14 font-display text-lg font-bold text-accent">
-                                {{ $card['letter'] }}
+                            <div class="mb-5 flex size-12 items-center justify-center rounded-xl bg-accent/14 text-accent">
+                                <x-ui.icon :name="$card['icon']" class="size-6" />
                             </div>
 
                             <h3 class="mb-2.5 text-[17px] font-semibold">{{ $card['title'] }}</h3>
@@ -926,8 +940,8 @@
                         @foreach ($serviceGroups as $group)
                             <article class="rounded-card border border-white/8 bg-surface p-7 lg:p-8">
                                 <div class="mb-2 flex items-center gap-4">
-                                    <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/14 font-display text-[15px] font-bold text-accent">
-                                        {{ $group['badge'] }}
+                                    <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/14 text-accent">
+                                        <x-ui.icon :name="$group['icon']" class="size-5.5" />
                                     </div>
 
                                     <h3 class="text-[17px] font-semibold">{{ $group['category']->label() }}</h3>

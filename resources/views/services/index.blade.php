@@ -94,8 +94,8 @@
                         >
                             <div class="grid items-start gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14">
                                 <div>
-                                    <div class="mb-5 flex size-10 items-center justify-center rounded-xl bg-accent/14 font-display text-[15px] font-bold text-accent">
-                                        {{ $block['badge'] }}
+                                    <div class="mb-5 flex size-10 items-center justify-center rounded-xl bg-accent/14 text-accent">
+                                        <x-ui.icon :name="$block['icon']" class="size-5.5" />
                                     </div>
 
                                     <h2 class="font-display text-[26px] leading-[1.2] font-semibold lg:text-3xl">

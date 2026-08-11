@@ -74,7 +74,7 @@ final class HomeContent
      *     priceBreakdown: list<array{title: string, note: ?string}>,
      *     faq: list<array{question: string, answer: string}>,
      *     reviews: EloquentCollection<int, Review>,
-     *     serviceGroups: list<array{category: ServiceCategory, badge: string, note: ?string, items: EloquentCollection<int, Service>}>,
+     *     serviceGroups: list<array{category: ServiceCategory, icon: string, note: ?string, items: EloquentCollection<int, Service>}>,
      *     services: EloquentCollection<int, Service>,
      *     selector: array{cars: list<array{price: ?int, engine: ?string, status: string}>, engines: list<array{value: string, label: string}>, price_min: ?int, price_max: ?int, total: int},
      *     contacts: array{phone: ?string, email: ?string, address: ?string},
@@ -424,7 +424,7 @@ final class HomeContent
      * описания разошёлся бы с первым при первой правке одного из них.
      *
      * @return array{
-     *     groups: list<array{category: ServiceCategory, badge: string, note: ?string, items: EloquentCollection<int, Service>}>,
+     *     groups: list<array{category: ServiceCategory, icon: string, note: ?string, items: EloquentCollection<int, Service>}>,
      *     services: EloquentCollection<int, Service>,
      * }
      */
@@ -469,7 +469,7 @@ final class HomeContent
 
             $groups[] = [
                 'category' => $category,
-                'badge' => $category->badge(),
+                'icon' => $category->icon(),
                 'note' => $this->string($notes[$category->value] ?? null),
                 'items' => $items->take($limit),
             ];

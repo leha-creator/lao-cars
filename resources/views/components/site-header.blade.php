@@ -57,11 +57,21 @@
                     {{ $phone }}
                 </a>
 
+                {{-- Иконка, а не символ `☎`: он глиф шрифта, и часть систем
+                     подставляет вместо него цветное эмодзи, которое не
+                     слушается `text-accent` и не масштабируется вместе
+                     с кнопкой. Ломается это только у части посетителей —
+                     ровно у тех, у кого мы этого не видим.
+
+                     Подпись даёт `aria-label` кнопки: сама иконка
+                     `aria-hidden`, иначе скринридер прочитал бы её дважды. --}}
                 <a
                     href="tel:{{ $phoneHref() }}"
-                    class="flex size-[42px] items-center justify-center rounded-field border border-white/10 bg-white/6 text-lg lg:hidden"
+                    class="flex size-[42px] items-center justify-center rounded-field border border-white/10 bg-white/6 lg:hidden"
                     aria-label="Позвонить: {{ $phone }}"
-                >☎</a>
+                >
+                    <x-ui.icon name="phone" class="size-[18px]" />
+                </a>
             @endif
 
             <a
@@ -104,12 +114,18 @@
                             class="h-[26px] w-auto"
                         >
 
+                        {{-- `flex` с центровкой обязателен: у кнопки задан
+                             только размер, и без него SVG прижимается
+                             к левому верхнему углу — при живой кнопке
+                             и правильном размере. --}}
                         <button
                             type="button"
                             x-on:click="open = false"
-                            class="size-[42px] rounded-field border border-white/10 bg-white/6 text-xl leading-none"
+                            class="flex size-[42px] items-center justify-center rounded-field border border-white/10 bg-white/6"
                             aria-label="Закрыть меню"
-                        >✕</button>
+                        >
+                            <x-ui.icon name="close" class="size-[18px]" />
+                        </button>
                     </div>
 
                     <nav class="flex flex-col">

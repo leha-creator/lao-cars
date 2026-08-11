@@ -38,7 +38,7 @@ final class ServicesPageContent
      * @return array{
      *     title: string,
      *     intro: ?string,
-     *     blocks: list<array{category: ServiceCategory, badge: string, anchor: string, note: ?string, items: EloquentCollection<int, Service>}>,
+     *     blocks: list<array{category: ServiceCategory, icon: string, anchor: string, note: ?string, items: EloquentCollection<int, Service>}>,
      *     services: EloquentCollection<int, Service>,
      *     disclaimer: ?string,
      *     advantages: list<array{number: ?string, title: string, text: ?string}>,
@@ -77,7 +77,7 @@ final class ServicesPageContent
      * несуществующий якорь не работает молча. Оба списка шаблон строит
      * из ЭТОГО массива, а не собирает независимо.
      *
-     * @return list<array{category: ServiceCategory, badge: string, anchor: string, note: ?string, items: EloquentCollection<int, Service>}>
+     * @return list<array{category: ServiceCategory, icon: string, anchor: string, note: ?string, items: EloquentCollection<int, Service>}>
      */
     private function blocks(): array
     {
@@ -111,7 +111,7 @@ final class ServicesPageContent
 
             $blocks[] = [
                 'category' => $category,
-                'badge' => $category->badge(),
+                'icon' => $category->icon(),
                 'anchor' => $category->anchor(),
                 // Пустое описание убирает абзац, но НЕ блок: прайс важнее
                 // текста, и категория без описания остаётся на странице.
@@ -132,7 +132,7 @@ final class ServicesPageContent
      * от блоков, поэтому `<optgroup>` в шаблоне выстраиваются в том же
      * порядке, что и категории.
      *
-     * @param  list<array{category: ServiceCategory, badge: string, anchor: string, note: ?string, items: EloquentCollection<int, Service>}>  $blocks
+     * @param  list<array{category: ServiceCategory, icon: string, anchor: string, note: ?string, items: EloquentCollection<int, Service>}>  $blocks
      * @return EloquentCollection<int, Service>
      */
     private function flatten(array $blocks): EloquentCollection
