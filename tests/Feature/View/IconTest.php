@@ -36,7 +36,7 @@ it('renders every icon of the set', function (string $name): void {
         // на родителе, иначе скринридер прочитает подпись дважды.
         ->and($html)
         ->toContain('aria-hidden="true"');
-})->with(['wrench', 'wheel', 'sparkle', 'plus-circle', 'gear', 'headset', 'percent', 'phone', 'close']);
+})->with(['wrench', 'wheel', 'sparkle', 'plus-circle', 'gear', 'headset', 'percent', 'phone', 'check-circle', 'close']);
 
 it('fails loudly on an unknown icon name', function (): void {
     // Тихая пустота здесь хуже падения: разметка на месте, ошибок нет,

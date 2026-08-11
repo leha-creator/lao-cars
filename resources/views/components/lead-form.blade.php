@@ -27,6 +27,25 @@
     кнопка заявки в шапке и умолчание `home.promo.link_url`, то есть он
     обязан быть на странице ровно один, — а форма на карточке автомобиля
     и секция заявки могут встретиться на одной странице.
+
+    Вехой 4.7 поверх формы лёг `fetch` (`resources/js/lead-form.js`), но
+    сама форма осталась обычной POST-формой: `method`, `action`, `@csrf`
+    и кнопка `type="submit"` на месте, обработчик висит на `submit.prevent`.
+    При неработающем скрипте форма отправляется браузером и получает
+    прежний редирект с баннером `session('status')` выше. Переписать это
+    на `type="button"` с обработчиком выглядит упрощением и ломает форму
+    полностью — на состав разметки поэтому стоит отдельный тест.
+
+    У каждого поля ДВА контейнера ошибки, и это не дубль. Блейдовский
+    `@error` печатается только после редиректа, то есть только на пути
+    без JavaScript; соседний `x-show`/`x-text` заполняется только при живом
+    `fetch`. Одновременно они появиться не могут, а единственную щель —
+    страницу с серверными ошибками, на которой скрипт догрузился позже, —
+    закрывает `data-server-error`: первый клиентский сабмит удаляет
+    серверные сообщения, прежде чем нарисовать свои. Один общий контейнер
+    на оба источника отклонён: `x-show` и `x-text` при инициализации
+    затирают серверный текст — тот же класс ошибки, что запрет `x-model`
+    на контроле с `@selected(old(...))`.
 --}}
 @if ($title !== null)
     <h2 class="mb-6 font-display text-2xl font-semibold lg:text-[28px]">{{ $title }}</h2>
@@ -40,7 +59,13 @@
     </p>
 @endif
 
-<form method="POST" action="{{ route('leads.store') }}" class="flex flex-col gap-4">
+<form
+    method="POST"
+    action="{{ route('leads.store') }}"
+    x-data="leadForm()"
+    x-on:submit.prevent="submit($event)"
+    class="flex flex-col gap-4"
+>
     @csrf
 
     @if ($source !== null)
@@ -75,8 +100,9 @@
             class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
         >
         @error('name')
-            <span class="text-sm text-danger">{{ $message }}</span>
+            <span data-server-error class="text-sm text-danger">{{ $message }}</span>
         @enderror
+        <span x-cloak x-show="errors.name" x-text="errors.name" class="text-sm text-danger"></span>
     </label>
 
     <label class="flex flex-col gap-1.5">
@@ -89,8 +115,9 @@
             class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
         >
         @error('phone')
-            <span class="text-sm text-danger">{{ $message }}</span>
+            <span data-server-error class="text-sm text-danger">{{ $message }}</span>
         @enderror
+        <span x-cloak x-show="errors.phone" x-text="errors.phone" class="text-sm text-danger"></span>
     </label>
 
     <label class="flex flex-col gap-1.5">
@@ -102,8 +129,9 @@
             class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
         >
         @error('email')
-            <span class="text-sm text-danger">{{ $message }}</span>
+            <span data-server-error class="text-sm text-danger">{{ $message }}</span>
         @enderror
+        <span x-cloak x-show="errors.email" x-text="errors.email" class="text-sm text-danger"></span>
     </label>
 
     @if ($hasServiceChoice())
@@ -166,8 +194,9 @@
                  форму, оно должно указывать на поле, а не висеть над
                  кнопкой. --}}
             @error('source_id')
-                <span class="text-sm text-danger">{{ $message }}</span>
+                <span data-server-error class="text-sm text-danger">{{ $message }}</span>
             @enderror
+            <span x-cloak x-show="errors.source_id" x-text="errors.source_id" class="text-sm text-danger"></span>
         </label>
     @endif
 
@@ -187,8 +216,9 @@
                 @endforeach
             </select>
             @error('contact_method')
-                <span class="text-sm text-danger">{{ $message }}</span>
+                <span data-server-error class="text-sm text-danger">{{ $message }}</span>
             @enderror
+            <span x-cloak x-show="errors.contact_method" x-text="errors.contact_method" class="text-sm text-danger"></span>
         </label>
 
         <label class="flex flex-col gap-1.5">
@@ -203,8 +233,9 @@
                 @endforeach
             </select>
             @error('preferred_time')
-                <span class="text-sm text-danger">{{ $message }}</span>
+                <span data-server-error class="text-sm text-danger">{{ $message }}</span>
             @enderror
+            <span x-cloak x-show="errors.preferred_time" x-text="errors.preferred_time" class="text-sm text-danger"></span>
         </label>
     </div>
 
@@ -221,8 +252,9 @@
                     class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
                 >
                 @error('part_brand')
-                    <span class="text-sm text-danger">{{ $message }}</span>
+                    <span data-server-error class="text-sm text-danger">{{ $message }}</span>
                 @enderror
+                <span x-cloak x-show="errors.part_brand" x-text="errors.part_brand" class="text-sm text-danger"></span>
             </label>
 
             <label class="flex flex-col gap-1.5">
@@ -234,8 +266,9 @@
                     class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
                 >
                 @error('part_model')
-                    <span class="text-sm text-danger">{{ $message }}</span>
+                    <span data-server-error class="text-sm text-danger">{{ $message }}</span>
                 @enderror
+                <span x-cloak x-show="errors.part_model" x-text="errors.part_model" class="text-sm text-danger"></span>
             </label>
         </div>
 
@@ -252,8 +285,9 @@
                 class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
             >
             @error('part_vin')
-                <span class="text-sm text-danger">{{ $message }}</span>
+                <span data-server-error class="text-sm text-danger">{{ $message }}</span>
             @enderror
+            <span x-cloak x-show="errors.part_vin" x-text="errors.part_vin" class="text-sm text-danger"></span>
         </label>
     @endif
 
@@ -265,8 +299,9 @@
             class="resize-y rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
         >{{ old('message') }}</textarea>
         @error('message')
-            <span class="text-sm text-danger">{{ $message }}</span>
+            <span data-server-error class="text-sm text-danger">{{ $message }}</span>
         @enderror
+        <span x-cloak x-show="errors.message" x-text="errors.message" class="text-sm text-danger"></span>
     </label>
 
     {{-- Ошибка источника внизу формы — для сценариев со скрытым полем
@@ -275,12 +310,29 @@
          оно выводится рядом с ним, и второй копии здесь быть не должно. --}}
     @if (! $hasServiceChoice())
         @error('source_id')
-            <span class="text-sm text-danger">{{ $message }}</span>
+            <span data-server-error class="text-sm text-danger">{{ $message }}</span>
         @enderror
+        <span x-cloak x-show="errors.source_id" x-text="errors.source_id" class="text-sm text-danger"></span>
     @endif
 
+    {{-- Отказ, которому не на какое поле указать: оборванная сеть,
+         протухшая сессия, неразбираемый ответ. Стоит над кнопкой, потому
+         что человек в этот момент смотрит именно на неё — форма для него
+         «не отправилась». --}}
+    <p
+        x-cloak
+        x-show="formError"
+        x-text="formError"
+        class="rounded-field border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
+    ></p>
+
+    {{-- `type="submit"` и никак иначе: на кнопке держится отправка формы
+         при неработающем скрипте. Блокировка на время запроса — не
+         косметика: без неё двойной клик даёт две заявки, и увидит это
+         менеджер, а не разработчик. --}}
     <button
         type="submit"
-        class="mt-1.5 rounded-full bg-accent py-4.5 text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+        x-bind:disabled="sending"
+        class="mt-1.5 rounded-full bg-accent py-4.5 text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover disabled:pointer-events-none disabled:opacity-60"
     >{{ $submit }}</button>
 </form>

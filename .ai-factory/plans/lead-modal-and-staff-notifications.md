@@ -94,7 +94,7 @@
 
 ### Фаза 1 — Модальное окно вместо перезагрузки
 
-- [ ] **Задача 1: JSON-ветка ответа на приём заявки**
+- [x] **Задача 1: JSON-ветка ответа на приём заявки**
 
   `app/Http/Controllers/LeadController.php`. Приватный `accepted()` начинает выбирать форму ответа: при `$request->expectsJson()` — `response()->json(['message' => $message])`, иначе прежний `back()->with('status', $message)`. Текст сообщения — один и тот же и объявляется один раз. Ветка обязана применяться и к пути honeypot: бот, отправивший форму через `fetch`, получает ровно тот же успех.
 
@@ -104,9 +104,11 @@
 
   **Логирование:** без изменений. Запись «заявка принята» делает `LeadService`, отброс по honeypot — уже существующий DEBUG в контроллере; форма ответа на состав логов не влияет и дублировать её в лог не нужно.
 
-  **Файлы:** `app/Http/Controllers/LeadController.php`
+  **Файлы:** `app/Http/Controllers/LeadController.php`, `bootstrap/app.php`
 
-- [ ] **Задача 2: JSON-ветка отказа лимитера**
+  **Отклонение от плана, обнаружено при исполнении.** Посылка «422 отдаёт сам Laravel при `expectsJson()`» в этом проекте была неверна: `bootstrap/app.php` сужал `shouldRenderJsonWhen()` до `$request->is('api/*')`, а маршрутов `api/*` в проекте нет вовсе — условие было тождественно ложным, и обработчик отдавал редирект любому клиенту. `fetch` следовал за 302, получал 200 с HTML главной, разбор ответа как JSON падал, и симптом читался как «форма зависла», а не как «телефон не заполнен». Условие дополнено до `$request->is('api/*') || $request->expectsJson()`, то есть возвращено умолчание фреймворка. Правил `StoreLeadRequest` правка не касается; весь набор тестов, включая Filament, проходит без изменений.
+
+- [x] **Задача 2: JSON-ветка отказа лимитера**
 
   `app/Providers/AppServiceProvider.php`, замыкание `->response()` лимитера `leads`. При `$request->expectsJson()` — `response()->json(['message' => …, 'errors' => ['phone' => [$message]]], 429, $headers)`; иначе прежний `back()->withInput()->withErrors(…)`. Текст один и тот же в обеих ветках и объявляется один раз. Заголовки `Retry-After`/`X-RateLimit-*`, которые приходят замыканию вторым аргументом, обязательно прокинуть в JSON-ответ.
 
@@ -117,7 +119,7 @@
   **Файлы:** `app/Providers/AppServiceProvider.php`
   **Зависит от:** задачи 1 (общий формат ответа)
 
-- [ ] **Задача 3: компонент модального окна**
+- [x] **Задача 3: компонент модального окна**
 
   Новый анонимный компонент `resources/views/components/ui/modal.blade.php` (пространство `ui.` уже заведено — там живёт `x-ui.icon`; напоминание про занятые пакетами имена в правилах проекта) и его подключение в `resources/views/layouts/app.blade.php` ровно один раз, перед `@stack('scripts')`.
 
@@ -133,7 +135,7 @@
 
   **Файлы:** `resources/views/components/ui/modal.blade.php`, `resources/views/layouts/app.blade.php`
 
-- [ ] **Задача 4: перехват отправки формы**
+- [x] **Задача 4: перехват отправки формы**
 
   Новый модуль `resources/js/lead-form.js` с регистрацией `Alpine.data('leadForm', …)`, импортируемый в `resources/js/app.js` **до** вызова `Alpine.start()`. В `resources/views/components/lead-form.blade.php` — `x-data="leadForm()"` на `<form>` и `x-on:submit.prevent="submit($event)"`.
 
@@ -155,7 +157,7 @@
   **Файлы:** `resources/js/lead-form.js`, `resources/js/app.js`, `resources/views/components/lead-form.blade.php`
   **Зависит от:** задач 1, 2, 3
 
-- [ ] **Задача 5: тесты фазы 1**
+- [x] **Задача 5: тесты фазы 1**
 
   Новый `tests/Feature/Http/LeadStoreJsonTest.php`:
   - заявка с `postJson()` создаётся и отдаёт 200 с сообщением, задача уведомления поставлена в очередь (`Queue::fake()`);
