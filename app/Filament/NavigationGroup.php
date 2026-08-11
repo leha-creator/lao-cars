@@ -42,6 +42,13 @@ enum NavigationGroup implements HasLabel
     case Leads;
     case Media;
     case Settings;
+    // Справка — ПОСЛЕДНИМ кейсом, и именно группой, а не пунктом без
+    // группы. `NavigationManager::get()` сортирует группы по
+    // `array_search($groupEnum, $groupEnum::cases())`, а пункт без группы
+    // получает сортировку `-1` — то есть ungrouped «Справка» встала бы
+    // над «Каталогом», рядом с «Панелью управления». Справка — то, куда
+    // заглядывают, а не то, с чего начинают рабочий день.
+    case Help;
 
     public function getLabel(): ?string
     {
@@ -51,6 +58,7 @@ enum NavigationGroup implements HasLabel
             self::Leads => 'Заявки',
             self::Media => 'Медиа',
             self::Settings => 'Настройки',
+            self::Help => 'Справка',
         };
     }
 }

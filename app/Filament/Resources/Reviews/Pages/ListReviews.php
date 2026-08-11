@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Reviews\Pages;
 
+use App\Filament\Actions\HelpAction;
 use App\Filament\Resources\Reviews\ReviewResource;
 use App\Models\Review;
 use Filament\Actions\CreateAction;
@@ -19,6 +20,7 @@ final class ListReviews extends ListRecords
     {
         return [
             CreateAction::make(),
+            HelpAction::make('reviews-moderation'),
         ];
     }
 

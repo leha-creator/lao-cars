@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Services\Pages;
 
 use App\Enums\ServiceCategory;
+use App\Filament\Actions\HelpAction;
 use App\Filament\Resources\Services\ServiceResource;
 use App\Models\Service;
 use Filament\Actions\CreateAction;
@@ -23,6 +24,7 @@ final class ListServices extends ListRecords
     {
         return [
             CreateAction::make(),
+            HelpAction::make('price-list'),
         ];
     }
 

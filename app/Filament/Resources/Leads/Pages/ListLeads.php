@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Leads\Pages;
 
 use App\Enums\LeadStatus;
+use App\Filament\Actions\HelpAction;
 use App\Filament\Resources\Leads\LeadResource;
 use App\Models\Lead;
 use Filament\Resources\Pages\ListRecords;
@@ -21,7 +22,9 @@ final class ListLeads extends ListRecords
      */
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            HelpAction::make('lead-processing'),
+        ];
     }
 
     /**

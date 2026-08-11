@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Pages;
 
+use App\Filament\Actions\HelpAction;
 use App\Filament\Resources\Users\UserResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -16,6 +17,7 @@ final class ListUsers extends ListRecords
     {
         return [
             CreateAction::make(),
+            HelpAction::make('staff-and-roles'),
         ];
     }
 }

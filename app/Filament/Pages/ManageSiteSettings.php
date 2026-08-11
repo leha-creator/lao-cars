@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Enums\ServiceCategory;
+use App\Filament\Actions\HelpAction;
 use App\Filament\Forms\Components\MediaPicker;
 use App\Filament\NavigationGroup;
 use App\Models\Setting;
@@ -129,6 +130,22 @@ final class ManageSiteSettings extends Page
     public static function canAccess(): bool
     {
         return auth()->user()?->isAdmin() === true;
+    }
+
+    /**
+     * Ссылка на справку в шапке — рядом с формой, а не только в меню.
+     *
+     * Вопрос «что делает этот блок» возникает над полем, а не в боковом
+     * меню. Вкладок у формы шесть, и статей о них тоже несколько —
+     * кнопка ведёт в ту, с которой человек чаще всего начинает.
+     *
+     * @return array<Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            HelpAction::make('home-blocks'),
+        ];
     }
 
     /**

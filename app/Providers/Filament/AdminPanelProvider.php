@@ -4,6 +4,8 @@ namespace App\Providers\Filament;
 
 use App\Filament\NavigationGroup;
 use App\Filament\Pages\Auth\EditProfile;
+use App\Filament\Pages\Help\Scenarios;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -12,6 +14,7 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
@@ -48,6 +51,17 @@ class AdminPanelProvider extends PanelProvider
             // и пароля приходят вызовом родительской схемы, а не копией
             // её кода.
             ->profile(EditProfile::class)
+            // Третья точка входа в справку — рядом с профилем, где сотрудник
+            // ищет «всё про себя». Первые две: пункт меню внизу бокового
+            // меню и кнопка в шапке каждого раздела. Раздел справки,
+            // до которого надо догадаться дойти, эквивалентен отсутствию
+            // раздела.
+            ->userMenuItems([
+                Action::make('help')
+                    ->label('Справка')
+                    ->icon(Heroicon::OutlinedQuestionMarkCircle)
+                    ->url(fn (): string => Scenarios::getUrl()),
+            ])
             // Без строгого режима отсутствие политики означает «разрешено»:
             // `Filament\get_authorization_response()` при отсутствующей
             // политике или отсутствующем методе доходит до `Response::allow()`
