@@ -128,10 +128,15 @@ laocars/
 │   │                         # LeadData + LeadService + LeadNotifier
 │   │                         # + TelegramNotifier — приём заявки
 │   │                         # и уведомления сотрудникам. LeadNotifier —
-│   │                         # единственное место, знающее адресатов
+│   │                         # единственное место, знающее адресатов;
+│   │                         # HelpContent — справка в панели: видимость
+│   │                         # статей по ролям и рендер markdown
 │   ├── Support/              # ThumbnailPath, MediaSettingKeys, SiteMenu,
 │   │                         # SocialLinks, AttributeFilterIndex — чистые
 │   │                         # правила без слоя и состояния
+│   │   └── Help/             # HelpLibrary, HelpArticle, HelpSection —
+│   │                         # реестр статей справки: только данные,
+│   │                         # ни диска, ни авторизации
 │   └── View/Components/      # LeadForm (x-lead-form) — только <form>;
 │                             # LeadSection (x-lead-section) — секция-обёртка
 │                             # с раскладками; SiteHeader и SiteFooter —
@@ -149,6 +154,10 @@ laocars/
 │   └── seeders/              # Демо-данные; CarPhotoSeeder раскладывает assets/cars
 ├── docker/postgres/init/     # Init-скрипты Postgres: создание базы laocars_testing
 ├── resources/
+│   ├── help/                 # Пятнадцать статей справки для сотрудника
+│   │                         # (веха 4.8). Имя файла = слаг из HelpLibrary;
+│   │                         # текст начинается с `##`, технических
+│   │                         # подробностей в нём нет — см. docs/help-center.md
 │   ├── css/app.css           # Tailwind v4; @theme — токены дизайн-системы
 │   ├── images/               # Логотип, фон хиро (hero-960/1920.webp) и фон
 │   │                         # секции заявки (lead-bg.webp); в манифест
@@ -218,6 +227,7 @@ laocars/
 | app/Providers/AppServiceProvider.php | Morph map (`car`, `service`, `user` — карта `enforce`), синглтон `ImageManager` на GD, два формата ответа лимитера заявок |
 | app/Providers/Filament/AdminPanelProvider.php | Конфигурация админ-панели: путь, брендинг, ресурсы, порядок групп меню, строгий режим авторизации, своя страница профиля, колокольчик уведомлений |
 | app/Filament/NavigationGroup.php | Разделы меню админки и конвенции раскладки ресурсов Filament v5 |
+| app/Support/Help/HelpLibrary.php | Реестр статей справки; его PHPDoc — единственное место, куда заглянет тот, кто добавляет шестнадцатую |
 | app/Policies/AdminOnlyPolicy.php | Матрица прав администратора; парный `StaffPolicy` — права обеих ролей |
 | app/Filament/Pages/ManageSiteSettings.php | Страница настроек: реестр ключей, вкладки, сохранение через `data_get` |
 | app/Filament/Forms/Components/MediaPicker.php | Выбор изображения из медиабиблиотеки: режим со связью и без |
@@ -245,6 +255,7 @@ laocars/
 | Админка каталога | docs/admin-catalog.md | Марки, карточки, фото, характеристики, медиабиблиотека |
 | Роли и доступ | docs/admin-roles.md | Права ролей, заведение сотрудников, первый запуск на проде |
 | Контент и настройки | docs/admin-content.md | Услуги и запчасти, команда, модерация отзывов, настройки сайта |
+| Справка в панели | docs/help-center.md | Устройство раздела справки, как добавить статью, видимость по ролям, что запрещено в текстах |
 | Техническое задание | ТЗ_ЛАО_КАРС.md | Требования заказчика: структура разделов, админка, оценка сроков, риски |
 | Спецификация проекта | .ai-factory/DESCRIPTION.md | Стек, архитектурные заметки, что входит и не входит в MVP |
 | Правила кода | .ai-factory/rules/base.md | Именование, структура модулей, ошибки, логирование, тесты |
