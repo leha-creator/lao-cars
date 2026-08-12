@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\CarAttributeType;
+use App\Enums\CarStatus;
 use App\Enums\ServiceCategory;
 use App\Models\Brand;
 use App\Models\Car;
@@ -101,7 +102,22 @@ it('seeds a catalog that exercises every card state', function () {
     expect(Car::onHomepage()->count())->toBeGreaterThan(0)
         ->and(Car::onOrder()->count())->toBeGreaterThan(0)
         ->and(Car::query()->whereNull('price')->count())->toBeGreaterThan(0)
-        ->and(Car::query()->whereNull('mileage')->count())->toBeGreaterThan(0);
+        ->and(Car::query()->whereNull('mileage')->count())->toBeGreaterThan(0)
+        // Без авто в пути в демо-данных кнопка «В пути» на главной
+        // не появилась бы вовсе — она строится из фактически встреченных
+        // статусов, и новый статус выглядел бы как несработавшая правка.
+        ->and(Car::query()->where('status', CarStatus::InTransit)->count())->toBeGreaterThan(0)
+        ->and(Car::onHomepage()->where('status', CarStatus::InTransit)->count())->toBeGreaterThan(0);
+});
+
+it('keeps the homepage selection non-empty after the status change', function () {
+    // `HomeContent::cars()` пересекает `onHomepage()` с `available()`.
+    // Перевод отмеченного автомобиля в «В пути» её не ломает, а перевод
+    // в «Продан» сломал бы — и при правке литерала статусов в сиде это
+    // делается соседней строкой.
+    $this->seed();
+
+    expect(Car::onHomepage()->available()->count())->toBeGreaterThan(0);
 });
 
 it('seeds an attribute of every type so no branch stays uncovered', function () {

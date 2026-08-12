@@ -32,12 +32,18 @@ class CarSeeder extends Seeder
     private const CARS = [
         ['Zeekr', '001', 2024, EngineType::Electric, DriveType::Full, 4_200_000, CarStatus::InStock, true],
         ['Zeekr', '007', 2025, EngineType::Electric, DriveType::Rear, 4_950_000, CarStatus::OnOrder, true],
-        ['Zeekr', 'X', 2025, EngineType::Electric, DriveType::Full, 3_890_000, CarStatus::OnOrder, false],
+        // На главной ради фильтра подборки: кнопки там строятся
+        // из статусов, ФАКТИЧЕСКИ встреченных в подборке, и без авто
+        // в пути на главной кнопка «В пути» не появилась бы вовсе —
+        // новый статус выглядел бы как несработавшая правка.
+        ['Zeekr', 'X', 2025, EngineType::Electric, DriveType::Full, 3_890_000, CarStatus::InTransit, true],
         ['Voyah', 'Free', 2023, EngineType::Hybrid, DriveType::Full, 5_100_000, CarStatus::InStock, true],
         ['Voyah', 'Dream', 2024, EngineType::Hybrid, DriveType::Full, 6_890_000, CarStatus::OnOrder, false],
         ['BYD', 'Song Plus', 2024, EngineType::Hybrid, DriveType::Front, 3_650_000, CarStatus::InStock, false],
         ['BYD', 'Han', 2023, EngineType::Electric, DriveType::Full, 4_400_000, CarStatus::InStock, false],
-        ['Li Auto', 'L7', 2024, EngineType::Hybrid, DriveType::Full, 7_200_000, CarStatus::InStock, false],
+        // Второе авто в пути — чтобы вкладка каталога отдавала список,
+        // а не одну карточку.
+        ['Li Auto', 'L7', 2024, EngineType::Hybrid, DriveType::Full, 7_200_000, CarStatus::InTransit, false],
         ['Exeed', 'TXL', 2023, EngineType::Petrol, DriveType::Full, 2_980_000, CarStatus::InStock, false],
         ['Chery', 'Tiggo 8 Pro', 2024, EngineType::Petrol, DriveType::Front, 3_150_000, CarStatus::InStock, false],
         // Без цены — проверяет вывод «цена по запросу» в карточке.
@@ -84,8 +90,13 @@ class CarSeeder extends Seeder
                 'engine_type' => $engine,
                 'engine_volume' => $engine->hasVolume() ? fake()->randomFloat(1, 1.5, 3.0) : null,
                 'drive' => $drive,
-                // Под заказ — авто новое, пробега у него нет.
-                'mileage' => $status === CarStatus::OnOrder ? null : fake()->numberBetween(5_000, 90_000),
+                // Под заказ и в пути — авто новое, пробега у него нет.
+                // Правило то же, что в `CarFactory::inTransit()`, где оно
+                // и обосновано: автомобиль в пути уже куплен, но его никто
+                // не водил.
+                'mileage' => in_array($status, [CarStatus::OnOrder, CarStatus::InTransit], true)
+                    ? null
+                    : fake()->numberBetween(5_000, 90_000),
                 'price' => $price,
                 'status' => $status,
                 'show_on_homepage' => $onHomepage,

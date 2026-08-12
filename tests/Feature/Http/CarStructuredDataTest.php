@@ -125,8 +125,20 @@ it('maps the status to schema.org availability', function (CarStatus $status, st
 })->with([
     [CarStatus::InStock, 'https://schema.org/InStock'],
     [CarStatus::OnOrder, 'https://schema.org/PreOrder'],
+    // BackOrder, а не PreOrder: PreOrder — товар, который ещё не выпущен
+    // и получить его нельзя в принципе; BackOrder — заказан и придёт
+    // позже. Автомобиль в пути уже куплен и физически едет.
+    [CarStatus::InTransit, 'https://schema.org/BackOrder'],
     [CarStatus::Sold, 'https://schema.org/SoldOut'],
 ]);
+
+it('covers every status in the availability map', function () {
+    // Сторож на полноту набора данных выше: `match` без `default` уронит
+    // страницу на пропущенном статусе, но только если тест до этого
+    // статуса вообще доберётся. Новый случай enum-а обязан приносить
+    // с собой новую строку в `with()`.
+    expect(CarStatus::cases())->toHaveCount(4);
+});
 
 it('derives the item condition from the mileage', function () {
     // Пробег null — это не «ноль километров», а автомобиль под заказ,

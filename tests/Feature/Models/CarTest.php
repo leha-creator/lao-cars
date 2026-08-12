@@ -123,13 +123,36 @@ it('deletes photos together with the car', function () {
 it('filters the catalog by status', function () {
     Car::factory()->count(2)->inStock()->create();
     Car::factory()->onOrder()->create();
+    Car::factory()->inTransit()->create();
     Car::factory()->sold()->create();
 
     expect(Car::inStock()->count())->toBe(2)
         ->and(Car::onOrder()->count())->toBe(1)
         // Проданные остаются в базе ради истории и SEO,
         // но из выдачи каталога уходят.
-        ->and(Car::available()->count())->toBe(3);
+        ->and(Car::available()->count())->toBe(4);
+});
+
+it('keeps a car in transit in the catalog and a sold one out of it', function () {
+    // Статус, который прячет карточку, обнаружился бы как «завёл авто,
+    // а его нет на сайте», поэтому оба края скоупа проверяются явно:
+    // «в пути» обязан входить, «продан» — нет.
+    $inTransit = Car::factory()->inTransit()->create();
+    $sold = Car::factory()->sold()->create();
+
+    $available = Car::available()->pluck('id');
+
+    expect($available)->toContain($inTransit->id)
+        ->and($available)->not->toContain($sold->id);
+});
+
+it('drops mileage for cars in transit', function () {
+    // Автомобиль в пути уже куплен, но его никто не водил: карточка
+    // выводит на месте пробега «Новый», а микроразметка — NewCondition.
+    $car = Car::factory()->inTransit()->create();
+
+    expect($car->mileage)->toBeNull()
+        ->and($car->status)->toBe(CarStatus::InTransit);
 });
 
 it('selects only cars marked for the homepage', function () {

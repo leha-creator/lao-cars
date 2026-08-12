@@ -428,6 +428,31 @@ it('hides the status filter until alpine boots', function () {
     expect($html)->toMatch('/x-cloak[^>]*aria-label="Фильтр по статусу"/u');
 });
 
+it('adds a button for a car in transit when the selection has one', function () {
+    // Кнопки строятся из статусов, ФАКТИЧЕСКИ встреченных в подборке,
+    // а не из полного enum-а: кнопка без карточек — это пустая выдача
+    // по клику.
+    Car::factory()->onHomepage()->create(['status' => CarStatus::InStock]);
+    Car::factory()->onHomepage()->inTransit()->create();
+
+    $html = $this->get('/')->assertOk()->getContent();
+
+    expect($html)->toContain('Фильтр по статусу')
+        ->and($html)->toContain("status = '".CarStatus::InTransit->value."'");
+});
+
+it('leaves the in transit button out when no such car is in the selection', function () {
+    Car::factory()->onHomepage()->create(['status' => CarStatus::InStock]);
+    Car::factory()->onHomepage()->create(['status' => CarStatus::OnOrder]);
+    // В подборку не попадёт: отметки «на главной» нет.
+    Car::factory()->inTransit()->create();
+
+    $html = $this->get('/')->assertOk()->getContent();
+
+    expect($html)->toContain('Фильтр по статусу')
+        ->and($html)->not->toContain("status = '".CarStatus::InTransit->value."'");
+});
+
 it('drops the status filter when the selection has a single status', function () {
     // Фильтровать нечего: две кнопки над одинаковой выдачей выглядят
     // сломанными.

@@ -11,6 +11,7 @@ use App\Support\AttributeFilterIndex;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /*
  * Фильтр каталога (веха 3.6).
@@ -60,9 +61,23 @@ it('narrows the results by engine type', function () {
 it('narrows the results by availability', function () {
     Car::factory()->count(2)->inStock()->create();
     Car::factory()->onOrder()->create();
+    Car::factory()->count(3)->inTransit()->create();
 
     expect(catalogFilter(['status' => 'in_stock'])->count())->toBe(2)
-        ->and(catalogFilter(['status' => 'on_order'])->count())->toBe(1);
+        ->and(catalogFilter(['status' => 'on_order'])->count())->toBe(1)
+        ->and(catalogFilter(['status' => 'in_transit'])->count())->toBe(3);
+});
+
+it('returns exactly the cars in transit and nothing else', function () {
+    $inTransit = Car::factory()->count(2)->inTransit()->create();
+    Car::factory()->inStock()->create();
+    Car::factory()->onOrder()->create();
+    Car::factory()->sold()->create();
+
+    // Счётчика мало: фильтр, поймавший не те две карточки, дал бы
+    // ту же двойку.
+    expect(catalogFilter(['status' => 'in_transit'])->pluck('id')->sort()->values()->all())
+        ->toBe($inTransit->pluck('id')->sort()->values()->all());
 });
 
 it('narrows the results by year and price range', function () {
@@ -294,6 +309,50 @@ it('keeps the prefix constant in sync with the migration', function () {
     // его брать — молча. Менять длину можно только новой миграцией.
     expect($normalized)->toContain('left(value, ')
         ->and($normalized)->toContain('left(value, '.AttributeFilterIndex::PREFIX_LENGTH.')');
+});
+
+it('keeps the partial index predicate in sync with the available scope', function () {
+    // Сторож на связку, которая уже один раз обманула читателя кода:
+    // предикат трёх частичных индексов каталога обязан перечислять ровно
+    // те статусы, которые перечисляет скоуп `Car::available()`.
+    //
+    // Расхождение не даёт ни ошибки, ни красного теста нигде больше:
+    // запросы остаются корректными, просто перестают попадать в индекс,
+    // и симптом появляется только на проде как «сайт тормозит».
+    // Опасно оно в обе стороны — и расширенный скоуп при старом индексе,
+    // и наоборот, — поэтому сравнение точное, а не «содержит».
+    //
+    // Список статусов берётся из самого скоупа, а не переписывается
+    // константой рядом: копия разошлась бы с оригиналом ровно так же,
+    // как разъезжаются индекс и запрос.
+    $scopeStatuses = collect(Car::available()->toBase()->getBindings())
+        ->map(fn (mixed $binding): string => $binding instanceof BackedEnum
+            ? (string) $binding->value
+            : (string) $binding)
+        ->unique()->sort()->values()->all();
+
+    expect($scopeStatuses)->not->toBeEmpty();
+
+    foreach (['cars_available_created_index', 'cars_available_brand_index', 'cars_available_price_index'] as $name) {
+        $definition = (string) DB::table('pg_indexes')
+            ->where('indexname', $name)
+            ->value('indexdef');
+
+        expect($definition)->not->toBe('', "частичный индекс {$name} не существует");
+
+        // Предикат печатается как `WHERE ((status)::text = ANY
+        // ((ARRAY['in_stock'::character varying, …])::text[]))`.
+        $predicate = (string) Str::after($definition, ' WHERE ');
+
+        preg_match_all("/'([a-z_]+)'/", $predicate, $matches);
+
+        $indexStatuses = collect($matches[1])->unique()->sort()->values()->all();
+
+        expect($indexStatuses)->toBe(
+            $scopeStatuses,
+            "предикат {$name} разошёлся со списком статусов Car::available(): нужна новая миграция",
+        );
+    }
 });
 
 it('applies the available scope before any user condition', function () {

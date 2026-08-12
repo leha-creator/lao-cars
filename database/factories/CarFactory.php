@@ -67,6 +67,26 @@ class CarFactory extends Factory
         ]);
     }
 
+    /**
+     * Авто в пути — тоже новое, и пробег у него `null` по тому же
+     * правилу, что и у «под заказ».
+     *
+     * Решение принято один раз и записано здесь, потому что тот же
+     * вопрос всплывает в `CarSeeder`: автомобиль в пути уже куплен,
+     * но его никто не водил — он едет от поставщика. `null` карточка
+     * показывает как «Новый», а `CarStructuredData` — как
+     * `itemCondition: NewCondition`; оба ответа верны. Небольшое число
+     * вместо `null` означало бы конкретный пробег, которого никто
+     * не измерял.
+     */
+    public function inTransit(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'status' => CarStatus::InTransit,
+            'mileage' => null,
+        ]);
+    }
+
     public function sold(): static
     {
         return $this->state(fn (array $attributes): array => [

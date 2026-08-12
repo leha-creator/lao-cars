@@ -6,6 +6,7 @@ use App\Models\Brand;
 use App\Models\Car;
 use App\Models\CarAttribute;
 use App\Models\CarPhoto;
+use Illuminate\Support\Facades\Log;
 
 /*
  * Страница списка каталога (веха 3.6).
@@ -88,9 +89,87 @@ it('redirects an invalid parameter to the clean catalog', function () {
 it('does not let a sold status through the filter', function () {
     Car::factory()->sold()->create();
 
-    // Список допустимых значений — два, а не три: ?status=sold
-    // отбрасывается валидацией, а не открывает проданные.
+    // Список допустимых значений — три, а не четыре: ?status=sold
+    // отбрасывается валидацией, а не открывает проданные. Расширение
+    // списка новым статусом это ограничение не снимает.
     $this->get('/catalog?status=sold')->assertRedirect(route('catalog.index'));
+});
+
+it('logs a discarded status but stays quiet on a valid one', function () {
+    Car::factory()->inTransit()->create();
+
+    // Через `Log::listen`, а не через `Log::spy()`: за один запрос
+    // в отладочный канал пишет не только `failedValidation`, и даже
+    // префикса `[CatalogFilter]` мало — успешный запрос пишет им же
+    // «фильтр применён». Проверять надо конкретную запись, иначе тест
+    // либо ловит чужую, либо не ловит ничего.
+    $discarded = [];
+
+    Log::listen(function ($event) use (&$discarded): void {
+        if (str_contains($event->message, 'параметры отброшены')) {
+            $discarded[] = $event->level;
+        }
+    });
+
+    // Мусорный статус по-прежнему отбрасывается и пишется в лог.
+    $this->get('/catalog?status=teleporting')->assertRedirect(route('catalog.index'));
+
+    // Уровень именно DEBUG: основной источник таких запросов — сканеры,
+    // и WARN забил бы лог.
+    expect($discarded)->toBe(['debug']);
+
+    $discarded = [];
+
+    // А новый статус валиден, и записи о нём быть не должно: расширение
+    // списка не должно превратить рабочий фильтр в источник шума.
+    $this->get('/catalog?status=in_transit')->assertOk();
+
+    expect($discarded)->toBe([]);
+});
+
+it('shows a switcher button for every filterable status', function () {
+    Car::factory()->create();
+
+    $content = $this->get('/catalog')->assertOk()->getContent();
+
+    // Четыре кнопки: «Все» плюс три статуса. «Продан» кнопки не получает —
+    // он и валидацию не прошёл бы.
+    foreach ([CarStatus::InStock, CarStatus::OnOrder, CarStatus::InTransit] as $status) {
+        expect($content)->toContain('value="'.$status->value.'"')
+            ->and($content)->toContain($status->label());
+    }
+
+    expect($content)->not->toContain('value="'.CarStatus::Sold->value.'"');
+});
+
+it('serves the cars in transit under their own status filter', function () {
+    $brand = Brand::factory()->create(['name' => 'Zeekr']);
+
+    Car::factory()->for($brand)->inTransit()->create(['model' => 'X']);
+    Car::factory()->for($brand)->inStock()->create(['model' => '001']);
+
+    $this->get('/catalog?status=in_transit')
+        ->assertOk()
+        ->assertSee('X')
+        // Старый статус обязан выпасть: иначе вкладка «В пути» показывает
+        // весь каталог, и человек решает, что фильтр не работает.
+        ->assertDontSee('001');
+});
+
+it('keeps the old status links working', function () {
+    // Контракт GET-параметров расширяется, а не ломается: ссылка,
+    // сохранённая до появления «В пути», обязана открываться тем же.
+    $brand = Brand::factory()->create(['name' => 'Voyah']);
+
+    Car::factory()->for($brand)->inStock()->create(['model' => 'Free']);
+    Car::factory()->for($brand)->inTransit()->create(['model' => 'Dream']);
+
+    $this->get('/catalog?status=in_stock')
+        ->assertOk()
+        ->assertSee('Free')
+        ->assertDontSee('Dream');
+
+    $this->get('/catalog?status=on_order')->assertOk();
 });
 
 it('passes a cyrillic attribute value from the url to the filter', function () {
