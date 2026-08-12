@@ -332,11 +332,19 @@ final class Car extends Model
     /**
      * Всё, что можно купить. Проданные карточки остаются в базе ради
      * истории и SEO, но из выдачи каталога уходят.
+     *
+     * ВНИМАНИЕ: список статусов здесь связан с предикатом трёх частичных
+     * индексов каталога (`cars_available_*`, миграция
+     * `2026_08_13_*_extend_catalog_partial_indexes_with_in_transit`).
+     * Расхождение не даёт ни ошибки, ни красного теста — только seq scan
+     * на проде. На связку стоит сторож в
+     * `tests/Feature/Services/CatalogFilterTest.php`: правя список,
+     * правьте миграцию.
      */
     #[Scope]
     protected function available(Builder $query): void
     {
-        $query->whereIn('status', [CarStatus::InStock, CarStatus::OnOrder]);
+        $query->whereIn('status', [CarStatus::InStock, CarStatus::OnOrder, CarStatus::InTransit]);
     }
 
     #[Scope]

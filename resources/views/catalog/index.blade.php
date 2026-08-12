@@ -132,10 +132,13 @@
                     <fieldset class="-mx-5 flex gap-2.5 overflow-x-auto px-5 lg:order-2 lg:mx-0 lg:ml-auto lg:overflow-visible lg:px-0">
                         <legend class="sr-only">Наличие</legend>
 
-                        {{-- Вариантов три: «Продан» фильтром не выбирается —
+                        {{-- Вариантов четыре: «Продан» фильтром не выбирается —
                              это уже зафиксировано в `CatalogFilterRequest`,
-                             а проданные из выдачи убирает скоуп available(). --}}
-                        @foreach ([['', 'Все'], [\App\Enums\CarStatus::InStock->value, \App\Enums\CarStatus::InStock->label()], [\App\Enums\CarStatus::OnOrder->value, \App\Enums\CarStatus::OnOrder->label()]] as [$value, $label])
+                             а проданные из выдачи убирает скоуп available().
+                             Список перечислен вручную по той же причине, что
+                             и там: сборка из `cases()` затащила бы сюда
+                             «Продан». --}}
+                        @foreach ([['', 'Все'], [\App\Enums\CarStatus::InStock->value, \App\Enums\CarStatus::InStock->label()], [\App\Enums\CarStatus::OnOrder->value, \App\Enums\CarStatus::OnOrder->label()], [\App\Enums\CarStatus::InTransit->value, \App\Enums\CarStatus::InTransit->label()]] as [$value, $label])
                             <label>
                                 {{-- `sr-only`, а не `hidden`: спрятанный
                                      через `display:none` контрол недоступен

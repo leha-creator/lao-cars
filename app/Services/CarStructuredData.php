@@ -169,6 +169,13 @@ final class CarStructuredData
             'availability' => match ($car->status) {
                 CarStatus::InStock => 'https://schema.org/InStock',
                 CarStatus::OnOrder => 'https://schema.org/PreOrder',
+                // `BackOrder`, а не напрашивающийся `PreOrder`: разница
+                // в словаре содержательная. `PreOrder` — товар, который
+                // ещё не выпущен и получить его нельзя в принципе;
+                // `BackOrder` — товар заказан и придёт позже. Автомобиль
+                // в пути уже куплен и физически едет, то есть это второе.
+                // `PreOrder` остаётся у «Под заказ», где он и верен.
+                CarStatus::InTransit => 'https://schema.org/BackOrder',
                 CarStatus::Sold => 'https://schema.org/SoldOut',
             },
         ];

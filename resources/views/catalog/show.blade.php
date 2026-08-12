@@ -218,13 +218,18 @@
             </div>
 
             <div>
-                {{-- Статус-пилюля в цвет статуса — тот же приём, что
-                     в `x-car-card`: акцентная только для «в наличии». --}}
+                {{-- Статус-пилюля в цвет статуса — тот же приём и те же
+                     три состояния, что в `x-car-card`: акцентная только
+                     для «в наличии», «в пути» выделен яркостью обводки
+                     и текста, остальные приглушены. Разъезд с карточкой
+                     списка означал бы, что один и тот же автомобиль
+                     выглядит по-разному в каталоге и на своей странице. --}}
                 <span
                     @class([
                         'mb-5 inline-block rounded-full border px-3 py-1.5 text-[11px] tracking-[0.08em] uppercase',
                         'border-accent/40 text-accent' => $car->status === CarStatus::InStock,
-                        'border-white/20 text-ink-muted' => $car->status !== CarStatus::InStock,
+                        'border-white/45 text-ink' => $car->status === CarStatus::InTransit,
+                        'border-white/20 text-ink-muted' => ! in_array($car->status, [CarStatus::InStock, CarStatus::InTransit], true),
                     ])
                 >{{ $car->status->label() }}</span>
 

@@ -46,11 +46,21 @@ final class CatalogFilterRequest extends FormRequest
             'price_from' => ['nullable', 'integer', 'min:0'],
             'price_to' => ['nullable', 'integer', 'min:0'],
 
-            // Список из двух значений, а не из трёх: `?status=sold`
+            // Список из трёх значений, а не из четырёх: `?status=sold`
             // не открывает доступ к проданным автомобилям в выдаче.
             // Скоуп `available()` применяется всегда, а `status` может
             // лишь сузить его.
-            'status' => ['nullable', Rule::in([CarStatus::InStock->value, CarStatus::OnOrder->value])],
+            //
+            // Перечисление остаётся ручным намеренно. Собрать список
+            // из `CarStatus::cases()` «чтобы не забывать новый статус» —
+            // ровно та правка, которая снимет ограничение по «Продан»,
+            // и снимет его молча: тесты останутся зелёными, а выдача
+            // начнёт отдавать проданные автомобили по прямой ссылке.
+            'status' => ['nullable', Rule::in([
+                CarStatus::InStock->value,
+                CarStatus::OnOrder->value,
+                CarStatus::InTransit->value,
+            ])],
 
             'sort' => ['nullable', Rule::enum(CatalogSort::class)],
 

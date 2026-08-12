@@ -57,13 +57,22 @@
             </{{ $heading }}>
 
             {{-- Статус-тег: pill с обводкой в цвет статуса, без заливки
-                 (UI Kit §04). Акцентный только для «в наличии» — статус,
-                 ради которого человек и открывает каталог. --}}
+                 (UI Kit §04). Состояний три, а не два.
+
+                 Акцентный — только «в наличии»: статус, ради которого
+                 человек и открывает каталог, и единственный акцентный
+                 цвет на сайт (UI Kit §02). «В пути» второго акцента
+                 не получает — он выделен яркостью обводки и текста
+                 в пределах той же нейтральной шкалы. Свести его обратно
+                 к приглушённому варианту нельзя: он станет визуально
+                 неотличим от «Под заказ», то есть вкладка появится,
+                 а карточка её не подтвердит. --}}
             <span
                 @class([
                     'shrink-0 rounded-full border px-2.5 py-1 text-[11px] tracking-[0.08em] uppercase',
                     'border-accent/40 text-accent' => $car->status === CarStatus::InStock,
-                    'border-white/20 text-ink-muted' => $car->status !== CarStatus::InStock,
+                    'border-white/45 text-ink' => $car->status === CarStatus::InTransit,
+                    'border-white/20 text-ink-muted' => ! in_array($car->status, [CarStatus::InStock, CarStatus::InTransit], true),
                 ])
             >{{ $car->status->label() }}</span>
         </div>
