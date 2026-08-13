@@ -6,7 +6,7 @@
     На мобильных колонки складываются в одну: пять колонок на 390px
     превращаются в пять полосок по одному слову.
 --}}
-<footer class="border-t border-white/10 px-5 pt-14 pb-10 lg:px-8 lg:pt-18">
+<footer class="border-t border-line px-5 pt-14 pb-10 lg:px-8 lg:pt-18">
     <div class="mx-auto max-w-page">
         <div class="mb-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1.1fr] lg:items-start">
             <div>
@@ -74,7 +74,7 @@
             </div>
 
             @if ($guaranteeValue('title') !== null)
-                <div class="rounded-card border border-white/10 bg-surface p-5.5">
+                <div class="rounded-card border border-line bg-surface p-5.5">
                     <div class="mb-2 text-sm font-semibold">{{ $guaranteeValue('title') }}</div>
 
                     @if ($guaranteeValue('text') !== null)
@@ -90,7 +90,7 @@
             @endif
         </div>
 
-        <div class="flex flex-col gap-3 border-t border-white/10 pt-8 text-[13px] text-ink-faint sm:flex-row sm:justify-between">
+        <div class="flex flex-col gap-3 border-t border-line pt-8 text-[13px] text-ink-faint sm:flex-row sm:justify-between">
             {{-- Год считается, а не пишется константой: захардкоженный
                  устаревает в новогоднюю ночь и никем не замечается. --}}
             <div>© {{ date('Y') }} ЛАО КАРС. Все права защищены.</div>

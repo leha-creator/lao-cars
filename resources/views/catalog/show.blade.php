@@ -83,7 +83,10 @@
         $groups = $car->cardAttributes();
     @endphp
 
-    <nav class="px-5 pt-8 lg:px-8 lg:pt-9" aria-label="Хлебные крошки">
+    {{-- Карточка автомобиля светлая целиком, как и каталог, из которого
+         на неё приходят (веха 4.11). Крошки — тоже: тёмная полоса над
+         светлой страницей читалась бы как остаток шапки. --}}
+    <nav class="theme-light px-5 pt-8 lg:px-8 lg:pt-9" aria-label="Хлебные крошки">
         <ol class="mx-auto flex max-w-page flex-wrap gap-x-1.5 text-[13px] text-ink-faint">
             <li><a href="{{ route('catalog.index') }}" class="transition hover:text-accent">Каталог</a></li>
             {{-- Последний элемент — не ссылка: ссылка на текущую страницу
@@ -92,7 +95,15 @@
         </ol>
     </nav>
 
-    <section class="px-5 pt-7 lg:px-8 lg:pt-8">
+    {{-- Нижнее поле секция берёт на себя только тогда, когда похожих
+         автомобилей нет: обычно его даёт `pt-20` следующей секции. Без
+         этой развилки светлая страница у автомобиля без похожих
+         обрывалась бы вплотную к подвалу — до вехи 4.11 разрыва не было
+         видно, потому что обе стороны стыка были одного цвета. --}}
+    <section @class([
+        'theme-light px-5 pt-7 lg:px-8 lg:pt-8',
+        'pb-20 lg:pb-28' => $similar->isEmpty(),
+    ])>
         <div class="mx-auto grid max-w-page gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-16">
             {{--
                 Фотогалерея.
@@ -166,7 +177,7 @@
                     @empty
                         {{-- Пустой прямоугольник читается как недогруженная
                              страница, поэтому место фото занимает подпись. --}}
-                        <div class="flex size-full items-center justify-center border border-white/10 bg-page-alt text-sm text-ink-faint">
+                        <div class="flex size-full items-center justify-center border border-line bg-page-alt text-sm text-ink-faint">
                             Фотографии готовятся
                         </div>
                     @endforelse
@@ -177,7 +188,7 @@
                             x-cloak
                             x-on:click="active = (active + total - 1) % total"
                             aria-label="Предыдущее фото"
-                            class="absolute top-1/2 left-4 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-page/70 text-lg backdrop-blur-sm transition hover:border-accent/50 hover:text-accent"
+                            class="absolute top-1/2 left-4 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-line-strong bg-page/70 text-lg backdrop-blur-sm transition hover:border-accent/50 hover:text-accent"
                         >‹</button>
 
                         <button
@@ -185,13 +196,13 @@
                             x-cloak
                             x-on:click="active = (active + 1) % total"
                             aria-label="Следующее фото"
-                            class="absolute top-1/2 right-4 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-page/70 text-lg backdrop-blur-sm transition hover:border-accent/50 hover:text-accent"
+                            class="absolute top-1/2 right-4 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-line-strong bg-page/70 text-lg backdrop-blur-sm transition hover:border-accent/50 hover:text-accent"
                         >›</button>
 
                         <div
                             x-cloak
                             x-text="(active + 1) + ' / ' + total"
-                            class="absolute right-4 bottom-4 rounded-full border border-white/15 bg-page/70 px-3 py-1 text-xs text-ink-muted backdrop-blur-sm"
+                            class="absolute right-4 bottom-4 rounded-full border border-line-strong bg-page/70 px-3 py-1 text-xs text-ink-muted backdrop-blur-sm"
                         ></div>
                     @endif
                 </div>
@@ -228,8 +239,8 @@
                     @class([
                         'mb-5 inline-block rounded-full border px-3 py-1.5 text-[11px] tracking-[0.08em] uppercase',
                         'border-accent/40 text-accent' => $car->status === CarStatus::InStock,
-                        'border-white/45 text-ink' => $car->status === CarStatus::InTransit,
-                        'border-white/20 text-ink-muted' => ! in_array($car->status, [CarStatus::InStock, CarStatus::InTransit], true),
+                        'border-line-loud text-ink' => $car->status === CarStatus::InTransit,
+                        'border-line-strong text-ink-muted' => ! in_array($car->status, [CarStatus::InStock, CarStatus::InTransit], true),
                     ])
                 >{{ $car->status->label() }}</span>
 
@@ -254,7 +265,7 @@
                     внутри списка определений невалиден, а выносить его наружу
                     значит разбить одну сетку на несколько.
                 --}}
-                <div class="mb-8 grid grid-cols-2 gap-5 border-y border-white/10 py-7">
+                <div class="mb-8 grid grid-cols-2 gap-5 border-y border-line py-7">
                     @foreach ($fixed as $label => $value)
                         <div>
                             <div class="mb-1.5 text-xs text-ink-faint">{{ $label }}</div>
@@ -309,7 +320,7 @@
                     менеджер увидит «Авто: <марка> <модель>», а не «Общая
                     форма».
                 --}}
-                <div id="lead-form" class="rounded-[20px] border border-white/8 bg-surface p-6 lg:p-8">
+                <div id="lead-form" class="rounded-[20px] border border-line bg-surface p-6 lg:p-8">
                     <x-lead-form :source="$car" title="Заявка на этот автомобиль" />
                 </div>
             </div>
@@ -317,7 +328,7 @@
     </section>
 
     @if ($similar->isNotEmpty())
-        <section class="px-5 pt-20 pb-20 lg:px-8 lg:pt-25 lg:pb-28">
+        <section class="theme-light px-5 pt-20 pb-20 lg:px-8 lg:pt-25 lg:pb-28">
             <div class="mx-auto max-w-page">
                 <h2 class="mb-8 font-display text-2xl font-semibold lg:mb-10 lg:text-[28px]">
                     Похожие <span class="text-accent">автомобили</span>

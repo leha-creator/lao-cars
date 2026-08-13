@@ -4,9 +4,11 @@ use App\Enums\CarStatus;
 use App\Enums\ServiceCategory;
 use App\Models\Car;
 use App\Models\CarPhoto;
+use App\Models\Media;
 use App\Models\Review;
 use App\Models\Service;
 use App\Models\Setting;
+use Illuminate\Support\Facades\Log;
 
 /*
  * Главная (вехи 4.2 и 4.6).
@@ -262,6 +264,102 @@ it('renders steps, price breakdown and faq from site settings', function () {
         ->assertSee('проверочное уточнение')
         ->assertSee('Проверочный вопрос?')
         ->assertSee('Проверочный ответ.');
+});
+
+it('illustrates a step and keeps a step without an image textual', function () {
+    // Главный сторож вехи: изображение НЕобязательно. Обратное правило
+    // сносило бы с сайта этап, которому картинку ещё не подобрали, —
+    // и симптом читался бы как поломка сохранения формы.
+    $media = Media::factory()->create();
+
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Этап с картинкой', 'text' => 'Текст первого.', 'image_id' => $media->getKey()],
+        ['number' => '02', 'title' => 'Этап без картинки', 'text' => 'Текст второго.', 'image_id' => null],
+    ]);
+
+    $html = $this->get('/')
+        ->assertOk()
+        ->assertSee('Этап с картинкой')
+        // Этап без картинки остаётся на странице целиком — с номером,
+        // заголовком и текстом.
+        ->assertSee('Этап без картинки')
+        ->assertSee('Текст второго.')
+        ->assertSee($media->url)
+        // Осмысленный `alt`: картинка несёт смысл, а не декорирует.
+        ->assertSee('alt="Этап покупки: Этап с картинкой"', escape: false)
+        ->getContent();
+
+    // Ровно одна картинка на два этапа, а не одна на каждый.
+    expect(substr_count($html, $media->url))->toBe(1)
+        // Блок восьмой из четырнадцати — заведомо ниже сгиба, и ленивая
+        // загрузка здесь не микрооптимизация: шесть иллюстраций иначе
+        // конкурируют за канал с фоном первого экрана.
+        ->and($html)->toContain('src="'.$media->url.'"');
+
+    expect(preg_match(
+        '#<img[^>]*'.preg_quote($media->url, '#').'[^>]*loading="lazy"#',
+        // Атрибуты разнесены по строкам — переносы для проверки
+        // схлопываются в пробел.
+        (string) preg_replace('/\s+/', ' ', $html),
+    ))->toBe(1);
+});
+
+it('does not add a query per step illustration', function () {
+    // Шесть картинок — это ровно то число, при котором приём
+    // `promoImageUrl()` (`find()` на каждый вызов) копируют дальше
+    // и получают N+1 на главной странице сайта.
+    warmSettingsCache();
+
+    $images = Media::factory()->count(6)->create();
+
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Первый этап', 'image_id' => $images[0]->getKey()],
+    ]);
+
+    $few = countQueries(fn () => $this->get('/')->assertOk()->assertSee('Первый этап'));
+
+    Setting::set('home.steps', $images
+        ->map(fn (Media $media, int $i): array => [
+            'number' => '0'.($i + 1),
+            'title' => 'Этап номер '.($i + 1),
+            'image_id' => $media->getKey(),
+        ])
+        ->all());
+
+    $many = countQueries(fn () => $this->get('/')->assertOk()->assertSee('Этап номер 6'));
+
+    // Нижняя граница обязательна — правило `RULES.md`: выборка,
+    // не поймавшая ни одного запроса, иначе проходит вхолостую.
+    expect($few)->toBeGreaterThan(0)
+        ->and($many)->toBe($few);
+});
+
+it('keeps the homepage up when a step image was deleted from the library', function () {
+    // Штатным путём сюда не попасть — удаление используемой записи
+    // блокирует `Media::usages()`. Значит запись пропала в обход админки,
+    // и это единственный отказ блока, который снаружи неотличим
+    // от незаполненного поля: карточка просто останется текстовой.
+    Log::spy();
+
+    $media = Media::factory()->create();
+    $id = $media->getKey();
+    $media->forceDelete();
+
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Этап с потерянной картинкой', 'text' => 'Текст.', 'image_id' => $id],
+    ]);
+
+    $this->get('/')
+        ->assertOk()
+        // Карточка на месте: пропала картинка, а не этап.
+        ->assertSee('Этап с потерянной картинкой')
+        ->assertSee('Текст.');
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => $message === '[Главная] этап покупки ссылается на удалённую запись медиабиблиотеки'
+            && $context['step'] === 'Этап с потерянной картинкой'
+            && $context['media_id'] === $id)
+        ->once();
 });
 
 it('drops the steps section when the list is emptied', function () {

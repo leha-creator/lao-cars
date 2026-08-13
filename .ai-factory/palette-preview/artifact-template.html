@@ -1,0 +1,667 @@
+<title>Светлые секции ЛАО КАРС</title>
+
+<style>
+  /* Шрифты сайта, встроенные из его же сборки (public/build/assets).
+     Страница про палитру ЛАО КАРС набрана самим ЛАО КАРС. */
+  @font-face {
+    font-family: 'Unbounded';
+    font-style: normal;
+    font-weight: 500 700;
+    font-display: swap;
+    src: url(__FONT_UNB_CYR__) format('woff2');
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  }
+  @font-face {
+    font-family: 'Unbounded';
+    font-style: normal;
+    font-weight: 500 700;
+    font-display: swap;
+    src: url(__FONT_UNB_LAT__) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: 'Unbounded';
+    font-style: normal;
+    font-weight: 500 700;
+    font-display: swap;
+    src: url(__FONT_UNB_EXT__) format('woff2');
+    unicode-range: U+0100-02BA, U+20A0-20AB, U+20AD-20C0, U+2113;
+  }
+  @font-face {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url(__FONT_MAN_CYR__) format('woff2');
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  }
+  @font-face {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url(__FONT_MAN_LAT__) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2122, U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: 'Manrope';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url(__FONT_MAN_EXT__) format('woff2');
+    unicode-range: U+0100-02BA, U+20A0-20AB, U+20AD-20C0, U+2113;
+  }
+
+  /* Одна визуальная среда намеренно: страница показывает и светлые кадры,
+     и тёмные, и подложка не должна подыгрывать ни тем, ни другим. Светлый
+     фон страницы завысил бы светлые варианты, тёмный — тёмный эталон.
+     Нейтральный тёплый графит — то, на чём показывают образцы. */
+  :root {
+    --ground: #1b1917;
+    --ground-lift: #232120;
+    --panel: #2a2725;
+    --line: rgba(244, 238, 228, 0.12);
+    --line-soft: rgba(244, 238, 228, 0.07);
+    --ink: #f4efe7;
+    --ink-muted: #a9a29a;
+    --ink-faint: #7b7570;
+    --accent: #f9c227;
+
+    --step-0: 1rem;
+    --step-1: 1.1875rem;
+    --step-2: 1.5rem;
+    --step-3: 2.125rem;
+    --step-4: 3.25rem;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    font-size: var(--step-0);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 6rem;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: 'Unbounded', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    line-height: 1.14;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+    max-width: 62ch;
+  }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* — Шапка ————————————————————————————————— */
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 5rem 0 3.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .masthead h1 {
+    font-size: var(--step-4);
+  }
+
+  .masthead p {
+    font-size: var(--step-1);
+    color: var(--ink-muted);
+  }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 2.25rem;
+    font-size: 0.8125rem;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .facts b {
+    color: var(--ink-muted);
+    font-weight: 600;
+  }
+
+  /* — Вопросы ———————————————————————————————— */
+
+  .asks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1px;
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+    margin: 3.5rem 0 0;
+  }
+
+  .ask {
+    background: var(--ground);
+    padding: 1.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .ask h3 {
+    font-size: var(--step-1);
+  }
+
+  .ask p {
+    font-size: 0.9375rem;
+    color: var(--ink-muted);
+  }
+
+  /* — Блок варианта ——————————————————————————— */
+
+  .variant {
+    padding-top: 5rem;
+  }
+
+  .variant-head {
+    display: grid;
+    grid-template-columns: 4.5rem 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    padding-bottom: 2rem;
+  }
+
+  .tag {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.75rem 0;
+    text-align: center;
+    border-top: 2px solid var(--accent);
+    color: var(--accent);
+  }
+
+  .variant--base .tag {
+    border-top-color: var(--ink-faint);
+    color: var(--ink-faint);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    padding-top: 1.125rem;
+  }
+
+  .variant-head h2 {
+    font-size: var(--step-3);
+    margin-bottom: 0.75rem;
+  }
+
+  .variant-head p {
+    color: var(--ink-muted);
+  }
+
+  .quote {
+    margin-top: 0.875rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--line);
+    font-size: 0.9375rem;
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  /* — Свотчи —————————————————————————————————— */
+
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .swatch {
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .swatch i {
+    display: block;
+    height: 3.5rem;
+  }
+
+  .swatch span {
+    padding: 0.625rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .swatch b {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  /* — Окна с кадрами ————————————————————————— */
+
+  .shots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    gap: 1.25rem;
+  }
+
+  .shot {
+    background: var(--ground-lift);
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .shot-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+
+  .shot-bar em {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--line);
+  }
+
+  .shot-bar span {
+    margin-left: 0.375rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+  }
+
+  .viewport {
+    height: 34rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ink-faint) transparent;
+  }
+
+  .viewport img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .shot figcaption {
+    padding: 0.75rem 0.875rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.75rem;
+    color: var(--ink-faint);
+  }
+
+  /* — Заметки и списки ————————————————————————— */
+
+  .note {
+    margin-top: 1.75rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--accent);
+    background: var(--ground-lift);
+    font-size: 0.9375rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .note b {
+    font-weight: 700;
+  }
+
+  .note p {
+    color: var(--ink-muted);
+  }
+
+  .closing {
+    padding-top: 5rem;
+  }
+
+  .closing h2 {
+    font-size: var(--step-2);
+    margin-bottom: 1.5rem;
+  }
+
+  .fixed-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .fixed-list li {
+    display: grid;
+    grid-template-columns: 1.5rem 1fr;
+    gap: 0.75rem;
+    font-size: 0.9375rem;
+    color: var(--ink-muted);
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .fixed-list li:last-child {
+    border-bottom: 0;
+  }
+
+  .fixed-list b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .mark {
+    color: var(--accent);
+    font-family: 'Unbounded', sans-serif;
+    font-size: 0.8125rem;
+    line-height: 1.9;
+  }
+
+  .colophon {
+    margin-top: 5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.8125rem;
+    color: var(--ink-faint);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.875em;
+    color: var(--ink);
+    background: rgba(244, 238, 228, 0.07);
+    padding: 0.1em 0.35em;
+  }
+
+  @media (max-width: 46rem) {
+    :root {
+      --step-3: 1.625rem;
+      --step-4: 2.125rem;
+    }
+
+    .wrap {
+      padding: 0 1.125rem 4rem;
+    }
+
+    .masthead {
+      padding: 3rem 0 2.5rem;
+    }
+
+    .variant-head {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+
+    .tag {
+      text-align: left;
+      width: 3rem;
+    }
+
+    .viewport {
+      height: 24rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <span class="eyebrow">ЛАО КАРС · чередование фонов</span>
+    <h1>Светлые секции</h1>
+    <p>
+      Три варианта светлого фона, показанные на живом сайте, а не палитрой квадратиков. Каждый кадр —
+      настоящая страница со своим содержимым: те же карточки, те же цены, те же фотографии. Нужен
+      ответ по одному варианту, дальше он превращается в код.
+    </p>
+    <div class="facts">
+      <span><b>Дата</b> 12 августа 2026</span>
+      <span><b>Кадры</b> 1440 px, главная и каталог</span>
+      <span><b>Основание</b> демонстрация 11 августа</span>
+    </div>
+  </header>
+
+  <section class="asks">
+    <article class="ask">
+      <h3>Какой вариант</h3>
+      <p>A, B или C. Можно назвать один и попросить сдвинуть теплее или светлее — это правка одного значения, а не переделка.</p>
+    </article>
+    <article class="ask">
+      <h3>Нужен ли перелив</h3>
+      <p>Вариант C отвечает на просьбу про «не плоскую заливку». Если перелив не нужен, остаются A или B — они плоские.</p>
+    </article>
+    <article class="ask">
+      <h3>Автосервис или Сервис</h3>
+      <p>В меню сейчас «Автосервис». На встрече прозвучало «сервис» — это правка или сокращение в речи?</p>
+    </article>
+  </section>
+
+  <section class="variant variant--base">
+    <div class="variant-head">
+      <div class="tag">Сейчас</div>
+      <div>
+        <h2>Как выглядит сегодня</h2>
+        <p>
+          Четыре фоновых оттенка, и все четыре — почти чёрные. Разница между ними есть в коде и
+          почти отсутствует на глаз, поэтому страница читается как одна сплошная тёмная плоскость.
+        </p>
+        <p class="quote">«Слишком много чёрного» — с этого началась правка.</p>
+      </div>
+    </div>
+
+    <div class="swatches">
+      <div class="swatch"><i style="background: oklch(0.13 0.004 60)"></i><span><b>page</b>oklch(0.13 0.004 60)</span></div>
+      <div class="swatch"><i style="background: oklch(0.16 0.005 60)"></i><span><b>page-alt</b>oklch(0.16 0.005 60)</span></div>
+      <div class="swatch"><i style="background: oklch(0.185 0.006 60)"></i><span><b>surface</b>oklch(0.185 0.006 60)</span></div>
+      <div class="swatch"><i style="background: oklch(0.1 0.004 60)"></i><span><b>deep</b>oklch(0.1 0.004 60)</span></div>
+    </div>
+
+    <div class="shots">
+      <figure class="shot">
+        <div class="shot-bar"><em></em><em></em><em></em><span>Главная</span></div>
+        <div class="viewport"><img src="__IMG_HOME_0__" alt="Главная страница в текущем тёмном оформлении"></div>
+        <figcaption>Прокрутите внутри окна</figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="shot-bar"><em></em><em></em><em></em><span>Каталог</span></div>
+        <div class="viewport"><img src="__IMG_CAT_0__" alt="Каталог автомобилей в текущем тёмном оформлении"></div>
+        <figcaption>Прокрутите внутри окна</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="variant">
+    <div class="variant-head">
+      <div class="tag">A</div>
+      <div>
+        <h2>Слоновая кость</h2>
+        <p>
+          Тёплый приглушённый светлый — прямая формулировка с встречи. Фон уходит в жёлтую область,
+          поэтому дружит с фирменным жёлтым и не спорит с ним. Самый «салонный» из трёх: так
+          выглядят шоу-румы, а не маркетплейсы.
+        </p>
+        <p class="quote">«Слоновая кость», а не белый — сказано отдельно и намеренно.</p>
+      </div>
+    </div>
+
+    <div class="swatches">
+      <div class="swatch"><i style="background: oklch(0.958 0.014 88)"></i><span><b>page</b>oklch(0.958 0.014 88)</span></div>
+      <div class="swatch"><i style="background: oklch(0.928 0.018 86)"></i><span><b>page-alt</b>oklch(0.928 0.018 86)</span></div>
+      <div class="swatch"><i style="background: oklch(0.988 0.008 92)"></i><span><b>surface</b>oklch(0.988 0.008 92)</span></div>
+      <div class="swatch"><i style="background: oklch(0.235 0.014 60)"></i><span><b>текст</b>oklch(0.235 0.014 60)</span></div>
+    </div>
+
+    <div class="shots">
+      <figure class="shot">
+        <div class="shot-bar"><em></em><em></em><em></em><span>Главная</span></div>
+        <div class="viewport"><img src="__IMG_HOME_A__" alt="Главная страница в варианте «слоновая кость»"></div>
+        <figcaption>Прокрутите внутри окна</figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="shot-bar"><em></em><em></em><em></em><span>Каталог</span></div>
+        <div class="viewport"><img src="__IMG_CAT_A__" alt="Каталог автомобилей в варианте «слоновая кость»"></div>
+        <figcaption>Прокрутите внутри окна</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="variant">
+    <div class="variant-head">
+      <div class="tag">B</div>
+      <div>
+        <h2>Холодный светлый</h2>
+        <p>
+          Нейтральный, ближе к коммерческому предложению: чёрный, жёлтый, белый. Суше и контрастнее
+          варианта A, карточки чисто-белые. Читается как техника, а не как салон — это разница
+          характера, а не качества.
+        </p>
+      </div>
+    </div>
+
+    <div class="swatches">
+      <div class="swatch"><i style="background: oklch(0.973 0.003 250)"></i><span><b>page</b>oklch(0.973 0.003 250)</span></div>
+      <div class="swatch"><i style="background: oklch(0.938 0.005 250)"></i><span><b>page-alt</b>oklch(0.938 0.005 250)</span></div>
+      <div class="swatch"><i style="background: oklch(1 0 0)"></i><span><b>surface</b>oklch(1 0 0)</span></div>
+      <div class="swatch"><i style="background: oklch(0.19 0.005 250)"></i><span><b>текст</b>oklch(0.19 0.005 250)</span></div>
+    </div>
+
+    <div class="shots">
+      <figure class="shot">
+        <div class="shot-bar"><em></em><em></em><em></em><span>Главная</span></div>
+        <div class="viewport"><img src="__IMG_HOME_B__" alt="Главная страница в холодном светлом варианте"></div>
+        <figcaption>Прокрутите внутри окна</figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="shot-bar"><em></em><em></em><em></em><span>Каталог</span></div>
+        <div class="viewport"><img src="__IMG_CAT_B__" alt="Каталог автомобилей в холодном светлом варианте"></div>
+        <figcaption>Прокрутите внутри окна</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="variant">
+    <div class="variant-head">
+      <div class="tag">C</div>
+      <div>
+        <h2>Слоновая кость с переливом</h2>
+        <p>
+          Та же палитра, что в A, плюс лёгкий металлик по диагонали секции: светлее в верхнем углу,
+          теплее в нижнем. Ответ на просьбу «чтобы фон не был плоской заливкой». Сделан градиентом,
+          а не картинкой — картинка означала бы лишний файл на критическом пути и ещё один стоковый
+          актив с непроверенными правами.
+        </p>
+        <p class="quote">Перелив держится в пределах одного материала: сильнее — и он читается как второй цвет.</p>
+      </div>
+    </div>
+
+    <div class="swatches">
+      <div class="swatch"><i style="background: linear-gradient(156deg, oklch(0.99 0.014 94), oklch(0.945 0.02 84) 55%, oklch(0.9 0.028 80))"></i><span><b>перелив</b>0.90 → 0.99</span></div>
+      <div class="swatch"><i style="background: oklch(0.958 0.014 88)"></i><span><b>page</b>oklch(0.958 0.014 88)</span></div>
+      <div class="swatch"><i style="background: oklch(0.988 0.008 92)"></i><span><b>surface</b>oklch(0.988 0.008 92)</span></div>
+      <div class="swatch"><i style="background: oklch(0.235 0.014 60)"></i><span><b>текст</b>oklch(0.235 0.014 60)</span></div>
+    </div>
+
+    <div class="shots">
+      <figure class="shot">
+        <div class="shot-bar"><em></em><em></em><em></em><span>Главная</span></div>
+        <div class="viewport"><img src="__IMG_HOME_C__" alt="Главная страница со слоновой костью и металлик-переливом"></div>
+        <figcaption>Прокрутите внутри окна</figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="shot-bar"><em></em><em></em><em></em><span>Каталог</span></div>
+        <div class="viewport"><img src="__IMG_CAT_C__" alt="Каталог автомобилей со слоновой костью и металлик-переливом"></div>
+        <figcaption>Прокрутите внутри окна</figcaption>
+      </figure>
+    </div>
+
+    <div class="note">
+      <b>Что изменилось в ценах</b>
+      <p>
+        На светлом фоне фирменный жёлтый как цвет текста перестаёт читаться: «4 200 000 ₽» жёлтым по
+        слоновой кости почти невидимо. Поэтому в светлых секциях цена набрана тем же жёлтым, но
+        затемнённым до читаемого — заливка кнопок и бейджей осталась ровно прежней. Это видно на
+        кадрах каталога: цена тёмно-золотая, кнопка «Показать» — прежняя жёлтая.
+      </p>
+    </div>
+  </section>
+
+  <section class="closing">
+    <h2>Что не меняется ни в одном варианте</h2>
+    <ul class="fixed-list">
+      <li>
+        <span class="mark">01</span>
+        <span><b>Первый экран остаётся тёмным.</b> К нему претензий не было, и фотография автомобиля на тёмном работает лучше.</span>
+      </li>
+      <li>
+        <span class="mark">02</span>
+        <span><b>Шапка тёмная на любой странице.</b> Вопрос задавался прямо, ответ был «да». Дополнительная причина: логотип белый — на светлой шапке он бы просто исчез.</span>
+      </li>
+      <li>
+        <span class="mark">03</span>
+        <span><b>Жёлтый — один на весь сайт.</b> Кнопки, бейджи «в наличии», активные состояния сохраняют прежний <code>#f9c227</code>.</span>
+      </li>
+      <li>
+        <span class="mark">04</span>
+        <span><b>Светлые и тёмные секции чередуются.</b> Сайт целиком светлым не становится ни в одном из вариантов — чередование и есть предмет правки.</span>
+      </li>
+    </ul>
+
+    <div class="note">
+      <b>Каталог светлеет в любом случае</b>
+      <p>
+        Это единственная страница, по которой ответ уже есть: «тем более каталог, он точно будет
+        приятен». По остальным внутренним страницам раскладка сделана по правилу чередования и может
+        быть пересмотрена, когда сайт будет виден живьём.
+      </p>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span>Кадры сняты с рабочей версии сайта: настоящая вёрстка, настоящее содержимое, ширина 1440 px.</span>
+    <span>В код палитра не внесена — это материал для решения, а не готовая правка.</span>
+  </footer>
+</div>

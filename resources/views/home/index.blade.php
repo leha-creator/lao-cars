@@ -80,7 +80,7 @@
              отступов Tailwind знает только шаги в половину, и `py-2.25`
              не порождает правила вовсе — класс в разметке есть, CSS нет,
              отступ молча не тот. --}}
-        <div class="overflow-hidden border-b border-white/6 bg-deep py-2 lg:py-[9px]">
+        <div class="overflow-hidden border-b border-line bg-deep py-2 lg:py-[9px]">
             {{--
                 Лента едет `translateX(-50%)`, поэтому копий обязано быть
                 ровно две и они обязаны совпадать. Копии порождает цикл,
@@ -192,12 +192,12 @@
                          Без этой записи её однажды «поправят по макету». --}}
                     <a
                         href="{{ route('catalog.index') }}"
-                        class="rounded-full bg-accent px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                        class="rounded-full bg-accent-solid px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover"
                     >Посмотреть автомобили</a>
 
                     <a
                         href="#selection"
-                        class="rounded-full border border-white/35 px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] transition hover:-translate-y-0.5 hover:border-white/70"
+                        class="rounded-full border border-line-loud px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] transition hover:-translate-y-0.5 hover:border-ink-muted"
                     >Подборка под бюджет</a>
                 </div>
 
@@ -221,7 +221,7 @@
                         ['title' => 'Под заказ', 'text' => 'подбор комплектации и цвета под задачу'],
                         ['title' => 'После покупки', 'text' => 'сервис, детейлинг и расходники'],
                     ] as $fact)
-                        <div class="border-t border-white/18 pt-3.5">
+                        <div class="border-t border-line-strong pt-3.5">
                             <div class="mb-1 text-sm font-semibold text-accent">{{ $fact['title'] }}</div>
 
                             <div class="text-[13px] leading-[1.5] text-ink-muted">{{ $fact['text'] }}</div>
@@ -236,12 +236,29 @@
         Полоса доверия. Тексты — в шаблоне по той же причине, что и факты
         хиро: одна строка на карточку, привязанная к вёрстке блока.
 
+        ПЕРВАЯ СВЕТЛАЯ СЕКЦИЯ СТРАНИЦЫ (веха 4.11), и здесь же — про весь
+        механизм, потому что дальше он повторяется классом без объяснений.
+
+        `theme-light` переопределяет токены на своём поддереве (см. блок
+        в `resources/css/app.css` и `docs/design-system.md`): ни один класс
+        внутри секции не меняется, темнеет `--color-ink`, светлеет
+        `--color-page`. Класс висит на `<section>`, а НЕ на `<body>`:
+        шапка, подвал и хиро остаются тёмными по прямому решению заказчика.
+
+        Чередование по странице сверху вниз: хиро тёмный → полоса доверия,
+        промо и подборка светлые → быстрый подбор и этапы тёмные →
+        автосервис и услуги светлые → прозрачность цены тёмная → отзывы
+        и преимущества светлые → FAQ и заявка тёмные. Первый экран остаётся
+        тёмным намеренно: претензий к нему у заказчика не было.
+
         Секция на фоне `page`, и следующие за ней промо-баннер с подборкой —
         тоже: в макете полоса доверия и каталог стоят на одном фоне, а
         правило дизайн-системы запрещает не смену тона, а больше двух
-        оттенков на экране.
+        оттенков на экране. На светлой теме это правило впервые стало
+        проверяемым глазом — три светлые секции подряд на одном `page`
+        читаются как один участок, а не как три полосы.
     --}}
-    <section class="px-5 py-14 lg:px-8 lg:py-18">
+    <section class="theme-light px-5 py-14 lg:px-8 lg:py-18">
         <div class="mx-auto grid max-w-page gap-4 sm:grid-cols-2 lg:grid-cols-4">
             @foreach ([
                 ['title' => 'Физический салон в Москве', 'text' => 'Можно увидеть автомобили и познакомиться с командой.'],
@@ -249,7 +266,7 @@
                 ['title' => 'Фото- и видеоотчёт', 'text' => 'Фиксируем ключевые этапы проверки и доставки.'],
                 ['title' => 'Собственная экосистема', 'text' => 'Продажа, сервис, детейлинг и запчасти.'],
             ] as $item)
-                <div class="rounded-card border border-white/7 bg-surface px-6.5 py-6 transition duration-250 hover:-translate-y-1 hover:border-accent/30">
+                <div class="rounded-card border border-line bg-surface px-6.5 py-6 transition duration-250 hover:-translate-y-1 hover:border-accent/30">
                     <div class="mb-2 text-[15px] font-semibold">{{ $item['title'] }}</div>
 
                     <div class="text-sm leading-[1.6] text-ink-muted">{{ $item['text'] }}</div>
@@ -262,14 +279,25 @@
         Промо-баннер. Управляется настройкой `home.promo` целиком: очищены
         и заголовок, и текст — секции нет вовсе. Пустая карточка с одной
         иконкой читалась бы не как «мало контента», а как поломка.
+
+        Светлая секция — продолжение полосы доверия, фон тот же `page`.
     --}}
     @if ($promo !== null)
-        <section class="px-5 py-14 lg:px-8">
+        <section class="theme-light px-5 py-14 lg:px-8">
             <div class="mx-auto max-w-page">
-                <div class="relative flex flex-wrap items-center gap-6 overflow-hidden rounded-[20px] border border-white/10 bg-page-alt px-6 py-7 lg:px-9">
+                <div class="relative flex flex-wrap items-center gap-6 overflow-hidden rounded-[20px] border border-line bg-page-alt px-6 py-7 lg:px-9">
                     {{-- Фон необязателен и по умолчанию его нет (`image_id`
                          в сиде — `null`). Подложка обязательна вместе с ним:
-                         текст поверх фотографии без затемнения нечитаем. --}}
+                         текст поверх фотографии без подложки нечитаем —
+                         в тёмной теме она затемняет, в светлой осветляет,
+                         и это один и тот же токен, а не два случая.
+
+                         Токен именно `page-alt`, а не `page`: он равен
+                         собственному фону карточки, и баннер с фоновым
+                         снимком не оказывается другого оттенка, чем баннер
+                         без него. На светлой теме разница между 0.938
+                         и 0.973 видна, на тёмной между 0.16 и 0.13 — нет,
+                         поэтому до вехи 4.11 расхождение и не замечали. --}}
                     @if ($promo['image_url'] !== null)
                         <img
                             src="{{ $promo['image_url'] }}"
@@ -278,14 +306,14 @@
                             loading="lazy"
                             class="absolute inset-0 size-full object-cover"
                         >
-                        <div class="absolute inset-0 bg-page/78"></div>
+                        <div class="absolute inset-0 bg-page-alt/78"></div>
                     @endif
 
-                    {{-- Кружок с заливкой `bg-accent`, поэтому иконка идёт
-                         по тёмному: `text-page` красит её через
+                    {{-- Кружок с заливкой `bg-accent-solid`, поэтому иконка идёт
+                         по тёмному: `text-on-accent` красит её через
                          `currentColor` — цвет берётся от родителя, а не
                          задаётся внутри компонента. --}}
-                    <div class="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-accent text-page">
+                    <div class="relative flex size-11 shrink-0 items-center justify-center rounded-full bg-accent-solid text-on-accent">
                         <x-ui.icon name="percent" class="size-5.5" />
                     </div>
 
@@ -308,7 +336,7 @@
                     @if ($promo['link_text'] !== null && $promo['link_url'] !== null)
                         <a
                             href="{{ $promo['link_url'] }}"
-                            class="relative shrink-0 rounded-full border border-accent/50 px-6 py-3 text-sm font-semibold text-accent transition hover:-translate-y-px hover:bg-accent/12"
+                            class="relative shrink-0 rounded-full border border-accent/50 px-6 py-3 text-sm font-semibold text-accent transition hover:-translate-y-px hover:bg-accent-solid/12"
                         >{{ $promo['link_text'] }}</a>
                     @endif
                 </div>
@@ -348,7 +376,11 @@
             ));
         @endphp
 
-        <section id="cars" class="px-5 pt-4 pb-20 lg:px-8 lg:pb-30">
+        {{-- Третья и последняя светлая секция верхнего участка: фон тот же
+             `page`, что у полосы доверия и промо, поэтому граница между
+             ними не читается вовсе — это один светлый блок. Следующая
+             секция (быстрый подбор) тёмная, и переход происходит там. --}}
+        <section id="cars" class="theme-light px-5 pt-4 pb-20 lg:px-8 lg:pb-30">
             <div class="mx-auto max-w-page">
                 <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
                     <div>
@@ -407,7 +439,7 @@
                                 aria-pressed="true"
                                 x-on:click="status = 'all'"
                                 x-bind:aria-pressed="status === 'all' ? 'true' : 'false'"
-                                class="rounded-full border border-white/15 px-5 py-2.5 text-sm transition-colors hover:border-accent/50 hover:text-accent aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:font-semibold aria-pressed:text-page"
+                                class="rounded-full border border-line-strong px-5 py-2.5 text-sm transition-colors hover:border-accent/50 hover:text-accent aria-pressed:border-accent aria-pressed:bg-accent-solid aria-pressed:font-semibold aria-pressed:text-on-accent"
                             >Все</button>
 
                             @foreach ($statuses as $status)
@@ -416,7 +448,7 @@
                                     aria-pressed="false"
                                     x-on:click="status = '{{ $status->value }}'"
                                     x-bind:aria-pressed="status === '{{ $status->value }}' ? 'true' : 'false'"
-                                    class="rounded-full border border-white/15 px-5 py-2.5 text-sm transition-colors hover:border-accent/50 hover:text-accent aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:font-semibold aria-pressed:text-page"
+                                    class="rounded-full border border-line-strong px-5 py-2.5 text-sm transition-colors hover:border-accent/50 hover:text-accent aria-pressed:border-accent aria-pressed:bg-accent-solid aria-pressed:font-semibold aria-pressed:text-on-accent"
                                 >{{ $status->label() }}</button>
                             @endforeach
                         </div>
@@ -446,7 +478,7 @@
                              нет», и именно суженная фильтром выдача —
                              момент, когда предложение подобрать нужнее
                              всего. --}}
-                        <div class="flex flex-col justify-center gap-5 rounded-card border border-dashed border-white/16 p-8">
+                        <div class="flex flex-col justify-center gap-5 rounded-card border border-dashed border-line-strong p-8">
                             <h3 class="font-display text-[19px] font-semibold">Не нашли модель?</h3>
 
                             <p class="text-sm leading-[1.65] text-ink-muted">
@@ -462,7 +494,7 @@
                                  на контейнере здесь не подходит. --}}
                             <a
                                 href="#selection"
-                                class="self-start rounded-full bg-accent px-6 py-3 text-sm font-semibold text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                                class="self-start rounded-full bg-accent-solid px-6 py-3 text-sm font-semibold text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover"
                             >Получить подборку</a>
                         </div>
                     </div>
@@ -471,7 +503,7 @@
                 <div class="mt-11 flex justify-center">
                     <a
                         href="{{ route('catalog.index') }}"
-                        class="rounded-full border border-white/35 px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] transition hover:-translate-y-0.5 hover:border-white/70"
+                        class="rounded-full border border-line-loud px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] transition hover:-translate-y-0.5 hover:border-ink-muted"
                     >Весь каталог →</a>
                 </div>
             </div>
@@ -608,7 +640,7 @@
                         Перейти в каталог». Честно и полезно; со скриптом
                         становится подбором.
                     --}}
-                    <div x-cloak class="rounded-card border border-white/8 bg-surface p-7 lg:p-9">
+                    <div x-cloak class="rounded-card border border-line bg-surface p-7 lg:p-9">
                         <div>
                             <div class="mb-3.5 flex items-baseline justify-between gap-4">
                                 <label for="selection-budget" class="text-sm font-medium text-ink-muted">Бюджет</label>
@@ -637,7 +669,7 @@
                                 step="{{ $step }}"
                                 value="{{ $sliderMax }}"
                                 x-model.number="budget"
-                                class="h-1 w-full appearance-none rounded-full bg-white/15 [&::-moz-range-thumb]:size-5.5 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-accent [&::-moz-range-thumb]:shadow-[0_0_0_6px_rgb(249_194_39/0.18)] [&::-webkit-slider-thumb]:size-5.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-[0_0_0_6px_rgb(249_194_39/0.18)]"
+                                class="h-1 w-full appearance-none rounded-full bg-line-strong [&::-moz-range-thumb]:size-5.5 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-accent-solid [&::-moz-range-thumb]:shadow-[0_0_0_6px_rgb(249_194_39/0.18)] [&::-webkit-slider-thumb]:size-5.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent-solid [&::-webkit-slider-thumb]:shadow-[0_0_0_6px_rgb(249_194_39/0.18)]"
                             >
                         </div>
 
@@ -694,7 +726,7 @@
                                                 class="peer sr-only"
                                             >
 
-                                            <span class="inline-block rounded-full border border-white/15 px-5 py-2.5 text-sm transition-colors hover:border-accent/50 peer-checked:border-accent peer-checked:bg-accent peer-checked:font-semibold peer-checked:text-page peer-focus-visible:outline-2 peer-focus-visible:outline-offset-[3px] peer-focus-visible:outline-accent">{{ $option['label'] }}</span>
+                                            <span class="inline-block rounded-full border border-line-strong px-5 py-2.5 text-sm transition-colors hover:border-accent/50 peer-checked:border-accent peer-checked:bg-accent-solid peer-checked:font-semibold peer-checked:text-on-accent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-[3px] peer-focus-visible:outline-accent">{{ $option['label'] }}</span>
                                         </label>
                                     @endforeach
                                 </div>
@@ -702,7 +734,7 @@
                         @endforeach
                     </div>
 
-                    <div class="flex flex-col justify-between gap-7 rounded-card border border-white/8 bg-surface p-7 lg:p-9">
+                    <div class="flex flex-col justify-between gap-7 rounded-card border border-line bg-surface p-7 lg:p-9">
                         <div>
                             {{-- Счётчик печатается поверх серверного числа,
                                  а не вместо него: без скрипта здесь остаётся
@@ -735,7 +767,7 @@
                         <a
                             href="{{ route('catalog.index') }}"
                             x-bind:href="href"
-                            class="rounded-full bg-accent px-9 py-4.5 text-center text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                            class="rounded-full bg-accent-solid px-9 py-4.5 text-center text-[15px] font-semibold tracking-[0.02em] text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover"
                         >Получить подборку</a>
                     </div>
                 </div>
@@ -770,21 +802,64 @@
                 </div>
 
                 {{-- Карточки на фоне `page`, а не `surface`: секция уже
-                     на `deep`, и `surface` дал бы третий оттенок на экране. --}}
+                     на `deep`, и `surface` дал бы третий оттенок на экране.
+                     Иллюстрация внутри карточки — не повод завести третий:
+                     кадр держит `bg-photo`, тот же токен, что у каталога. --}}
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
                     @foreach ($steps as $step)
-                        <article class="rounded-card border border-white/8 bg-page p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30">
-                            @if ($step['number'] !== null)
-                                <div class="mb-5.5 flex size-10 items-center justify-center rounded-full bg-accent/14 font-display text-[15px] font-bold text-accent">
-                                    {{ $step['number'] }}
+                        <article class="overflow-hidden rounded-card border border-line bg-page transition duration-250 hover:-translate-y-1 hover:border-accent/30">
+                            @if ($step['image_url'] !== null)
+                                {{-- Пропорция задана контейнером и одинакова
+                                     у всех шести: изображения разной высоты
+                                     иначе разъехались бы по сетке. Приём тот же,
+                                     что в `car-card`, — и по той же причине
+                                     не нужны width/height, которых у записи
+                                     библиотеки нет в известном виде.
+
+                                     `loading="lazy"` обязателен: блок восьмой
+                                     из четырнадцати, он заведомо ниже сгиба,
+                                     и шесть иллюстраций иначе конкурируют
+                                     за канал с фоном первого экрана. Правило
+                                     проекта запрещает ленивую загрузку только
+                                     самому фону хиро — LCP-изображению. --}}
+                                <div class="relative aspect-4/3 bg-photo">
+                                    <img
+                                        src="{{ $step['image_url'] }}"
+                                        alt="Этап покупки: {{ $step['title'] }}"
+                                        loading="lazy"
+                                        class="size-full object-cover"
+                                    >
+
+                                    {{-- Номер переезжает на кадр, а не исчезает:
+                                         порядок содержателен — без нумерации
+                                         «подбор → проверка → доставка»
+                                         превращается в набор картинок. --}}
+                                    @if ($step['number'] !== null)
+                                        <div class="absolute top-4 left-4 flex size-10 items-center justify-center rounded-full bg-deep/85 font-display text-[15px] font-bold text-accent">
+                                            {{ $step['number'] }}
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
 
-                            <h3 class="mb-3 text-[17px] font-semibold">{{ $step['title'] }}</h3>
+                            <div class="p-7">
+                                {{-- Этап без картинки остаётся прежней текстовой
+                                     карточкой — с номером над заголовком
+                                     и без пустой рамки на месте изображения.
+                                     Требовать картинку значило бы сносить
+                                     с сайта этап, которому её ещё не подобрали. --}}
+                                @if ($step['image_url'] === null && $step['number'] !== null)
+                                    <div class="mb-5.5 flex size-10 items-center justify-center rounded-full bg-accent-solid/14 font-display text-[15px] font-bold text-accent">
+                                        {{ $step['number'] }}
+                                    </div>
+                                @endif
 
-                            @if ($step['text'] !== null)
-                                <p class="text-sm leading-[1.65] text-ink-muted">{{ $step['text'] }}</p>
-                            @endif
+                                <h3 class="mb-3 text-[17px] font-semibold">{{ $step['title'] }}</h3>
+
+                                @if ($step['text'] !== null)
+                                    <p class="text-sm leading-[1.65] text-ink-muted">{{ $step['text'] }}</p>
+                                @endif
+                            </div>
                         </article>
                     @endforeach
                 </div>
@@ -811,7 +886,13 @@
         роуты, то есть код. Триггер завести настройку назван: первая просьба
         заказчика поправить эти тексты.
     --}}
-    <section id="service" class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
+    {{-- Светлая секция после двух тёмных (быстрый подбор и этапы). Свой
+         `bg-page-alt` она сохраняет: внутри светлого поддерева он даёт
+         светло-серый, а не тёмный, — утилиты Tailwind лежат слоем выше
+         `@layer base`, поэтому класс на секции перебивает фон, заданный
+         самим `.theme-light`. Чередование оттенков внутри светлого участка
+         продолжает работать: здесь `page-alt`, у следующих услуг `page`. --}}
+    <section id="service" class="theme-light bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
         <div class="mx-auto grid max-w-page items-start gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
             <div class="relative flex min-h-105 items-end overflow-hidden rounded-card lg:min-h-140">
                 {{--
@@ -835,8 +916,28 @@
 
                 {{-- Маска: подпись лежит на самом светлом участке кадра,
                      поэтому нижний стоп почти непрозрачный — приглушённый
-                     текст поверх блика нечитаем. --}}
-                <div class="absolute inset-0 bg-gradient-to-t from-page/96 via-page/62 to-page/10"></div>
+                     текст поверх блика нечитаем.
+
+                     С вехой 4.11 секция светлая, и маска вместе с ней
+                     перевернулась: тот же `from-page/96` теперь не
+                     затемняет низ кадра, а осветляет его, а текст поверх
+                     стал тёмным — оба конца пары держатся на токенах,
+                     поэтому переворот произошёл без единой правки здесь.
+                     Верх кадра остаётся фотографией как есть; панель
+                     обрезана `rounded-card` и читается своей поверхностью,
+                     а не продолжением фона секции.
+
+                     Стопы при этом пришлось пересчитать. В прежних
+                     (`96 → 62 на половине высоты → 10`) подпись попадала
+                     примерно на 78% непрозрачности, и на тёмной теме этого
+                     хватало — приглушённый СВЕТЛЫЙ текст поверх тёмного
+                     кадра читается и через полупрозрачную маску. На светлой
+                     тот же процент даёт тёмный текст поверх мутного серого:
+                     около 3:1 при минимуме 4.5:1. Непрозрачная часть
+                     поднята к 30% высоты, то есть ровно под подпись;
+                     середина и верх кадра остались прежними с точностью
+                     до пары процентов. --}}
+                <div class="absolute inset-0 bg-gradient-to-t from-page via-page/88 via-30% to-page/8"></div>
 
                 <div class="relative p-7">
                     <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">После покупки</div>
@@ -880,9 +981,9 @@
                     ] as $card)
                         <a
                             href="{{ $card['url'] }}"
-                            class="block rounded-card border border-white/7 bg-surface p-6.5 transition duration-250 hover:-translate-y-1 hover:border-accent/30"
+                            class="block rounded-card border border-line bg-surface p-6.5 transition duration-250 hover:-translate-y-1 hover:border-accent/30"
                         >
-                            <div class="mb-5 flex size-12 items-center justify-center rounded-xl bg-accent/14 text-accent">
+                            <div class="mb-5 flex size-12 items-center justify-center rounded-xl bg-accent-solid/14 text-accent">
                                 <x-ui.icon :name="$card['icon']" class="size-6" />
                             </div>
 
@@ -933,7 +1034,11 @@
             прайс пишет `HomeContent`.
         --}}
         @if ($serviceGroups !== [])
-            <section id="services" class="px-5 py-20 lg:px-8 lg:py-30">
+            {{-- Светлая, фон `page` — на тон светлее предыдущего автосервиса
+                 (`page-alt`). На экране одновременно видны ровно два
+                 оттенка, и это тот самый стык, где до вехи 4.11 разница
+                 не читалась вовсе. --}}
+            <section id="services" class="theme-light px-5 py-20 lg:px-8 lg:py-30">
                 <div class="mx-auto max-w-page">
                     <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
                         <div>
@@ -952,9 +1057,9 @@
 
                     <div class="grid gap-6 min-[900px]:grid-cols-2">
                         @foreach ($serviceGroups as $group)
-                            <article class="rounded-card border border-white/8 bg-surface p-7 lg:p-8">
+                            <article class="rounded-card border border-line bg-surface p-7 lg:p-8">
                                 <div class="mb-2 flex items-center gap-4">
-                                    <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent/14 text-accent">
+                                    <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-solid/14 text-accent">
                                         <x-ui.icon :name="$group['icon']" class="size-5.5" />
                                     </div>
 
@@ -983,7 +1088,7 @@
                                         <a
                                             href="#lead-form"
                                             x-on:click="pick({{ $service->getKey() }})"
-                                            class="group flex items-baseline justify-between gap-4 border-t border-white/8 py-3.5 first:border-t-0"
+                                            class="group flex items-baseline justify-between gap-4 border-t border-line py-3.5 first:border-t-0"
                                         >
                                             <span class="text-[15px] leading-[1.4] transition-colors group-hover:text-accent">{{ $service->title }}</span>
 
@@ -1013,7 +1118,7 @@
                     <div class="mt-11 flex justify-center">
                         <a
                             href="{{ route('services.index') }}"
-                            class="rounded-full bg-accent px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                            class="rounded-full bg-accent-solid px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover"
                         >Посмотреть все услуги</a>
                     </div>
                 </div>
@@ -1047,12 +1152,12 @@
                     </div>
 
                     <div class="grid gap-6 lg:grid-cols-[1.3fr_1fr] lg:gap-8">
-                        <div class="rounded-card border border-white/8 bg-surface px-7 py-3 lg:px-9 lg:py-4">
+                        <div class="rounded-card border border-line bg-surface px-7 py-3 lg:px-9 lg:py-4">
                             @foreach ($priceBreakdown as $row)
                                 {{-- Граница снизу у каждой строки и погашена
                                      у последней: иначе список заканчивается
                                      линией, повторяющей край карточки. --}}
-                                <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-white/8 py-5 last:border-b-0">
+                                <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-line py-5 last:border-b-0">
                                     <div class="text-[15px] font-semibold">{{ $row['title'] }}</div>
 
                                     @if ($row['note'] !== null)
@@ -1066,7 +1171,7 @@
                              контейнере плашка растянулась бы на всю ширину
                              карточки вопреки `inline-block`, и оговорка стала
                              бы похожа на заголовок блока. --}}
-                        <div class="flex flex-col items-start gap-4.5 rounded-card border border-white/8 bg-surface p-7 lg:p-9">
+                        <div class="flex flex-col items-start gap-4.5 rounded-card border border-line bg-surface p-7 lg:p-9">
                             {{-- Та же разметка, что у оговорки цен
                                  на `/services`: смысл один — «это не оферта», —
                                  и две по-разному набранные плашки читались бы
@@ -1089,7 +1194,7 @@
 
                             <a
                                 href="#lead-form"
-                                class="rounded-full bg-accent px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                                class="rounded-full bg-accent-solid px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover"
                             >Получить расчёт</a>
                         </div>
                     </div>
@@ -1108,7 +1213,10 @@
             «Отзывы» над пустой сеткой читается как поломка.
         --}}
         @if ($reviews->isNotEmpty())
-            <section id="about" class="px-5 py-20 lg:px-8 lg:py-30">
+            {{-- Светлая: после тёмной прозрачности цены страница снова
+                 светлеет. Отзывы и преимущества под ними — один светлый
+                 участок, как полоса доверия с промо и подборкой наверху. --}}
+            <section id="about" class="theme-light px-5 py-20 lg:px-8 lg:py-30">
                 <div class="mx-auto max-w-page">
                     <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
                         <div>
@@ -1127,7 +1235,7 @@
 
                     <div class="grid gap-6 md:grid-cols-3">
                         @foreach ($reviews as $review)
-                            <article class="flex flex-col gap-4 rounded-card border border-white/8 bg-surface p-7">
+                            <article class="flex flex-col gap-4 rounded-card border border-line bg-surface p-7">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex min-w-0 items-center gap-3">
                                         {{-- Фото необязательно: `media_id`
@@ -1191,7 +1299,10 @@
              Пустой список убирает секцию: пустая сетка под заголовком
              читается как поломка, а не как «мало контента». --}}
         @if ($advantages !== [])
-            <section class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
+            {{-- Последняя светлая секция страницы: `page-alt` на тон темнее
+                 отзывов над ней, а FAQ под ней уже тёмный — светлый участок
+                 заканчивается здесь. --}}
+            <section class="theme-light bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
                 <div class="mx-auto max-w-page">
                     <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Почему мы</div>
 
@@ -1201,9 +1312,9 @@
 
                     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                         @foreach ($advantages as $advantage)
-                            <div class="rounded-card border border-white/7 bg-surface p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30 lg:px-7 lg:py-9">
+                            <div class="rounded-card border border-line bg-surface p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30 lg:px-7 lg:py-9">
                                 @if ($advantage['number'] !== null)
-                                    <div class="mb-5.5 flex size-10 items-center justify-center rounded-full bg-accent/14 font-display text-[15px] font-bold text-accent">
+                                    <div class="mb-5.5 flex size-10 items-center justify-center rounded-full bg-accent-solid/14 font-display text-[15px] font-bold text-accent">
                                         {{ $advantage['number'] }}
                                     </div>
                                 @endif
@@ -1249,13 +1360,13 @@
                         </h2>
                     </div>
 
-                    <div class="border-t border-white/10">
+                    <div class="border-t border-line">
                         @foreach ($faq as $index => $item)
                             {{-- Первый вопрос раскрыт: закрытый целиком блок
                                  читается как список ссылок, а не как ответы,
                                  и человек уходит, не поняв, что здесь есть
                                  текст. --}}
-                            <details class="group border-b border-white/10" @if ($index === 0) open @endif>
+                            <details class="group border-b border-line" @if ($index === 0) open @endif>
                                 {{-- Маркер браузера гасится обоими способами:
                                      `list-none` не убирает треугольник
                                      в WebKit — там за него отвечает

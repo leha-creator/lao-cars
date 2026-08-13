@@ -33,7 +33,11 @@
 @section('description', 'ТО и ремонт, шиномонтаж, детейлинг и дополнительные сервисы для автомобилей любых марок.')
 
 @section('content')
-    <x-page-heading eyebrow="Услуги" :title="$title" :intro="$intro">
+    {{-- Страница автосервиса светлая целиком (веха 4.11): шапка, прайс
+         и «почему сюда» — три светлые секции подряд, из них последняя
+         на тон темнее (`page-alt`). Секцию заявки под ними красит сам
+         компонент по своей раскладке. --}}
+    <x-page-heading eyebrow="Услуги" :title="$title" :intro="$intro" class="theme-light">
         {{-- Якорная навигация: прайс длинный, и человек, пришедший
              за шиномонтажом, не должен пролистывать три чужие категории.
 
@@ -47,7 +51,7 @@
                     @foreach ($blocks as $block)
                         <a
                             href="#{{ $block['anchor'] }}"
-                            class="rounded-full border border-white/15 px-5 py-2.5 text-sm transition-colors hover:border-accent/50 hover:text-accent"
+                            class="rounded-full border border-line-strong px-5 py-2.5 text-sm transition-colors hover:border-accent/50 hover:text-accent"
                         >{{ $block['category']->label() }}</a>
                     @endforeach
                 </nav>
@@ -79,7 +83,20 @@
         }"
     >
         @if ($blocks !== [])
-            <div class="px-5 lg:px-8">
+            {{-- Светлая тема висит на обёртке с боковыми полями, а не
+                 на секциях внутри неё: у секций полей нет, они лежат
+                 в колонке контента, и фон каждой оборвался бы по её
+                 краям — по светлой странице пошли бы тёмные полосы
+                 слева и справа.
+
+                 Нижний отступ — `pb` здесь, а не `mb` у оговорки о ценах,
+                 и это не стилистика. Вертикальный внешний отступ последнего
+                 потомка схлопывается наружу через обёртки без padding
+                 и границы, то есть выпадает ИЗ закрашенной области: `mb-6`
+                 у оговорки давал ровно 24 пикселя тёмной полосы поперёк
+                 светлой страницы. До вехи 4.11 этого не было видно, потому
+                 что по обе стороны полосы был один цвет. --}}
+            <div class="theme-light px-5 pb-6 lg:px-8">
                 <div class="mx-auto max-w-page">
                     @foreach ($blocks as $index => $block)
                         {{-- Верхняя граница разделяет блоки, поэтому у первого
@@ -89,12 +106,12 @@
                             id="{{ $block['anchor'] }}"
                             @class([
                                 'py-13 lg:py-16',
-                                'border-t border-white/10' => $index > 0,
+                                'border-t border-line' => $index > 0,
                             ])
                         >
                             <div class="grid items-start gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14">
                                 <div>
-                                    <div class="mb-5 flex size-10 items-center justify-center rounded-xl bg-accent/14 text-accent">
+                                    <div class="mb-5 flex size-10 items-center justify-center rounded-xl bg-accent-solid/14 text-accent">
                                         <x-ui.icon :name="$block['icon']" class="size-5.5" />
                                     </div>
 
@@ -138,7 +155,7 @@
                                         <a
                                             href="#lead-form"
                                             x-on:click="pick({{ $service->getKey() }})"
-                                            class="group flex items-baseline justify-between gap-4 border-t border-white/8 py-3.5 first:border-t-0 md:[&:nth-child(2)]:border-t-0"
+                                            class="group flex items-baseline justify-between gap-4 border-t border-line py-3.5 first:border-t-0 md:[&:nth-child(2)]:border-t-0"
                                         >
                                             <span class="text-[15px] leading-[1.4] transition-colors group-hover:text-accent">{{ $service->title }}</span>
 
@@ -170,7 +187,7 @@
                          вместе с плашкой, потому что плашка без пояснения
                          ничего не сообщает. --}}
                     @if ($disclaimer !== null)
-                        <div class="mb-6 flex flex-wrap items-center gap-4 rounded-card border border-accent/25 bg-accent/6 px-6.5 py-5.5">
+                        <div class="flex flex-wrap items-center gap-4 rounded-card border border-accent/25 bg-accent-solid/6 px-6.5 py-5.5">
                             <span class="inline-block shrink-0 rounded-full border border-accent/40 px-2.5 py-1 text-[11px] tracking-[0.08em] text-accent uppercase">
                                 Не публичная оферта
                             </span>
@@ -189,7 +206,7 @@
             как обрезанный блок.
         --}}
         @if ($advantages !== [])
-            <section class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
+            <section class="theme-light bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
                 <div class="mx-auto grid max-w-page items-start gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
                     <div class="relative flex min-h-105 items-end overflow-hidden rounded-card lg:min-h-140">
                         {{--
@@ -216,10 +233,20 @@
                         >
 
                         {{-- Маска: подпись лежит на самом светлом участке
-                             кадра, поэтому нижний стоп почти непрозрачный —
+                             кадра, поэтому нижний стоп непрозрачный —
                              приглушённый текст поверх блика нечитаем.
-                             Значения стопов из макета. --}}
-                        <div class="absolute inset-0 bg-gradient-to-t from-page/96 via-page/62 to-page/10"></div>
+
+                             Стопы макета (`96 → 62 → 10`) заменены вехой 4.11
+                             вместе со светлой темой: подпись попадала
+                             примерно на 78% непрозрачности, и тёмному тексту
+                             поверх мутного серого этого не хватало (около
+                             3:1 при минимуме 4.5:1). Непрозрачная часть
+                             поднята к 30% высоты — ровно под подпись.
+                             Разбор целиком — у такой же панели на главной
+                             (`home/index.blade.php`, блок «Экосистема»);
+                             панели обязаны остаться одинаковыми, кадр
+                             у них один. --}}
+                        <div class="absolute inset-0 bg-gradient-to-t from-page via-page/88 via-30% to-page/8"></div>
 
                         {{-- Подпись живёт в шаблоне, а не в настройках: она
                              описывает конкретный кадр и меняется только вместе
@@ -252,9 +279,9 @@
                              разъехались бы на первой же правке одной из них. --}}
                         <div class="mt-9 grid gap-5 sm:grid-cols-2">
                             @foreach ($advantages as $advantage)
-                                <div class="rounded-card border border-white/7 bg-surface p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30">
+                                <div class="rounded-card border border-line bg-surface p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30">
                                     @if ($advantage['number'] !== null)
-                                        <div class="mb-5.5 flex size-10 items-center justify-center rounded-full bg-accent/14 font-display text-[15px] font-bold text-accent">
+                                        <div class="mb-5.5 flex size-10 items-center justify-center rounded-full bg-accent-solid/14 font-display text-[15px] font-bold text-accent">
                                             {{ $advantage['number'] }}
                                         </div>
                                     @endif

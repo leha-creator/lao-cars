@@ -28,13 +28,16 @@
 @section('description', 'Подбор оригинальных запчастей и проверенных аналогов по марке, модели и VIN.')
 
 @section('content')
-    <x-page-heading eyebrow="Запчасти" :title="$title" :intro="$intro" />
+    {{-- Страница светлая целиком (веха 4.11). Нижнего поля секциям
+         не задаём: страница всегда заканчивается секцией заявки, и отступ
+         даёт она. --}}
+    <x-page-heading eyebrow="Запчасти" :title="$title" :intro="$intro" class="theme-light" />
 
     {{-- Пустая категория убирает секцию целиком: заголовок над пустой сеткой
          читается как поломка. Причину при этом пишет WARN в лог
          (`PartsController`), а не молчание. --}}
     @if ($categories->isNotEmpty())
-        <section class="px-5 pt-12 lg:px-8 lg:pt-16">
+        <section class="theme-light px-5 pt-12 lg:px-8 lg:pt-16">
             <div class="mx-auto max-w-page">
                 <h2 class="mb-8 font-display text-[26px] leading-[1.2] font-semibold lg:mb-10 lg:text-3xl">
                     Что подбираем
@@ -42,7 +45,7 @@
 
                 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ($categories as $category)
-                        <div class="rounded-card border border-white/8 bg-surface p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30">
+                        <div class="rounded-card border border-line bg-surface p-7 transition duration-250 hover:-translate-y-1 hover:border-accent/30">
                             <h3 class="text-[17px] font-semibold">{{ $category->title }}</h3>
 
                             @if ($category->description !== null && $category->description !== '')
@@ -60,9 +63,9 @@
     @endif
 
     @if ($deliveryTerms !== null && $deliveryTerms !== '')
-        <section class="px-5 pt-12 lg:px-8">
+        <section class="theme-light px-5 pt-12 lg:px-8">
             <div class="mx-auto max-w-page">
-                <div class="max-w-2xl rounded-card border border-white/10 bg-surface p-6 lg:p-8">
+                <div class="max-w-2xl rounded-card border border-line bg-surface p-6 lg:p-8">
                     <div class="mb-2 text-sm font-semibold">Условия поставки</div>
                     <p class="text-sm leading-relaxed text-ink-muted">{{ $deliveryTerms }}</p>
                 </div>

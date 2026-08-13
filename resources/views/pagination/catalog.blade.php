@@ -36,7 +36,7 @@
                     href="{{ $paginator->previousPageUrl() }}"
                     rel="prev"
                     aria-label="Предыдущая страница"
-                    class="flex size-10 items-center justify-center rounded-field border border-white/15 text-sm text-ink-muted transition hover:border-accent/50 hover:text-accent"
+                    class="flex size-10 items-center justify-center rounded-field border border-line-strong text-sm text-ink-muted transition hover:border-accent/50 hover:text-accent"
                 >←</a>
             @endif
 
@@ -52,7 +52,7 @@
                         @if ($page == $paginator->currentPage())
                             <span
                                 aria-current="page"
-                                class="flex size-10 items-center justify-center rounded-field bg-accent text-sm font-semibold text-page"
+                                class="flex size-10 items-center justify-center rounded-field bg-accent-solid text-sm font-semibold text-on-accent"
                             >{{ $page }}</span>
                         @else
                             {{-- Подпись ссылки — «Страница 2», а не голая цифра:
@@ -61,7 +61,7 @@
                             <a
                                 href="{{ $url }}"
                                 aria-label="Страница {{ $page }}"
-                                class="flex size-10 items-center justify-center rounded-field border border-white/15 text-sm text-ink-muted transition hover:border-accent/50 hover:text-accent"
+                                class="flex size-10 items-center justify-center rounded-field border border-line-strong text-sm text-ink-muted transition hover:border-accent/50 hover:text-accent"
                             >{{ $page }}</a>
                         @endif
                     @endforeach
@@ -73,7 +73,7 @@
                     href="{{ $paginator->nextPageUrl() }}"
                     rel="next"
                     aria-label="Следующая страница"
-                    class="flex size-10 items-center justify-center rounded-field border border-white/15 text-sm text-ink-muted transition hover:border-accent/50 hover:text-accent"
+                    class="flex size-10 items-center justify-center rounded-field border border-line-strong text-sm text-ink-muted transition hover:border-accent/50 hover:text-accent"
                 >→</a>
             @endif
         </div>

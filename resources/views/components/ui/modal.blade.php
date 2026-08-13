@@ -23,6 +23,14 @@
     скрыты стрелки фотогалереи: без скрипта оно не откроется никогда,
     и мелькнувший при загрузке диалог — это не «мало стилей», а поломка
     в глазах посетителя.
+
+    Окно ТЁМНОЕ на любой странице (веха 4.11), и это решение, а не пропуск.
+    Оно живёт в layout, то есть вне `.theme-light`, и получает тёмные токены
+    вместе с шапкой и подвалом. Формы стоят и на светлых страницах,
+    и на тёмной секции заявки главной; одинаковый диалог поверх притемнённой
+    страницы читается как диалог в обоих случаях, а перекрашивать окно
+    под страницу значило бы завести вторую его версию ради подтверждения
+    из трёх строк.
 --}}
 <div
     x-data="{
@@ -76,19 +84,19 @@
 
     <div
         x-transition.opacity.duration.200ms
-        class="relative w-full max-w-[440px] rounded-card border border-white/10 bg-surface p-8 text-center lg:p-9"
+        class="relative w-full max-w-[440px] rounded-card border border-line bg-surface p-8 text-center lg:p-9"
     >
         <button
             type="button"
             x-ref="close"
             x-on:click="hide()"
-            class="absolute top-4 right-4 flex size-9 items-center justify-center rounded-field border border-white/10 bg-white/6 text-ink-muted transition-colors hover:text-ink"
+            class="absolute top-4 right-4 flex size-9 items-center justify-center rounded-field border border-line bg-overlay text-ink-muted transition-colors hover:text-ink"
             aria-label="Закрыть"
         >
             <x-ui.icon name="close" class="size-4" />
         </button>
 
-        <div class="mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-accent/14 text-accent">
+        <div class="mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-accent-solid/14 text-accent">
             <x-ui.icon name="check-circle" class="size-7" />
         </div>
 
@@ -104,7 +112,7 @@
         <button
             type="button"
             x-on:click="hide()"
-            class="mt-7 w-full rounded-full bg-accent py-3.5 text-[15px] font-semibold text-page transition hover:bg-accent-hover"
+            class="mt-7 w-full rounded-full bg-accent-solid py-3.5 text-[15px] font-semibold text-on-accent transition hover:bg-accent-hover"
         >Понятно</button>
     </div>
 </div>

@@ -54,7 +54,7 @@
 @if (session('status'))
     {{-- Одно и то же сообщение видят и человек, и бот, заполнивший
          ловушку: ответ, отличающийся от успеха, выдал бы ловушку. --}}
-    <p class="mb-6 rounded-field border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent">
+    <p class="mb-6 rounded-field border border-accent/40 bg-accent-solid/10 px-4 py-3 text-sm text-accent">
         {{ session('status') }}
     </p>
 @endif
@@ -97,7 +97,7 @@
             name="name"
             value="{{ old('name') }}"
             required
-            class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+            class="rounded-field border border-line-strong bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
         >
         @error('name')
             <span data-server-error class="text-sm text-danger">{{ $message }}</span>
@@ -112,7 +112,7 @@
             name="phone"
             value="{{ old('phone') }}"
             required
-            class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+            class="rounded-field border border-line-strong bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
         >
         @error('phone')
             <span data-server-error class="text-sm text-danger">{{ $message }}</span>
@@ -126,7 +126,7 @@
             type="email"
             name="email"
             value="{{ old('email') }}"
-            class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+            class="rounded-field border border-line-strong bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
         >
         @error('email')
             <span data-server-error class="text-sm text-danger">{{ $message }}</span>
@@ -166,7 +166,7 @@
             <select
                 name="source_id"
                 id="lead-service"
-                class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                class="rounded-field border border-line-strong bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
             >
                 <option value="">Нужна консультация</option>
 
@@ -208,7 +208,7 @@
                  браузер красит выпадающий список по светлой схеме. --}}
             <select
                 name="contact_method"
-                class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                class="rounded-field border border-line-strong bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
             >
                 <option value="">Не важно</option>
                 @foreach (App\Enums\ContactMethod::options() as $value => $label)
@@ -225,7 +225,7 @@
             <span class="text-sm font-medium text-ink-muted">Удобное время звонка</span>
             <select
                 name="preferred_time"
-                class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                class="rounded-field border border-line-strong bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
             >
                 <option value="">Не важно</option>
                 @foreach (App\Enums\PreferredTime::options() as $value => $label)
@@ -249,7 +249,7 @@
                     type="text"
                     name="part_brand"
                     value="{{ old('part_brand') }}"
-                    class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                    class="rounded-field border border-line-strong bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
                 >
                 @error('part_brand')
                     <span data-server-error class="text-sm text-danger">{{ $message }}</span>
@@ -263,7 +263,7 @@
                     type="text"
                     name="part_model"
                     value="{{ old('part_model') }}"
-                    class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                    class="rounded-field border border-line-strong bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
                 >
                 @error('part_model')
                     <span data-server-error class="text-sm text-danger">{{ $message }}</span>
@@ -282,7 +282,7 @@
                 name="part_vin"
                 value="{{ old('part_vin') }}"
                 maxlength="17"
-                class="rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+                class="rounded-field border border-line-strong bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
             >
             @error('part_vin')
                 <span data-server-error class="text-sm text-danger">{{ $message }}</span>
@@ -296,7 +296,7 @@
         <textarea
             name="message"
             rows="4"
-            class="resize-y rounded-field border border-white/15 bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
+            class="resize-y rounded-field border border-line-strong bg-page px-4.5 py-4 text-[15px] transition-colors focus:border-accent/70 focus:outline-none"
         >{{ old('message') }}</textarea>
         @error('message')
             <span data-server-error class="text-sm text-danger">{{ $message }}</span>
@@ -333,6 +333,6 @@
     <button
         type="submit"
         x-bind:disabled="sending"
-        class="mt-1.5 rounded-full bg-accent py-4.5 text-[15px] font-semibold tracking-[0.02em] text-page transition hover:-translate-y-0.5 hover:bg-accent-hover disabled:pointer-events-none disabled:opacity-60"
+        class="mt-1.5 rounded-full bg-accent-solid py-4.5 text-[15px] font-semibold tracking-[0.02em] text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover disabled:pointer-events-none disabled:opacity-60"
     >{{ $submit }}</button>
 </form>

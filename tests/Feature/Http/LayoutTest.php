@@ -3,6 +3,7 @@
 use App\Models\Car;
 use App\Models\Setting;
 use App\Support\SiteMenu;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -63,6 +64,24 @@ it('omits the phone block instead of rendering an empty tel link', function () {
     $this->get('/')
         ->assertOk()
         ->assertDontSee('tel:"', escape: false);
+});
+
+it('warns in the log when the phone setting is empty', function () {
+    // Единственная запись в лог, которую делает публичный каркас, и потому
+    // единственная, которую могла задеть смена палитры вехи 4.11: правки шли
+    // по всем шаблонам подряд, а WARN живёт в компоненте шапки, а не в них.
+    //
+    // Тихий фолбэк здесь означал бы сайт без телефона, которого никто
+    // не заметил, — при том что весь сайт существует ради заявок.
+    Setting::set('contacts.phone', '');
+
+    Log::spy();
+
+    $this->get('/')->assertOk();
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => str_contains($message, 'не заполнен телефон'))
+        ->atLeast()->once();
 });
 
 it('links every menu item to a registered route', function () {

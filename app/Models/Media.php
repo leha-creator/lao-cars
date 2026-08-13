@@ -10,9 +10,9 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 /**
  * Запись общей медиабиблиотеки.
@@ -25,7 +25,10 @@ use Illuminate\Support\Str;
  *
  * Потребители появились вехой 3.5: фото сотрудников (`employees.media_id`),
  * фото авторов отзывов (`reviews.media_id`) и фон промо-блока на главной
- * (ключ настроек `home.promo.image_id`).
+ * (ключ настроек `home.promo.image_id`). Четвёртым стали иллюстрации
+ * этапов покупки — первая ссылка ВНУТРИ репитера настроек, ради которой
+ * реестр `MediaSettingKeys` и разделил ключ настройки с путём внутрь
+ * её значения.
  */
 #[Fillable(['disk', 'path', 'thumb_path', 'name', 'alt', 'mime', 'size'])]
 final class Media extends Model
@@ -57,15 +60,26 @@ final class Media extends Model
             $usages[] = "Отзыв: {$name}";
         }
 
-        foreach (MediaSettingKeys::all() as $path => $label) {
-            // Ключ строки настроек — это всё до последнего сегмента:
-            // `home.promo.image_id` хранится как поле `image_id` внутри
-            // jsonb-значения настройки `home.promo`.
-            $settingKey = Str::beforeLast($path, '.');
-            $field = Str::afterLast($path, '.');
+        foreach (MediaSettingKeys::all() as $entry) {
+            // Ключ настройки и путь внутрь её значения приходят из реестра
+            // раздельно — вывести их из одной строки нельзя: у репитера
+            // граница между ними не совпадает с последней точкой.
+            // Подробности отказа — в PHPDoc `MediaSettingKeys`.
+            $values = data_get(Setting::get($entry['setting']), $entry['path']);
 
-            if (data_get(Setting::get($settingKey), $field) === $this->getKey()) {
-                $usages[] = $label;
+            // Путь с подстановочным знаком отдаёт СПИСОК значений — по
+            // одному на элемент репитера, — а путь в объект одно. Обе
+            // формы приводятся к списку, и вопрос становится «id есть
+            // среди значений», а не «id равен значению».
+            foreach (Arr::wrap($values) as $value) {
+                if ($value === $this->getKey()) {
+                    // Одно упоминание на настройку: изображение, выбранное
+                    // сразу в двух этапах, — это по-прежнему одно место,
+                    // и повторять его в перечне нечем помочь.
+                    $usages[] = $entry['label'];
+
+                    break;
+                }
             }
         }
 

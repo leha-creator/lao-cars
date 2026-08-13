@@ -18,7 +18,7 @@
         // фотография под шапкой оставалась видимой.
         'relative bg-gradient-to-b from-page/92 to-page/0' => $overlay,
         // Внутренние страницы: липкая, полупрозрачная с размытием.
-        'sticky top-0 border-b border-white/10 bg-page/90 backdrop-blur-[14px]' => ! $overlay,
+        'sticky top-0 border-b border-line bg-page/90 backdrop-blur-[14px]' => ! $overlay,
     ])
 >
     <div class="mx-auto flex max-w-page items-center justify-between gap-6 px-5 py-3 lg:px-8 lg:py-4">
@@ -67,7 +67,7 @@
                      `aria-hidden`, иначе скринридер прочитал бы её дважды. --}}
                 <a
                     href="tel:{{ $phoneHref() }}"
-                    class="flex size-[42px] items-center justify-center rounded-field border border-white/10 bg-white/6 lg:hidden"
+                    class="flex size-[42px] items-center justify-center rounded-field border border-line bg-overlay lg:hidden"
                     aria-label="Позвонить: {{ $phone }}"
                 >
                     <x-ui.icon name="phone" class="size-[18px]" />
@@ -76,7 +76,7 @@
 
             <a
                 href="#lead-form"
-                class="hidden rounded-full bg-accent px-6 py-3 text-sm font-semibold tracking-[0.02em] text-page transition hover:-translate-y-px hover:bg-accent-hover lg:inline-block"
+                class="hidden rounded-full bg-accent-solid px-6 py-3 text-sm font-semibold tracking-[0.02em] text-on-accent transition hover:-translate-y-px hover:bg-accent-hover lg:inline-block"
             >Оставить заявку</a>
 
             {{-- Мобильное меню. `x-cloak` прячет панель до инициализации
@@ -91,7 +91,7 @@
                 <button
                     type="button"
                     x-on:click="open = true"
-                    class="flex size-[42px] flex-col items-center justify-center gap-[5px] rounded-field bg-accent"
+                    class="flex size-[42px] flex-col items-center justify-center gap-[5px] rounded-field bg-accent-solid"
                     aria-label="Открыть меню"
                 >
                     <span class="block h-0.5 w-[17px] rounded-sm bg-page"></span>
@@ -121,7 +121,7 @@
                         <button
                             type="button"
                             x-on:click="open = false"
-                            class="flex size-[42px] items-center justify-center rounded-field border border-white/10 bg-white/6"
+                            class="flex size-[42px] items-center justify-center rounded-field border border-line bg-overlay"
                             aria-label="Закрыть меню"
                         >
                             <x-ui.icon name="close" class="size-[18px]" />
@@ -134,7 +134,7 @@
                                 href="{{ $item['url'] }}"
                                 x-on:click="open = false"
                                 @class([
-                                    'border-b border-white/10 py-3.5 font-display text-2xl font-medium last:border-b-0',
+                                    'border-b border-line py-3.5 font-display text-2xl font-medium last:border-b-0',
                                     'text-accent' => $isActive($item['name']),
                                 ])
                             >{{ $item['label'] }}</a>
@@ -149,7 +149,7 @@
                         <a
                             href="#lead-form"
                             x-on:click="open = false"
-                            class="rounded-full bg-accent py-4 text-center text-sm font-semibold text-page"
+                            class="rounded-full bg-accent-solid py-4 text-center text-sm font-semibold text-on-accent"
                         >Оставить заявку</a>
                     </div>
                 </div>

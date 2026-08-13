@@ -70,7 +70,7 @@ final class HomeContent
      *     ticker: list<string>,
      *     promo: ?array{title: ?string, text: ?string, link_text: ?string, link_url: ?string, image_url: ?string},
      *     advantages: list<array{number: ?string, title: string, text: ?string}>,
-     *     steps: list<array{number: ?string, title: string, text: ?string}>,
+     *     steps: list<array{number: ?string, title: string, text: ?string, image_url: ?string}>,
      *     priceBreakdown: list<array{title: string, note: ?string}>,
      *     faq: list<array{question: string, answer: string}>,
      *     reviews: EloquentCollection<int, Review>,
@@ -284,7 +284,12 @@ final class HomeContent
      * что и в `advantages()`: карточка из одного номера выглядит
      * как поломка вёрстки, а не как «не дописали текст».
      *
-     * @return list<array{number: ?string, title: string, text: ?string}>
+     * Картинка, в отличие от заголовка, необязательна: этап без неё
+     * рендерится прежней текстовой карточкой. Обратное правило снесло бы
+     * с сайта этап, которому изображение ещё не подобрали, — и симптом
+     * читался бы как поломка сохранения формы, а не как пустое поле.
+     *
+     * @return list<array{number: ?string, title: string, text: ?string, image_url: ?string}>
      */
     private function steps(): array
     {
@@ -305,10 +310,82 @@ final class HomeContent
                 'number' => $this->string($item['number'] ?? null),
                 'title' => $title,
                 'text' => $this->string($item['text'] ?? null),
+                'image_id' => $item['image_id'] ?? null,
             ];
         }
 
-        return $steps;
+        return $this->withStepImages($steps);
+    }
+
+    /**
+     * Разрешить `image_id` этапов в URL — ОДНИМ запросом на весь блок.
+     *
+     * Приём `promoImageUrl()` (`find()` на каждый вызов) здесь не годится:
+     * для одной картинки промо это один запрос, для шести этапов — шесть,
+     * то есть N+1 на главной странице сайта. Правило проекта против N+1
+     * на списках действует и при шести элементах: шесть — это ровно то
+     * число, при котором приём копируют дальше.
+     *
+     * @param  list<array{number: ?string, title: string, text: ?string, image_id: mixed}>  $steps
+     * @return list<array{number: ?string, title: string, text: ?string, image_url: ?string}>
+     */
+    private function withStepImages(array $steps): array
+    {
+        $ids = [];
+
+        foreach ($steps as $step) {
+            // Пустота проверяется строго — правило `RULES.md`:
+            // `empty()` истинно и для нуля.
+            if ($step['image_id'] === null || $step['image_id'] === '') {
+                continue;
+            }
+
+            $ids[] = $step['image_id'];
+        }
+
+        /** @var EloquentCollection<int, Media> $media */
+        $media = $ids === []
+            ? new EloquentCollection
+            : Media::query()->whereKey(array_unique($ids))->get()->keyBy(
+                static fn (Media $record): int => (int) $record->getKey(),
+            );
+
+        $resolved = [];
+
+        foreach ($steps as $step) {
+            $id = $step['image_id'];
+            unset($step['image_id']);
+
+            $step['image_url'] = null;
+
+            if ($id !== null && $id !== '') {
+                $record = $media->get((int) $id);
+
+                if ($record === null) {
+                    // Штатным путём сюда не попасть: удаление используемой
+                    // записи блокирует `Media::usages()`, и ссылку внутри
+                    // репитера он теперь понимает. Значит запись пропала
+                    // в обход админки — и это стоит WARN, потому что
+                    // снаружи отказ неотличим от незаполненного поля:
+                    // карточка просто останется текстовой.
+                    Log::warning('[Главная] этап покупки ссылается на удалённую запись медиабиблиотеки', [
+                        'setting' => 'home.steps',
+                        'step' => $step['title'],
+                        'media_id' => $id,
+                    ]);
+                } else {
+                    // `url`, а не `thumb_url`: карточка занимает треть
+                    // контейнера в 1440px, то есть кадр около 460px,
+                    // а на экране с двойной плотностью — под 930px.
+                    // Превью шириной 600 растянулось бы в мыло.
+                    $step['image_url'] = $record->url;
+                }
+            }
+
+            $resolved[] = $step;
+        }
+
+        return $resolved;
     }
 
     /**

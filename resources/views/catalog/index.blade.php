@@ -51,12 +51,17 @@
         // Один и тот же набор классов у всех контролов панели: поле,
         // отличающееся от соседнего на пару пикселей, читается как
         // недоделка, а не как акцент.
-        $control = 'w-full rounded-field border border-white/15 bg-surface px-4 py-3.5 text-sm transition-colors focus:border-accent/70 focus:outline-none lg:px-5';
+        $control = 'w-full rounded-field border border-line-strong bg-surface px-4 py-3.5 text-sm transition-colors focus:border-accent/70 focus:outline-none lg:px-5';
 
-        $pill = 'block cursor-pointer rounded-full border border-white/15 px-5 py-3 text-sm whitespace-nowrap text-ink-muted transition hover:border-accent/35 peer-checked:border-accent/50 peer-checked:text-accent peer-focus-visible:border-accent';
+        $pill = 'block cursor-pointer rounded-full border border-line-strong px-5 py-3 text-sm whitespace-nowrap text-ink-muted transition hover:border-accent/35 peer-checked:border-accent/50 peer-checked:text-accent peer-focus-visible:border-accent';
     @endphp
 
-    <x-page-heading eyebrow="Каталог">
+    {{-- Каталог светлый целиком (веха 4.11) — единственная внутренняя
+         страница, по которой заказчик высказался прямо. Класс висит
+         на каждой секции отдельно, а не на одной обёртке вокруг всей
+         страницы: шапка при этом остаётся тёмной, а секции сохраняют
+         свои фоны и боковые поля. --}}
+    <x-page-heading eyebrow="Каталог" class="theme-light">
         Автомобили в наличии и <span class="text-accent">под заказ</span>
     </x-page-heading>
 
@@ -112,7 +117,11 @@
         x-data="{}"
         x-on:change="$el.requestSubmit()"
     >
-        <section class="border-b border-white/10 px-5 py-6 lg:px-8 lg:py-10">
+        {{-- Светлая, и здесь же самая заметная часть механизма: панель несёт
+             десять нативных селектов, а их красит браузер, а не CSS. За это
+             отвечает `color-scheme: light` внутри `.theme-light` — без него
+             выпадающие списки остались бы тёмными на светлой панели. --}}
+        <section class="theme-light border-b border-line px-5 py-6 lg:px-8 lg:py-10">
             <div class="mx-auto max-w-page">
                 <div class="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center lg:gap-3.5">
                     {{--
@@ -258,26 +267,30 @@
                          кнопки лишней. --}}
                     <button
                         type="submit"
-                        class="rounded-full bg-accent px-7 py-3 text-sm font-semibold text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                        class="rounded-full bg-accent-solid px-7 py-3 text-sm font-semibold text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover"
                     >Показать</button>
 
                     @if ($filtered)
                         <a
                             href="{{ route('catalog.index') }}"
-                            class="rounded-full border border-white/15 px-7 py-3 text-sm text-ink-muted transition hover:border-accent/35 hover:text-accent"
+                            class="rounded-full border border-line-strong px-7 py-3 text-sm text-ink-muted transition hover:border-accent/35 hover:text-accent"
                         >Сбросить</a>
                     @endif
                 </div>
             </div>
         </section>
 
-        <div class="px-5 pt-10 lg:px-8 lg:pt-12">
+        {{-- Строка результатов лежит в форме, а не в секции выдачи, — значит
+             и светлую тему получает отдельно. Пропущенная, она давала тёмную
+             полосу поперёк светлой страницы: ошибка ровно того рода,
+             от которой не спасает ни сборка, ни тест. --}}
+        <div class="theme-light px-5 pt-10 lg:px-8 lg:pt-12">
             <div class="mx-auto flex max-w-page flex-wrap items-center justify-between gap-4">
                 <p class="text-sm text-ink-muted">Найдено: {{ $cars->total() }}</p>
 
                 <label class="flex items-center gap-2.5">
                     <span class="sr-only">Сортировка</span>
-                    <select name="sort" class="rounded-field border border-white/15 bg-surface px-4 py-2.5 text-sm transition-colors focus:border-accent/70 focus:outline-none">
+                    <select name="sort" class="rounded-field border border-line-strong bg-surface px-4 py-2.5 text-sm transition-colors focus:border-accent/70 focus:outline-none">
                         @foreach (\App\Enums\CatalogSort::cases() as $sort)
                             <option value="{{ $sort->value }}" @selected($criteria->sort === $sort)>
                                 {{ $sort->label() }}
@@ -289,7 +302,10 @@
         </div>
     </form>
 
-    <section class="px-5 pt-8 pb-20 lg:px-8 lg:pt-10 lg:pb-28">
+    {{-- Светлая. Вместе с выдачей светлеет и свой вид пагинации
+         (`pagination/catalog.blade.php`, веха 4.3) — он живёт внутри
+         этой секции и читает те же токены. --}}
+    <section class="theme-light px-5 pt-8 pb-20 lg:px-8 lg:pt-10 lg:pb-28">
         <div class="mx-auto max-w-page">
             @if ($cars->isNotEmpty())
                 {{-- Заголовок карточки — h2 по умолчанию, и это здесь верно:
@@ -304,7 +320,7 @@
             @else
                 {{-- Осмысленный блок, а не строка текста: пустая выдача —
                      это тупик, и выход из него должен быть виден. --}}
-                <div class="mx-auto max-w-xl rounded-card border border-white/10 bg-surface px-6 py-14 text-center lg:py-20">
+                <div class="mx-auto max-w-xl rounded-card border border-line bg-surface px-6 py-14 text-center lg:py-20">
                     <p class="font-display text-xl font-semibold">По этим условиям ничего не нашлось</p>
                     <p class="mt-3 text-sm leading-relaxed text-ink-muted">
                         Попробуйте расширить диапазон цены или года — или посмотрите весь каталог.
@@ -312,7 +328,7 @@
 
                     <a
                         href="{{ route('catalog.index') }}"
-                        class="mt-7 inline-block rounded-full bg-accent px-7 py-3 text-sm font-semibold text-page transition hover:-translate-y-0.5 hover:bg-accent-hover"
+                        class="mt-7 inline-block rounded-full bg-accent-solid px-7 py-3 text-sm font-semibold text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover"
                     >Сбросить фильтры</a>
                 </div>
             @endif

@@ -17,7 +17,6 @@ use App\Models\User;
 use App\Support\MediaSettingKeys;
 use Database\Seeders\SiteSettingSeeder;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 use function Pest\Livewire\livewire;
 
@@ -87,6 +86,43 @@ it('stores the promo image chosen by a picker without a relationship', function 
         ->assertHasNoErrors();
 
     expect(Setting::get('home.promo')['image_id'])->toBe($media->getKey());
+});
+
+it('stores the step image chosen by a picker inside a repeater', function () {
+    // `MediaPicker` до сих пор вызывался только на верхнем уровне формы,
+    // а Filament переносит имена полей внутри репитера. Сторож на то,
+    // что собственный компонент проекта это переживает.
+    $media = Media::factory()->create();
+
+    $steps = Setting::get('home.steps');
+    $steps[0]['image_id'] = $media->getKey();
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['home.steps' => $steps])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('home.steps')[0]['image_id'])->toBe($media->getKey())
+        // Остальные этапы поле получили, но пустым: форма пишет его
+        // безусловно, и шаблон обязан пережить `null`.
+        ->and(Setting::get('home.steps')[1]['image_id'])->toBeNull();
+});
+
+it('keeps the step image through a resave of the untouched form', function () {
+    // Пересохранение нетронутой формы — тот круг «база → гидрация →
+    // дегидрация → база», на котором поле внутри репитера теряется
+    // молча: ошибки нет, картинка просто пропадает с сайта.
+    $media = Media::factory()->create();
+
+    $steps = Setting::get('home.steps');
+    $steps[2]['image_id'] = $media->getKey();
+    Setting::set('home.steps', $steps);
+
+    livewire(ManageSiteSettings::class)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('home.steps')[2]['image_id'])->toBe($media->getKey());
 });
 
 it('logs the changed keys without their values', function () {
@@ -203,7 +239,11 @@ it('keeps the media key list pointing at real settings', function () {
     // Список медийных ключей читает `Media::usages()`; ключ, которого нет
     // в реестре страницы, никогда не совпадёт и проверка использования
     // молча пропустит файл.
-    foreach (MediaSettingKeys::paths() as $path) {
-        expect(ManageSiteSettings::settingKeys())->toContain(Str::beforeLast($path, '.'));
+    //
+    // Спрашивается ключ настройки, а не путь внутрь её значения: реестр
+    // хранит их раздельно именно потому, что вывести одно из другого
+    // нельзя — у репитера граница не совпадает с последней точкой.
+    foreach (MediaSettingKeys::settings() as $setting) {
+        expect(ManageSiteSettings::settingKeys())->toContain($setting);
     }
 });

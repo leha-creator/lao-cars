@@ -57,7 +57,7 @@
          таба до содержимого для того, кто ходит по сайту с клавиатуры. --}}
     <a
         href="#content"
-        class="sr-only rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-page focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-200"
+        class="sr-only rounded-full bg-accent-solid px-5 py-2.5 text-sm font-semibold text-on-accent focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-200"
     >Перейти к содержимому</a>
 
     {{-- Место для бегущей строки главной (веха 4.2). В макете она стоит выше

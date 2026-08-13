@@ -34,7 +34,7 @@
 --}}
 <a
     href="{{ route('catalog.show', $car) }}"
-    class="group block overflow-hidden rounded-card border border-white/8 bg-surface transition duration-250 hover:-translate-y-1.5 hover:border-accent/35 hover:shadow-[0_20px_40px_rgba(0,0,0,0.35)]"
+    class="group block overflow-hidden rounded-card border border-line bg-surface transition duration-250 hover:-translate-y-1.5 hover:border-accent/35 hover:shadow-[0_20px_40px_rgba(0,0,0,0.35)]"
 >
     {{-- Соотношение сторон держит контейнер, поэтому карточки не прыгают,
          пока грузятся фотографии, — и не нужны атрибуты width/height,
@@ -71,8 +71,8 @@
                 @class([
                     'shrink-0 rounded-full border px-2.5 py-1 text-[11px] tracking-[0.08em] uppercase',
                     'border-accent/40 text-accent' => $car->status === CarStatus::InStock,
-                    'border-white/45 text-ink' => $car->status === CarStatus::InTransit,
-                    'border-white/20 text-ink-muted' => ! in_array($car->status, [CarStatus::InStock, CarStatus::InTransit], true),
+                    'border-line-loud text-ink' => $car->status === CarStatus::InTransit,
+                    'border-line-strong text-ink-muted' => ! in_array($car->status, [CarStatus::InStock, CarStatus::InTransit], true),
                 ])
             >{{ $car->status->label() }}</span>
         </div>

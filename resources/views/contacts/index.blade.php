@@ -16,9 +16,12 @@
 @section('description', 'Адрес, телефон, почта и мессенджеры ЛАО КАРС. Форма обратной связи — ответим в рабочее время.')
 
 @section('content')
-    <x-page-heading eyebrow="Контакты" title="Контакты" intro="Позвоните, напишите в мессенджер или оставьте заявку — перезвоним в рабочее время." />
+    {{-- Страница светлая целиком (веха 4.11). Вёрстка при этом не трогается:
+         контакты остаются заглушкой вехи 4.1 до вехи 4.5
+         (`showroom-and-about-page.md`), и доведён здесь только фон. --}}
+    <x-page-heading eyebrow="Контакты" title="Контакты" intro="Позвоните, напишите в мессенджер или оставьте заявку — перезвоним в рабочее время." class="theme-light" />
 
-    <section class="px-5 pt-12 lg:px-8">
+    <section class="theme-light px-5 pt-12 lg:px-8">
         <div class="mx-auto grid max-w-page gap-6 sm:grid-cols-2 lg:grid-cols-4">
             @foreach ([
                 'Адрес' => $contacts['contacts.address'] ?? null,
@@ -27,7 +30,7 @@
                 'Часы работы' => $contacts['contacts.work_hours'] ?? null,
             ] as $label => $value)
                 @if ($value !== null && $value !== '')
-                    <div class="rounded-card border border-white/10 bg-surface p-6">
+                    <div class="rounded-card border border-line bg-surface p-6">
                         <div class="mb-2 text-[13px] tracking-[0.1em] text-ink-muted uppercase">{{ $label }}</div>
                         <div class="text-[15px]">{{ $value }}</div>
                     </div>
@@ -42,7 +45,7 @@
                         href="{{ $social['url'] }}"
                         target="_blank"
                         rel="noopener"
-                        class="rounded-full border border-white/20 px-5 py-2.5 text-sm transition hover:border-accent/50 hover:text-accent"
+                        class="rounded-full border border-line-strong px-5 py-2.5 text-sm transition hover:border-accent/50 hover:text-accent"
                     >{{ $social['label'] }}</a>
                 @endforeach
             </div>

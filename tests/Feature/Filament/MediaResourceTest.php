@@ -115,6 +115,68 @@ it('reports where a record is used', function () {
     ]);
 });
 
+it('reports a record used inside a settings repeater', function () {
+    // Ссылка ВНУТРИ репитера — та, на которой прежний разбор пути молчал:
+    // `home.steps.*.image_id` он делил по последней точке и спрашивал
+    // настройку `home.steps.*`, которой не существует. Сравнение не
+    // срабатывало никогда, и файл считался свободным.
+    $media = Media::factory()->create();
+
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Подбор', 'text' => 'Текст.'],
+        ['number' => '02', 'title' => 'Проверка', 'text' => 'Текст.', 'image_id' => $media->getKey()],
+    ]);
+
+    expect($media->usages())->toBe(['Настройки: этапы покупки на главной']);
+});
+
+it('names a record used in two steps at once only once', function () {
+    // Одна картинка в двух этапах — это по-прежнему ОДНО место
+    // использования: перечень отвечает на вопрос «где», а не «сколько раз».
+    $media = Media::factory()->create();
+
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Подбор', 'image_id' => $media->getKey()],
+        ['number' => '02', 'title' => 'Проверка', 'image_id' => $media->getKey()],
+    ]);
+
+    expect($media->usages())->toBe(['Настройки: этапы покупки на главной']);
+});
+
+it('leaves a record free when repeater steps reference other images', function () {
+    // Обратная сторона: подстановочный знак не должен объявлять занятым
+    // любой файл при любом заполненном этапе.
+    $media = Media::factory()->create();
+    $other = Media::factory()->create();
+
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Подбор', 'image_id' => $other->getKey()],
+        ['number' => '02', 'title' => 'Проверка', 'image_id' => null],
+    ]);
+
+    expect($media->usages())->toBe([]);
+});
+
+it('cancels deletion of a record used only inside a settings repeater', function () {
+    // Главный сторож задачи: без починки разбора пути этот файл удалялся
+    // бы молча, оставляя в jsonb висячий id без внешнего ключа —
+    // восстановить связь было бы нечем.
+    Storage::fake('public');
+    Storage::disk('public')->put('media/step.webp', 'original');
+
+    $media = Media::factory()->create(['path' => 'media/step.webp']);
+
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Подбор', 'image_id' => $media->getKey()],
+    ]);
+
+    livewire(EditMedia::class, ['record' => $media->getRouteKey()])
+        ->callAction(DeleteAction::class);
+
+    expect(Media::query()->whereKey($media->id)->exists())->toBeTrue();
+    Storage::disk('public')->assertExists('media/step.webp');
+});
+
 it('cancels deletion of a record that is still in use', function () {
     // Блокировка, а не предупреждение: у сотрудников и отзывов есть
     // nullOnDelete(), а ссылка внутри jsonb настроек внешнего ключа
