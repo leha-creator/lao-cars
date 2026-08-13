@@ -86,8 +86,9 @@ laocars/
 │   │   │                     # LeadController: приём заявок со всех форм,
 │   │   │                     # два формата ответа по заголовкам запроса;
 │   │   │                     # PushSubscriptionController: подписка браузера;
-│   │   │                     # Home/Service/Parts/ContactController —
-│   │   │                     # страницы разделов, до вехи 4.5 заглушка
+│   │   │                     # Home/Service/Parts/About/ContactController —
+│   │   │                     # страницы разделов. Свёрстаны все, кроме
+│   │   │                     # контактов: там ещё заглушка вехи 4.1
 │   │   └── Requests/         # CatalogFilterRequest: валидация GET-контракта,
 │   │                         # битый параметр уводит на чистый /catalog;
 │   │                         # StoreLeadRequest: валидация формы + toData();
@@ -125,6 +126,9 @@ laocars/
 │   │                         # ServicesPageContent — данные автосервиса
 │   │                         # (у страницы запчастей парного сервиса нет —
 │   │                         # намеренно, см. PHPDoc контроллеров);
+│   │                         # AboutPageContent — данные «О компании»:
+│   │                         # настройки about_page.*, команда и отзывы
+│   │                         # с with('media'), отзывы без лимита главной;
 │   │                         # LeadData + LeadService + LeadNotifier
 │   │                         # + TelegramNotifier — приём заявки
 │   │                         # и уведомления сотрудникам. LeadNotifier —
@@ -180,7 +184,9 @@ laocars/
 │       │                     # 500 — своя разметка без шапки и подвала,
 │       │                     # потому что те ходят в БД
 │       ├── services|parts/   # index — свёрстаны вехой 4.4
-│       ├── contacts/         # index — заглушка на каркасе до вехи 4.5
+│       ├── about/            # index — свёрстана вехой 4.5 по макету v1
+│       ├── contacts/         # index — заглушка на каркасе; вёрстка это
+│       │                     # вторая половина вехи 4.5, не сделана
 │       └── catalog/          # index и show — свёрстаны вехой 4.3
 ├── tests/
 │   ├── Pest.php              # RefreshDatabase, сброс кеша настроек,
@@ -210,13 +216,14 @@ laocars/
 | ТЗ_ЛАО_КАРС.md | Первоисточник требований: разделы сайта, состав админки, сроки, риски |
 | .ai-factory/DESCRIPTION.md | Спецификация: стек, решения по развилкам ТЗ, границы MVP |
 | .ai-factory/config.yaml | Конфиг AI Factory: языки, пути, git |
-| routes/web.php | Публичные маршруты: `/`, `/catalog`, `/catalog/{slug}`, `/services`, `/parts`, `/contacts`, `POST /leads` |
+| routes/web.php | Публичные маршруты: `/`, `/catalog`, `/catalog/{slug}`, `/services`, `/parts`, `/contacts`, `/about`, `POST /leads` |
 | resources/css/app.css | Токены дизайн-системы в `@theme` — источник истины по палитре, шрифтам и радиусам; там же `.theme-light` — светлые секции |
 | vite.config.js | Сборка и самохостинг шрифтов: веса, `subsets` с кириллицей, preload |
 | app/Support/SiteMenu.php | Состав навигации: один список на шапку и подвал; пункт без роута выпадает |
 | app/Services/CatalogCriteria.php | Единственное место, где имена GET-параметров каталога превращаются в поля |
 | app/Services/HomeContent.php | Данные главной: подборка авто, промо, лента, преимущества, этапы, состав цены, FAQ, отзывы, витрина прайса, быстрый подбор, контакты, SEO; нормализация jsonb-настроек |
 | app/Services/ServicesPageContent.php | Данные автосервиса: прайс одним запросом с группировкой по категориям, описания, оговорка, преимущества |
+| app/Services/AboutPageContent.php | Данные «О компании»: настройки `about_page.*` с нормализацией репитера истории, команда и все опубликованные отзывы с `with('media')` |
 | app/Http/Requests/StoreLeadRequest.php | Контракт формы заявки: правила не мягче колонок, honeypot, `page_url` от сервера, сторож пары «тип + id» источника |
 | app/Services/LeadService.php | Приём заявки: запись в транзакции и постановка уведомлений |
 | app/Services/LeadNotifier.php | Единственное место, знающее получателей заявки: своя задача на человека, общий чат — фолбэк |

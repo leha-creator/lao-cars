@@ -7,9 +7,17 @@ use Illuminate\Support\Facades\Queue;
 /*
  * Страницы разделов закреплённого меню (веха 4.1).
  *
- * Пока это заглушки на каркасе: заголовок и вводный текст из настроек плюс
- * форма заявки. Наполнение приходит вехами 4.4 и 4.5 — но адреса и формы
- * работают уже сейчас, и именно это здесь проверяется.
+ * Заглушками на каркасе они были при заведении; наполнение принесли вехи
+ * 4.4 (автосервис, запчасти) и 4.5 («О компании»). Здесь проверяется
+ * сквозное — то, что обязано работать на КАЖДОЙ публичной странице:
+ * адрес отдаёт 200, заявка с неё доходит до базы, поля подбора запчасти
+ * на чужие страницы не протекают.
+ *
+ * **Адреса перечислены руками, и новая страница сама в эти перечни
+ * не попадает.** Именно поэтому веха 4.5 дописала `/about` в три места
+ * явно: без этого набор остался бы зелёным, а единственная страница
+ * без трёх сквозных сторожей — незамеченной. Заводя следующую публичную
+ * страницу, пройдите по файлу поиском по `/contacts`.
  */
 
 /*
@@ -25,7 +33,7 @@ beforeEach(function (): void {
 
 it('serves every section page', function (string $uri) {
     $this->get($uri)->assertOk();
-})->with(['/', '/services', '/parts', '/contacts']);
+})->with(['/', '/services', '/parts', '/about', '/contacts']);
 
 it('takes the services heading and intro from site settings', function () {
     Setting::set('services_page.intro_title', 'Наш автосервис');
@@ -67,7 +75,7 @@ it('asks for part details only on the parts page', function () {
         ->assertOk()
         ->assertSee('name="part_vin"', escape: false);
 
-    foreach (['/', '/services', '/contacts'] as $uri) {
+    foreach (['/', '/services', '/about', '/contacts'] as $uri) {
         $this->get($uri)
             ->assertOk()
             ->assertDontSee('name="part_vin"', escape: false);
@@ -88,7 +96,7 @@ it('captures a lead from every section page', function (string $uri) {
     // Проверка не декоративная: вёрстка вехи 4.1 переписала разметку формы,
     // и переименованное поле потеряло бы заявку молча.
     expect(Lead::query()->count())->toBe(1);
-})->with(['/', '/services', '/parts', '/contacts']);
+})->with(['/', '/services', '/parts', '/about', '/contacts']);
 
 it('captures part details from the parts page form', function () {
     Queue::fake();

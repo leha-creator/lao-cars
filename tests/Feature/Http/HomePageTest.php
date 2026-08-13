@@ -86,6 +86,132 @@ it('renders ticker, promo and advantages from site settings', function () {
         ->assertSee('Текст преимущества.');
 });
 
+it('calls the first trust card a showroom, not a physical salon', function () {
+    // Формулировку поправил сам заказчик на демонстрации 11.08.2026: «Не
+    // физический салон, а шоу-рум в Москве. — У нас и шоу-рум, и сервис».
+    //
+    // Сторожа у этой строки не было НИ ОДНОГО: полосу доверия набор
+    // не проверял вовсе, и откат формулировки прошёл бы незамеченным.
+    // Тексты карточек живут в шаблоне намеренно (веха 4.6) — значит
+    // и проверять их больше негде.
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('Шоу-рум в Москве')
+        ->assertDontSee('Физический салон');
+});
+
+it('adds the showroom photo to the trust band and keeps the band without it', function () {
+    // Фотография — единственное, чем полоса доверия управляется из админки.
+    // Пустая настройка убирает ФОТОПАНЕЛЬ, но не блок: это осознанное
+    // исключение из правила «блок без данных не рендерится вовсе», и без
+    // сторожа его «поправят» под общее правило вместе с полосой.
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('Шоу-рум в Москве')
+        ->assertDontSee('alt="Шоу-рум ЛАО КАРС в Москве"', escape: false);
+
+    $media = Media::factory()->create();
+
+    Setting::set('home.trust', ['image_id' => $media->getKey()]);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('Шоу-рум в Москве')
+        ->assertSee('alt="Шоу-рум ЛАО КАРС в Москве"', escape: false);
+});
+
+it('grounds the trust heading and glass cards on scrims over the photo', function () {
+    // Поверх кадра лежат СВЕТЛЫЕ чернила заголовка и стеклянные карточки,
+    // а `--color-ink` и `--color-surface` в светлой секции тёмный и белый
+    // соответственно. Держится это на паре «затемнение + `--color-on-photo`»,
+    // и обе маски нужны: верхняя под заголовок, нижняя под карточки.
+    //
+    // Отказ молчаливый вдвойне. Во-первых, сборка зелёная и классы на месте.
+    // Во-вторых, на ТЕКУЩЕЙ фотографии (ночной кадр) всё выглядит нормально
+    // и без затемнения — сломается это на первом же дневном снимке, который
+    // заказчик загрузит сам, без разработчика рядом.
+    $media = Media::factory()->create();
+
+    Setting::set('home.trust', ['image_id' => $media->getKey()]);
+
+    $html = $this->get('/')->assertOk()->getContent();
+
+    expect($html)->toContain('bg-gradient-to-b from-scrim/85')
+        ->and($html)->toContain('bg-gradient-to-t from-scrim/85')
+        // Светлые чернила заголовка — вторая половина той же пары.
+        ->and($html)->toContain('text-on-photo')
+        // Стекло: полупрозрачная заливка, светлая кромка и размытие.
+        // Без размытия сквозь карточку проступает кадр и спорит с текстом.
+        ->and($html)->toContain('lg:bg-on-photo/12')
+        ->and($html)->toContain('lg:border-on-photo/20')
+        ->and($html)->toContain('lg:backdrop-blur-lg');
+});
+
+it('promotes the first trust item to a heading over the photo and keeps three cards', function () {
+    $media = Media::factory()->create();
+
+    Setting::set('home.trust', ['image_id' => $media->getKey()]);
+
+    $html = $this->get('/')->assertOk()->getContent();
+
+    // Первый пункт стал заголовком блока — до вехи 4.5 заголовка
+    // у полосы доверия не было вовсе.
+    expect($html)->toMatch('/<h2[^>]*text-on-photo[^>]*>\s*Шоу-рум в Москве\s*<\/h2>/u');
+
+    // И в карточках его больше нет: иначе строка стояла бы на странице
+    // дважды — заголовком и карточкой.
+    $cards = mb_substr($html, (int) mb_strpos($html, 'Прозрачный состав цены'));
+
+    expect($cards)->not->toContain('Шоу-рум в Москве');
+});
+
+it('returns the showroom line to the cards when the photo setting is cleared', function () {
+    // Главное про эту развилку: очищенная настройка НЕ уносит текст с сайта.
+    // Первый пункт возвращается четвёртой карточкой, а не исчезает вместе
+    // с фотографией, — иначе пустое поле в админке молча удаляло бы строку,
+    // которую туда никто не писал.
+    Setting::set('home.trust', ['image_id' => null]);
+
+    $response = $this->get('/')->assertOk();
+
+    foreach ([
+        'Шоу-рум в Москве',
+        'Прозрачный состав цены',
+        'Фото- и видеоотчёт',
+        'Собственная экосистема',
+    ] as $title) {
+        $response->assertSee($title);
+    }
+
+    // Заголовка при этом нет: без кадра под ним первый пункт — такая же
+    // карточка, как остальные три, а не заголовок над ними.
+    expect($response->getContent())->not->toContain('text-on-photo');
+});
+
+it('keeps the trust band up when the showroom photo was deleted from the library', function () {
+    // Тот же отказ, что у картинки этапа, и та же причина для WARN:
+    // снаружи он неотличим от незаполненного поля — полоса просто
+    // остаётся текстовой.
+    Log::spy();
+
+    $media = Media::factory()->create();
+    $id = $media->getKey();
+    $media->forceDelete();
+
+    Setting::set('home.trust', ['image_id' => $id]);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('Шоу-рум в Москве')
+        ->assertDontSee('alt="Шоу-рум ЛАО КАРС в Москве"', escape: false);
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'фотография шоу-рума в полосе доверия')
+            && $context['setting'] === 'home.trust.image_id'
+            && $context['media_id'] === $id)
+        ->once();
+});
+
 it('shows only cars flagged for the homepage and still available', function () {
     $flagged = Car::factory()->onHomepage()->create(['model' => 'Отмеченный']);
     $plain = Car::factory()->create(['model' => 'Неотмеченный']);

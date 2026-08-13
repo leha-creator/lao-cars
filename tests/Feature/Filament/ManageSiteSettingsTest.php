@@ -235,6 +235,49 @@ it('keeps the new home repeaters lists of objects', function () {
         ->and($faq[0])->toHaveKeys(['question', 'answer']);
 });
 
+it('keeps the about page history a list of objects', function () {
+    // Формат, от которого зависит блок истории страницы «О компании»
+    // (веха 4.5). Ломается это молча: репитер, дегидрированный в другую
+    // форму, даёт `foreach` по неверной структуре уже на проде.
+    //
+    // Проверка после сохранения НЕТРОНУТОЙ формы — тот же круг
+    // «сид → заполнение → дегидрация → запись», на котором форма
+    // и расходится с сидом.
+    livewire(ManageSiteSettings::class)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $history = Setting::get('about_page.history');
+    $mission = Setting::get('about_page.mission');
+
+    expect($history)->toHaveCount(4)
+        ->and(array_is_list($history))->toBeTrue()
+        ->and($history[0])->toHaveKeys(['year', 'title', 'text'])
+        // Миссия, наоборот, объект, а не список: одно значение с двумя
+        // полями, как `home.promo` и `footer.guarantee`.
+        ->and($mission)->toBeArray()
+        ->and(array_is_list($mission))->toBeFalse()
+        ->and($mission)->toHaveKeys(['title', 'text']);
+});
+
+it('stores the showroom photo chosen by a picker in the trust setting', function () {
+    // Фотография полосы доверия (веха 4.5) — третий медийный ключ, и форма
+    // значения у него объектная (`home.trust.image_id`), а не скалярная:
+    // реестр `MediaSettingKeys` разводит ключ и путь, а `data_get()`
+    // с пустым путём ссылку внутрь значения не нашёл бы вовсе.
+    $media = Media::factory()->create();
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['home.trust.image_id' => $media->getKey()])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('home.trust')['image_id'])->toBe($media->getKey())
+        // Удалить используемый файл нельзя — иначе в jsonb остался бы
+        // висячий id, у которого нет внешнего ключа.
+        ->and($media->fresh()->usages())->toContain('Настройки: фотография шоу-рума на главной');
+});
+
 it('keeps the media key list pointing at real settings', function () {
     // Список медийных ключей читает `Media::usages()`; ключ, которого нет
     // в реестре страницы, никогда не совпадёт и проверка использования
