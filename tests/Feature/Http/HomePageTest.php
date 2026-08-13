@@ -60,6 +60,30 @@ function carCardCount(string $html): int
     return substr_count($html, 'href="'.route('catalog.index').'/');
 }
 
+/**
+ * Разметка секции «Как проходит покупка» — от её тега до ближайшего закрытия.
+ *
+ * Резать страницу обязательно: сторожа вехи 4.12 утверждают про блок то,
+ * что для остальной страницы неверно, — например отсутствие `text-accent`
+ * у кружка номера при живом `text-accent` в надзаголовке той же секции.
+ *
+ * Вложенных `<section>` внутри блока нет, поэтому ближайшее закрытие и есть
+ * конец секции. Появится вложенная — тест начнёт резать по её закрытию,
+ * то есть отрежет слишком мало и покраснеет, а не пройдёт вхолостую.
+ */
+function processSectionHtml(string $html): string
+{
+    $start = strpos($html, '<section id="process"');
+
+    expect($start)->not->toBeFalse('секция `#process` не найдена в разметке страницы');
+
+    $end = strpos($html, '</section>', (int) $start);
+
+    expect($end)->not->toBeFalse('у секции `#process` не найдено закрытие');
+
+    return substr($html, (int) $start, (int) $end - (int) $start);
+}
+
 it('renders ticker, promo and advantages from site settings', function () {
     // Значения меняются в тесте намеренно: проверка сида показала бы, что
     // работает SiteSettingSeeder, а не что страница читает настройки.
@@ -497,6 +521,45 @@ it('drops the steps section when the list is emptied', function () {
     $this->get('/')
         ->assertOk()
         ->assertDontSee('Каждый этап понятен');
+});
+
+it('stands the steps section on the light branch of the palette', function () {
+    // Веха 4.12: блок переехал с `deep` в светлую ветку. Отказ здесь тихий —
+    // сборка зелёная, классы на месте, в тёмной теме всё как было, — поэтому
+    // сторож нужен именно на разметке, а не на глаз.
+    //
+    // Место выбрано не случайно: `PaletteGuardTest` проверяет правила, общие
+    // для ВСЕХ публичных шаблонов (литерал `white`, `text-page`, `bg-accent`),
+    // а это утверждение про один блок главной.
+    $media = Media::factory()->create();
+
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Этап на светлом', 'text' => 'Текст этапа.', 'image_id' => $media->getKey()],
+    ]);
+
+    $section = processSectionHtml($this->get('/')->assertOk()->getContent());
+
+    // Проверка через отрицание обязательна: положительная проверка
+    // на `theme-light` прошла бы и при забытом `bg-deep`, который её
+    // молча перебивает светло-серым.
+    expect($section)->toContain('theme-light')
+        ->and($section)->not->toContain('bg-deep');
+
+    // Карточка на `surface`, а не на `page`: в светлой ветке `page` у секции
+    // и `page` у карточки — один и тот же цвет, и карточка перестаёт
+    // читаться приподнятой. Теней в дизайн-системе нет.
+    expect($section)->toMatch('/<article[^>]*\bbg-surface\b/');
+
+    // Кружок номера НА КАДРЕ — на паре «затемнение + чернила поверх
+    // фотографии», которая темой не переключается. `text-accent` в светлой
+    // ветке становится тёмно-жёлтым и поверх фотографии даёт 1.4:1;
+    // проверять его отсутствием по всей секции нельзя — надзаголовок
+    // и акцентное слово заголовка стоят на нём законно.
+    preg_match('/<div[^>]*\bbg-scrim\/85\b[^>]*>/', $section, $badge);
+
+    expect($badge)->not->toBeEmpty('кружок номера на кадре не найден по `bg-scrim/85`')
+        ->and($badge[0])->toContain('text-on-photo')
+        ->and($badge[0])->not->toContain('text-accent');
 });
 
 it('drops the price breakdown section together with its note', function () {
