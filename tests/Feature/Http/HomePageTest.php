@@ -562,6 +562,97 @@ it('stands the steps section on the light branch of the palette', function () {
         ->and($badge[0])->not->toContain('text-accent');
 });
 
+it('keeps every step in the markup instead of feeding the track on the fly', function () {
+    // Веха 4.12: лента — не слайдер с подгрузкой. Шесть `<article>` лежат
+    // в ответе сервера, а `line-clamp` режет описание только визуально.
+    // Это условие SEO: блок описывает услугу словами, и поисковик читает
+    // именно разметку.
+    //
+    // Этот сторож — единственный из четырёх, который на прежней сетке
+    // проходил бы зелёным, и это не недосмотр: он закрывает не переезд
+    // на ленту, а следующий шаг, которым ленту захотят «улучшить»
+    // подгрузкой карточек. Тогда он и покраснеет.
+    Setting::set('home.steps', collect(range(1, 6))
+        ->map(fn (int $i): array => [
+            'number' => '0'.$i,
+            'title' => 'Этап ленты '.$i,
+            'text' => 'Описание этапа номер '.$i.'.',
+        ])
+        ->all());
+
+    $section = processSectionHtml($this->get('/')->assertOk()->getContent());
+
+    foreach (range(1, 6) as $i) {
+        expect($section)->toContain('Этап ленты '.$i)
+            ->and($section)->toContain('Описание этапа номер '.$i.'.');
+    }
+
+    expect(substr_count($section, '<article'))->toBe(6);
+});
+
+it('leaves the steps track scrollable and flat without javascript', function () {
+    // Два отказа сразу, и оба тихие.
+    //
+    // Первый: лента без `overflow-x-auto` обрезает всё, кроме первых
+    // карточек, — содержимое есть в разметке, но добраться до него нечем.
+    //
+    // Второй: высоту обёртки и сцены ставит СКРИПТ, и только он. Класс
+    // с фиксированной высотой (`min-h-screen`, `h-[150vh]`) дал бы без
+    // `app.js` пустое поле в полтора экрана посреди главной, а дыра
+    // читается как поломка, а не как «не загрузился слайдер». Статический
+    // `style` — та же ошибка другим способом, поэтому проверяются оба.
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Этап ленты', 'text' => 'Текст этапа.'],
+    ]);
+
+    $section = processSectionHtml($this->get('/')->assertOk()->getContent());
+
+    preg_match_all('/\sclass="([^"]*)"/', $section, $matches);
+
+    $classes = implode(' ', $matches[1]);
+
+    expect($classes)->toContain('overflow-x-auto')
+        // `h-full` у заливки индикатора и `h-0.5` у его дорожки законны:
+        // ловятся только высоты, привязанные к экрану.
+        ->and($classes)->not->toMatch('/\b(?:min-)?h-(?:screen|\[[^\]]*v[hw][^\]]*\])/');
+
+    // Инлайновый `style` в блоке бывает только связанным (`x-bind:style`):
+    // он появляется после инициализации Alpine и исчезает вместе с ней.
+    expect($section)->not->toMatch('/(?<!x-bind:)style="/');
+});
+
+it('names the steps track for screen readers and reaches it from the keyboard', function () {
+    // Прокручиваемая область обязана добираться с клавиатуры, а лента
+    // без имени читается скринридером как безымянный контейнер: содержимое
+    // он перечислит, а что это за набор карточек — не скажет.
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Этап ленты', 'text' => 'Текст этапа.'],
+    ]);
+
+    $section = processSectionHtml($this->get('/')->assertOk()->getContent());
+
+    expect($section)->toMatch('/\srole="region"/')
+        ->and($section)->toMatch('/\stabindex="0"/');
+
+    preg_match('/\saria-label="([^"]*)"/', $section, $label);
+
+    expect($label)->not->toBeEmpty('у ленты этапов нет `aria-label`')
+        ->and(trim($label[1]))->not->toBe('');
+});
+
+it('hides the steps progress bar until alpine boots', function () {
+    // Тот же приём и то же основание, что у стрелок фотогалереи вехи 4.3
+    // и панели фильтра статусов вехи 4.6: полоса, застывшая на нуле, врёт
+    // о положении в ленте, а без Alpine она застынет на нуле навсегда.
+    Setting::set('home.steps', [
+        ['number' => '01', 'title' => 'Этап ленты', 'text' => 'Текст этапа.'],
+    ]);
+
+    $section = processSectionHtml($this->get('/')->assertOk()->getContent());
+
+    expect($section)->toContain('x-cloak');
+});
+
 it('drops the price breakdown section together with its note', function () {
     Setting::set('home.price_breakdown', null);
 
