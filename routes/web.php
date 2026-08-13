@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AboutController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HomeController;
@@ -23,6 +24,13 @@ Route::get('/catalog/{car}', [CatalogController::class, 'show'])->name('catalog.
 Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
 Route::get('/parts', [PartsController::class, 'index'])->name('parts.index');
 Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
+
+// «О компании» (веха 4.5). Имя роута обязано быть `about.index` — оно уже
+// объявлено в `SiteMenu::LABELS` и `FOOTER` с вехи 4.1, и любое другое
+// означало бы, что пункт подвала так и не появится: `SiteMenu::links()`
+// молча выбрасывает пункты без зарегистрированного роута. Порядок строк
+// повторяет порядок пунктов меню, а не дату появления страницы.
+Route::get('/about', [AboutController::class, 'index'])->name('about.index');
 
 // Приём заявок со всех форм сайта (веха 3.7). Лимитер `leads` объявлен
 // в `AppServiceProvider::configureRateLimiting()`.
