@@ -109,7 +109,7 @@ it('keeps the rouble glyph inside a declared unicode range', function () {
             $from = hexdec($bounds[1]);
             $to = hexdec($bounds[2] ?? $bounds[1]);
 
-            if (0x20BD >= $from && 0x20BD <= $to) {
+            if ($from <= 0x20BD && $to >= 0x20BD) {
                 $covers = true;
 
                 break 2;
@@ -207,8 +207,34 @@ it('switches the accent ink but not the accent fill in light sections', function
     // с тёмной надписью одинакова на любом фоне, потому что читаемость
     // там обеспечивается внутри самой плашки. Уравнять эти токены значит
     // сломать либо цены, либо кнопки — смотря какой сочтут лишним.
+    //
+    // Пара «затемнение + чернила поверх фотографии» (веха 4.5) — из той же
+    // семьи и по той же причине: читаемость там обеспечивается ВНУТРИ пары,
+    // а не темой секции вокруг. Оба токена выглядят близкими родственниками
+    // `--color-page` и `--color-ink` и первыми просятся «унифицировать»
+    // с ними — после чего заголовок и стеклянные карточки полосы доверия
+    // исчезают с кадра при зелёной сборке.
     expect($block[1])
-        ->not->toContain('--color-accent-solid:')
-        ->not->toContain('--color-accent-hover:')
-        ->not->toContain('--color-on-accent:');
+        ->not->toContain('--color-scrim:')
+        ->not->toContain('--color-on-photo:');
+});
+
+it('keeps the photo pair contrasting: dark scrim, light ink', function () {
+    // Пара заведена ради ОДНОГО отказа. Без неё подложку пришлось бы красить
+    // литералом `black` (запрещён тем же правилом, что и `white`) или
+    // `from-page`, а текст — `text-ink`; и то и другое в светлой секции даёт
+    // светлое по светлому, то есть содержимое, пропавшее с фотографии
+    // при зелёной сборке и разметке на месте.
+    //
+    // Сторож проверяет именно ПРОТИВОПОЛОЖНОСТЬ светлот: значения можно
+    // подкрутить, но затемнение обязано остаться тёмным, а чернила светлыми.
+    $css = (string) file_get_contents(resource_path('css/app.css'));
+
+    preg_match('/--color-scrim:\s*oklch\(([0-9.]+)/', $css, $scrim);
+    preg_match('/--color-on-photo:\s*oklch\(([0-9.]+)/', $css, $ink);
+
+    expect($scrim)->not->toBeEmpty('токен `--color-scrim` не найден в `app.css`')
+        ->and($ink)->not->toBeEmpty('токен `--color-on-photo` не найден в `app.css`')
+        ->and((float) $scrim[1])->toBeLessThan(0.3)
+        ->and((float) $ink[1])->toBeGreaterThan(0.9);
 });

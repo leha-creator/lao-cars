@@ -53,6 +53,11 @@ final class MediaSettingKeys
             'path' => '*.image_id',
             'label' => 'Настройки: этапы покупки на главной',
         ],
+        [
+            'setting' => 'home.trust',
+            'path' => 'image_id',
+            'label' => 'Настройки: фотография шоу-рума на главной',
+        ],
     ];
 
     /**

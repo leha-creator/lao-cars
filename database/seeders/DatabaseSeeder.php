@@ -67,8 +67,10 @@ class DatabaseSeeder extends Seeder
             ReviewSeeder::class,
             SiteSettingSeeder::class,
             // Строго после `SiteSettingSeeder`: тот пишет `home.steps`
-            // целиком и затёр бы проставленные здесь ссылки на картинки.
+            // и `home.trust` целиком и затёр бы проставленные здесь
+            // ссылки на картинки.
             StepPhotoSeeder::class,
+            ShowroomPhotoSeeder::class,
         ]);
     }
 }

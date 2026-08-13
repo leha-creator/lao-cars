@@ -68,6 +68,7 @@ final class HomeContent
      * @return array{
      *     cars: EloquentCollection<int, Car>,
      *     ticker: list<string>,
+     *     trustImage: ?string,
      *     promo: ?array{title: ?string, text: ?string, link_text: ?string, link_url: ?string, image_url: ?string},
      *     advantages: list<array{number: ?string, title: string, text: ?string}>,
      *     steps: list<array{number: ?string, title: string, text: ?string, image_url: ?string}>,
@@ -111,6 +112,7 @@ final class HomeContent
         return [
             'cars' => $cars,
             'ticker' => $this->ticker(),
+            'trustImage' => $this->trustImageUrl(),
             'promo' => $this->promo(),
             'advantages' => $this->advantages(),
             'steps' => $steps,
@@ -215,21 +217,57 @@ final class HomeContent
             'text' => $text,
             'link_text' => $this->string($promo['link_text'] ?? null),
             'link_url' => $this->string($promo['link_url'] ?? null),
-            'image_url' => $this->promoImageUrl($promo['image_id'] ?? null),
+            'image_url' => $this->singleImageUrl(
+                $promo['image_id'] ?? null,
+                'home.promo.image_id',
+                'фон промо-блока',
+            ),
         ];
     }
 
     /**
-     * Фон промо-блока: URL записи медиабиблиотеки или `null`.
+     * Фотография шоу-рума в полосе доверия (веха 4.5) — URL или `null`.
+     *
+     * Ключ настроек, а не имя файла в шаблоне: заказчик обязан иметь
+     * возможность заменить снимок сам, не дожидаясь разработчика. Ровно
+     * поэтому же снимок живёт в медиабиблиотеке, а не в `resources/images/`
+     * рядом с фоном хиро.
+     *
+     * `null` убирает фотопанель, но НЕ блок: полоса доверия остаётся
+     * четырьмя текстовыми карточками, как до вехи 4.5. Обратное правило
+     * снесло бы с главной работающий блок из-за незаполненной настройки.
+     */
+    private function trustImageUrl(): ?string
+    {
+        $trust = Setting::get('home.trust');
+
+        return $this->singleImageUrl(
+            is_array($trust) ? ($trust['image_id'] ?? null) : null,
+            'home.trust.image_id',
+            'фотография шоу-рума в полосе доверия',
+        );
+    }
+
+    /**
+     * Одиночная ссылка на медиабиблиотеку: URL записи или `null`.
      *
      * Штатным путём `null` при заполненном `image_id` не возникает —
      * удаление используемой записи блокирует проверка `Media::usages()`
      * (веха 3.5). Значит запись пропала в обход админки, и это стоит WARN:
-     * блок отрендерится без фона, а не упадёт, и симптом иначе останется
-     * незамеченным.
+     * блок отрендерится без изображения, а не упадёт, и симптом иначе
+     * останется незамеченным — снаружи он неотличим от незаполненного поля.
+     *
+     * Общий метод на промо и полосу доверия, а не копия на каждый ключ:
+     * оба разрешают ОДИН id, и разошедшиеся копии первым делом разошлись бы
+     * текстом предупреждения — то есть ровно тем, ради чего оно пишется.
+     * Для репитера этот приём не годится и не переиспользуется: там
+     * `find()` на элемент означает N+1, и этапы разрешаются одним запросом
+     * в `withStepImages()`.
      */
-    private function promoImageUrl(mixed $mediaId): ?string
+    private function singleImageUrl(mixed $mediaId, string $setting, string $what): ?string
     {
+        // Пустота проверяется строго — правило `RULES.md`: `empty()`
+        // истинно и для нуля.
         if ($mediaId === null || $mediaId === '') {
             return null;
         }
@@ -237,8 +275,8 @@ final class HomeContent
         $media = Media::query()->find($mediaId);
 
         if ($media === null) {
-            Log::warning('[Главная] фон промо-блока ссылается на удалённую запись медиабиблиотеки', [
-                'setting' => 'home.promo.image_id',
+            Log::warning("[Главная] {$what} ссылается на удалённую запись медиабиблиотеки", [
+                'setting' => $setting,
                 'media_id' => $mediaId,
             ]);
 
