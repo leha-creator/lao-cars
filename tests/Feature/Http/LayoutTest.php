@@ -89,7 +89,10 @@ it('links every menu item to a registered route', function () {
     // с зарегистрированным роутом — это защищает сайт от падения, но
     // означает, что удалённый роут просто исчезает из меню. Ловится
     // ошибка здесь, до мержа, а не жалобой на пропавший раздел.
-    $expected = ['catalog.index', 'services.index', 'parts.index', 'contacts.index'];
+    // Порядок значим, поэтому сравнение строгое (`toBe`): «О компании»
+    // стоит ЧЕТВЁРТОЙ, между запчастями и контактами, — место выбрал
+    // заказчик на демонстрации 11.08.2026, а не вывела вёрстка.
+    $expected = ['catalog.index', 'services.index', 'parts.index', 'about.index', 'contacts.index'];
 
     foreach ($expected as $name) {
         expect(Route::has($name))->toBeTrue("роут {$name} не зарегистрирован");
@@ -104,9 +107,22 @@ it('links every menu item to a registered route', function () {
     // сервис — ответом на открытый вопрос 13.08.2026). Названия самих разделов
     // остались прежними — см. docblock `SiteMenu`, там разобрано, почему это
     // не рассинхрон.
-    foreach (['Автомобили', 'Сервис', 'Запчасти', 'Контакты'] as $label) {
+    foreach (['Автомобили', 'Сервис', 'Запчасти', 'О компании', 'Контакты'] as $label) {
         $response->assertSee($label);
     }
+});
+
+it('keeps the footer menu in step with the header', function () {
+    // Составы шапки и подвала совпали вехой 4.5, и это факт, а не правило:
+    // «О компании» была в подвале с вехи 4.1 и ждала своего роута, а в шапку
+    // пришла решением заказчика. Сторож проверяет ровно то, что можно
+    // проверить, — что пункт действительно доехал до подвала сам, без правки
+    // `SiteMenu::FOOTER`, — а не то, что списки обязаны быть равны навсегда.
+    expect(array_column(SiteMenu::footer(), 'name'))->toContain('about.index');
+
+    $this->get('/')
+        ->assertOk()
+        ->assertSee(route('about.index'), escape: false);
 });
 
 it('marks the catalog menu item active on the catalog and on a car page', function () {
