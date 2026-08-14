@@ -123,8 +123,13 @@ composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 # до записи вывода, поэтому прежний `public/build` остаётся цел
 # и сайт продолжает отдавать 200 со СТАРЫМИ ассетами при уже
 # обновлённом коде. Расхождение кода и сборки не видно ничем.
+#
+# Хранилище — в домашнем каталоге деплой-пользователя, а НЕ в /var/cache:
+# туда `laocars` писать не может, а `sudo` в этом скрипте запрещён
+# по устройству (решения 6 и 7). Путь в /var/cache уронил бы выкат
+# на самом `mkdir`, то есть починка обернулась бы поломкой.
 FONT_CACHE_SRC="node_modules/.cache/laravel-vite-plugin/fonts"
-FONT_CACHE_KEEP="/var/cache/laocars/vite-fonts"
+FONT_CACHE_KEEP="${HOME}/.cache/laocars-vite-fonts"
 
 mkdir -p "$(dirname "${FONT_CACHE_KEEP}")"
 
