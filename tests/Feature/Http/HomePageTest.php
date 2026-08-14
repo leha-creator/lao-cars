@@ -84,6 +84,51 @@ function processSectionHtml(string $html): string
     return substr($html, (int) $start, (int) $end - (int) $start);
 }
 
+/**
+ * Открывающий тег обёртки-пина — той, что несёт `x-data` ленты этапов.
+ *
+ * Тег ищется посимвольно, а не регуляркой `<div[^>]*>`: значение `x-data`
+ * содержит выражения со знаком «больше» (`this.travel > 160`), и жадный
+ * поиск закрывающей скобки обрывает тег на середине атрибута. Сторож
+ * при этом не падает, а проверяет огрызок — то есть проходит вхолостую.
+ */
+function pinWrapperTag(string $html): string
+{
+    $anchor = strpos($html, 'x-data=');
+
+    expect($anchor)->not->toBeFalse('в секции `#process` нет элемента с `x-data`');
+
+    $start = strrpos(substr($html, 0, (int) $anchor), '<');
+
+    expect($start)->not->toBeFalse('у элемента с `x-data` не найдено начало тега');
+
+    $quote = null;
+
+    for ($i = (int) $start; $i < strlen($html); $i++) {
+        $char = $html[$i];
+
+        if ($quote !== null) {
+            if ($char === $quote) {
+                $quote = null;
+            }
+
+            continue;
+        }
+
+        if ($char === '"' || $char === "'") {
+            $quote = $char;
+
+            continue;
+        }
+
+        if ($char === '>') {
+            return substr($html, (int) $start, $i - (int) $start + 1);
+        }
+    }
+
+    return '';
+}
+
 it('renders ticker, promo and advantages from site settings', function () {
     // Значения меняются в тесте намеренно: проверка сида показала бы, что
     // работает SiteSettingSeeder, а не что страница читает настройки.
@@ -596,11 +641,18 @@ it('leaves the steps track scrollable and flat without javascript', function () 
     // Первый: лента без `overflow-x-auto` обрезает всё, кроме первых
     // карточек, — содержимое есть в разметке, но добраться до него нечем.
     //
-    // Второй: высоту обёртки и сцены ставит СКРИПТ, и только он. Класс
-    // с фиксированной высотой (`min-h-screen`, `h-[150vh]`) дал бы без
-    // `app.js` пустое поле в полтора экрана посреди главной, а дыра
-    // читается как поломка, а не как «не загрузился слайдер». Статический
-    // `style` — та же ошибка другим способом, поэтому проверяются оба.
+    // Второй: высоту обёртки-пина ставит СКРИПТ, и только он. Класс
+    // с фиксированной высотой (`min-h-screen`, `h-[150vh]`) или статический
+    // `style` дали бы без `app.js` пустое поле в полтора экрана посреди
+    // главной, а дыра читается как поломка, а не как «не загрузился
+    // слайдер».
+    //
+    // Утверждение адресное — про сам тег обёртки, а не про весь блок.
+    // Прежняя редакция искала высоту от вьюпорта по всей секции и
+    // покраснела, как только карточке законно понадобилась `h-[32vw]`.
+    // Ослабить её значило бы потерять сторожа; сузить до обёртки —
+    // сохранить, потому что «высота приходит из скрипта» это утверждение
+    // ровно про неё.
     Setting::set('home.steps', [
         ['number' => '01', 'title' => 'Этап ленты', 'text' => 'Текст этапа.'],
     ]);
@@ -609,16 +661,13 @@ it('leaves the steps track scrollable and flat without javascript', function () 
 
     preg_match_all('/\sclass="([^"]*)"/', $section, $matches);
 
-    $classes = implode(' ', $matches[1]);
+    expect(implode(' ', $matches[1]))->toContain('overflow-x-auto');
 
-    expect($classes)->toContain('overflow-x-auto')
-        // `h-full` у заливки индикатора и `h-0.5` у его дорожки законны:
-        // ловятся только высоты, привязанные к экрану.
-        ->and($classes)->not->toMatch('/\b(?:min-)?h-(?:screen|\[[^\]]*v[hw][^\]]*\])/');
+    $pin = pinWrapperTag($section);
 
-    // Инлайновый `style` в блоке бывает только связанным (`x-bind:style`):
-    // он появляется после инициализации Alpine и исчезает вместе с ней.
-    expect($section)->not->toMatch('/(?<!x-bind:)style="/');
+    expect($pin)->toContain('x-bind:style=')
+        ->and($pin)->not->toMatch('/\sclass="/')
+        ->and($pin)->not->toMatch('/(?<!x-bind:)\sstyle="/');
 });
 
 it('names the steps track for screen readers and reaches it from the keyboard', function () {
