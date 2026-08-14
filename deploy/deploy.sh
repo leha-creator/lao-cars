@@ -104,11 +104,49 @@ git reset --hard "${TARGET_SHA}"
 
 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
+# КЕШ ШРИФТОВ ПЕРЕЖИВАЕТ `npm ci`, И БЕЗ ЭТОГО ВЫКАТЫ ПАДАЮТ СЛУЧАЙНО.
+#
+# `vite.config.js` скачивает woff2 на сборке через `google()` из
+# `laravel-vite-plugin/fonts` и кеширует их в
+# `node_modules/.cache/laravel-vite-plugin/fonts`. `npm ci` сносит
+# `node_modules` целиком — то есть вместе с кешем, — и каждый выкат
+# идёт в сеть за шрифтами заново.
+#
+# Это не теория: 14.08.2026 выкат упал с
+# `Failed to fetch "https://fonts.gstatic.com/s/unbounded/…woff2":
+# 404 Not Found`, а следующий на той же ревизии прошёл. То есть отказ
+# перемежающийся, и вызывает его сторона, к изменению отношения
+# не имеющая. В CI ровно этот каталог кешируется отдельным шагом
+# (`actions/cache` в ci.yml) — здесь он кешируется так.
+#
+# Цена промаха высокая и незаметная: `vite` падает на `buildStart`,
+# до записи вывода, поэтому прежний `public/build` остаётся цел
+# и сайт продолжает отдавать 200 со СТАРЫМИ ассетами при уже
+# обновлённом коде. Расхождение кода и сборки не видно ничем.
+FONT_CACHE_SRC="node_modules/.cache/laravel-vite-plugin/fonts"
+FONT_CACHE_KEEP="/var/cache/laocars/vite-fonts"
+
+mkdir -p "$(dirname "${FONT_CACHE_KEEP}")"
+
+if [ -d "${FONT_CACHE_SRC}" ]; then
+    rm -rf "${FONT_CACHE_KEEP}"
+    cp -a "${FONT_CACHE_SRC}" "${FONT_CACHE_KEEP}"
+    log "Кеш шрифтов сохранён перед npm ci."
+fi
+
 # `npm ci`, а не `npm install`: ставит ровно то, что в package-lock.json.
 # NODE_ENV=production в окружении задавать НЕЛЬЗЯ — `vite`
 # и `tailwindcss` лежат в devDependencies, и с этой переменной `npm ci`
 # их пропустит, а сборка упадёт на отсутствующем `vite`.
 npm ci
+
+if [ -d "${FONT_CACHE_KEEP}" ]; then
+    mkdir -p "$(dirname "${FONT_CACHE_SRC}")"
+    rm -rf "${FONT_CACHE_SRC}"
+    cp -a "${FONT_CACHE_KEEP}" "${FONT_CACHE_SRC}"
+    log "Кеш шрифтов возвращён на место — сборка не пойдёт в сеть."
+fi
+
 npm run build
 
 php artisan migrate --force
