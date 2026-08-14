@@ -30,6 +30,22 @@ User=laocars
 Group=laocars
 WorkingDirectory=/var/www/laocars
 
+# Файл лога заводится ДО запуска и от имени laocars.
+#
+# Префикс `+` означает «выполнить от root», иначе команда пошла бы
+# от `User=laocars`, которому каталог принадлежит, но существующий
+# root-овый файл не переподчинить.
+#
+# Без этой строки `StandardOutput=append:` создаёт файл от root (его
+# открывает systemd, то есть PID 1, до понижения прав), а logrotate
+# для каталога `/var/log/laocars` вынужден работать под `su laocars`
+# — каталог принадлежит laocars, и без `su` logrotate откажется его
+# трогать как небезопасный. Итог: `error opening queue.log: Permission
+# denied` на каждой ротации, лог воркера не ротируется НИКОГДА и растёт
+# до заполнения диска. Проверено на месте: ошибка воспроизводится
+# на `logrotate -f`, а в штатном ночном прогоне её никто не увидит.
+ExecStartPre=+/bin/sh -c 'install -d -o laocars -g laocars /var/log/laocars; touch /var/log/laocars/queue.log; chown laocars:laocars /var/log/laocars/queue.log; chmod 0640 /var/log/laocars/queue.log'
+
 # Один воркер, и это не экономия. Заявок единицы в день; второй процесс
 # съел бы память, которую делят php-fpm, две базы и `vite build`
 # на каждом выкате.
