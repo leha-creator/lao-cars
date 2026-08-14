@@ -1012,7 +1012,14 @@
                  не должна: `max-w-page` и поля те же, что у соседних секций. --}}
             <div class="px-5 pt-20 lg:px-8 lg:pt-30">
                 <div class="mx-auto max-w-page">
-                    <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                    {{-- Отступ до ленты меньше, чем у соседних блоков
+                         (`mb-8`/`lg:mb-10` против `mb-12`/`lg:mb-14`), и это
+                         не рассинхрон с ритмом, а следствие прижатия: сразу
+                         под шапкой начинается сцена высотой в экран, и её
+                         собственное поле над карточками прибавляется к этому
+                         отступу. Полный отступ читается разрывом между
+                         заголовком и тем, что он называет. --}}
+                    <div class="mb-8 flex flex-col gap-5 lg:mb-10 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
                         <div>
                             <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Как проходит покупка</div>
 
@@ -1047,6 +1054,21 @@
                 чтобы скролл отнимал много времени» — назначить её в `vh`
                 значило бы задать длину эффекта наугад.
 
+                К ней прибавлена ЗАДЕРЖКА — короткий участок прокрутки уже
+                после того, как последняя карточка открылась целиком. Без
+                неё прижатие отпускает страницу ровно в тот кадр, когда
+                лента доехала: посетитель листает карточки колесом, по
+                инерции делает ещё один щелчок — и три следующих блока
+                пролетают мимо, потому что доехавшая лента отдаёт странице
+                всю накопленную прокрутку сразу. Задержка этот щелчок
+                поглощает, и чтобы она не читалась как «страница залипла»,
+                на ней лента доезжает влево ещё немного (см. `nudge`):
+                движение продолжается, значит блок не завис, а заканчивается.
+
+                Длина задержки — не константа: `min(220, travel / 2)`.
+                Фиксированные 220px на короткой ленте (порог прижатия —
+                всего 160px) означали бы, что стоишь дольше, чем ехал.
+
                 Прижатия НЕТ в трёх случаях, и все три намеренные: уже
                 мобильных (прижатие отбирает у жеста «вниз» его прямое
                 значение), при `prefers-reduced-motion: reduce` (глобальное
@@ -1069,14 +1091,32 @@
             <div
                 x-data="{
                     travel: 0,
+                    hold: 0,
+                    nudge: 0,
                     pinned: false,
                     stacked: false,
                     progress: 0,
+                    settle: 0,
                     eased: 0,
                     frame: 0,
 
                     init() {
                         this.measure();
+                    },
+
+                    /**
+                     * Заполнение полосы прогресса. Считается от ВСЕЙ дистанции
+                     * прижатия, а не от одной ленты: полная полоса при живой
+                     * задержке — это обещание «блок кончился», данное за
+                     * пару щелчков до того, как он кончится. Ровно то
+                     * непонимание, ради которого задержку и завели.
+                     */
+                    get advance() {
+                        const whole = this.travel + this.hold;
+
+                        return whole > 0
+                            ? (this.progress * this.travel + this.settle * this.hold) / whole
+                            : 0;
                     },
 
                     /**
@@ -1159,31 +1199,96 @@
 
                         track.style.setProperty('--card', card + 'px');
                         track.style.setProperty('--strip', strip + 'px');
+                        track.style.setProperty('--shift', '0px');
                     },
 
                     /**
-                     * Дистанция и решение о прижатии. Пересчитывается при
-                     * изменении ширины окна: от неё зависит вся раскладка.
+                     * Дистанция, задержка и решение о прижатии. Пересчитывается
+                     * при изменении ширины окна: от неё зависит вся раскладка.
                      */
                     measure() {
+                        const track = this.$refs.track;
+                        const tail = this.$refs.tail;
+
+                        // Хвост на время замера убирается. `travel` — это ровно
+                        // то, сколько ленты не поместилось в экран, и запас,
+                        // добавленный ради задержки, в этой величине
+                        // участвовать не должен: иначе он войдёт в путь
+                        // прокрутки дважды, и лента доедет до конца раньше,
+                        // чем прижатие отпустит страницу.
+                        tail.classList.add('hidden');
+
                         this.deal();
 
-                        this.travel = Math.max(0, this.$refs.track.scrollWidth - this.$refs.track.clientWidth);
+                        this.travel = Math.max(0, track.scrollWidth - track.clientWidth);
 
                         this.pinned = window.matchMedia('(min-width: 1024px)').matches
                             && ! window.matchMedia('(prefers-reduced-motion: reduce)').matches
                             && this.travel > 160;
 
+                        // Хвост — настоящий элемент, а не отступ и не поле
+                        // ленты: `scrollLeft` дальше своего максимума не идёт,
+                        // а концевые `padding` и `margin` в прокручиваемую
+                        // область попадают не у всех браузеров одинаково.
+                        // Коробка попадает всегда.
+                        //
+                        // Ширина хвоста доводит путь до бокового поля ленты:
+                        // за задержку карточки уезжают влево ровно на него,
+                        // и первая встаёт вровень с краем экрана. Дальше её
+                        // не пускаем — стопка, ушедшая под обрез, читается
+                        // как обрыв, а не как остановка.
+                        if (this.pinned) {
+                            const style = getComputedStyle(track);
+                            const pad = parseFloat(style.paddingLeft) || 0;
+                            const gutter = parseFloat(style.columnGap) || 0;
+
+                            tail.style.width = Math.max(0, pad - gutter) + 'px';
+                            tail.classList.remove('hidden');
+                        }
+
+                        // Насколько лента доедет за задержку — величина
+                        // ИЗМЕРЕННАЯ, а не заявленная: между последней
+                        // карточкой и хвостом лежит зазор ленты, и вычитать
+                        // его вслепую значило бы завязать расчёт на класс
+                        // `gap-5`. Разъехались бы они молча — сдвигом стопки
+                        // на десяток пикселей мимо её же прокрутки.
+                        this.nudge = Math.max(0, track.scrollWidth - track.clientWidth - this.travel);
+                        this.hold = this.nudge > 0 ? Math.min(220, this.travel / 2) : 0;
+
+                        if (this.pinned && this.nudge === 0) {
+                            console.warn('[FIX:steps] хвосту ленты не хватило места — задержки в конце прижатия не будет', {
+                                travel: this.travel,
+                                scrollWidth: track.scrollWidth,
+                                clientWidth: track.clientWidth,
+                            });
+                        }
+
                         this.pinned ? this.follow() : this.trail();
                     },
 
-                    /** Прогресс из положения страницы — пока сцена прижата. */
+                    /**
+                     * Прогресс из положения страницы — пока сцена прижата.
+                     * Величин две и они идут подряд, а не одна размазанная
+                     * на всю дистанцию: `progress` ведёт ленту и упирается
+                     * в единицу ровно тогда, когда последняя карточка
+                     * открылась целиком, `settle` живёт только на задержке
+                     * после этого. Одна общая шкала растянула бы ход ленты
+                     * на задержку, то есть замедлила бы всё ради паузы
+                     * в конце.
+                     */
                     follow() {
                         if (! this.pinned) {
                             return;
                         }
 
-                        this.progress = Math.min(Math.max(-this.$el.getBoundingClientRect().top / this.travel, 0), 1);
+                        const passed = -this.$el.getBoundingClientRect().top;
+
+                        this.progress = Math.min(Math.max(passed / this.travel, 0), 1);
+
+                        this.settle = this.hold > 0
+                            ? Math.min(Math.max((passed - this.travel) / this.hold, 0), 1)
+                            : 0;
+
                         this.glide();
                     },
 
@@ -1202,20 +1307,26 @@
                         cancelAnimationFrame(this.frame);
 
                         const step = () => {
-                            const target = this.progress * this.travel;
+                            const target = this.progress * this.travel + this.settle * this.nudge;
                             const gap = target - this.eased;
+                            const done = Math.abs(gap) < 0.5;
 
-                            this.eased += gap * 0.14;
+                            this.eased = done ? target : this.eased + gap * 0.14;
 
-                            if (Math.abs(gap) < 0.5) {
-                                this.eased = target;
-                                this.$refs.track.scrollLeft = this.eased;
-
-                                return;
-                            }
-
+                            // Смещение стопки идёт из ТОГО ЖЕ значения, что
+                            // и прокрутка, а не считается вторым выражением
+                            // из `settle`: сложенные карточки стоят на `left`
+                            // и прокрутку не замечают, а последняя едет вместе
+                            // с лентой. Разведи их по двум источникам —
+                            // и на сглаживании стопка отстанет от открытой
+                            // карточки, потому что одно значение доезжает
+                            // за несколько кадров, а другое встаёт сразу.
                             this.$refs.track.scrollLeft = this.eased;
-                            this.frame = requestAnimationFrame(step);
+                            this.$refs.track.style.setProperty('--shift', Math.max(0, this.eased - this.travel) + 'px');
+
+                            if (! done) {
+                                this.frame = requestAnimationFrame(step);
+                            }
                         };
 
                         this.frame = requestAnimationFrame(step);
@@ -1232,7 +1343,7 @@
                         this.progress = room > 0 ? this.$refs.track.scrollLeft / room : 0;
                     },
                 }"
-                x-bind:style="pinned ? 'height: calc(100svh + ' + travel + 'px)' : ''"
+                x-bind:style="pinned ? 'height: calc(100svh + ' + (travel + hold) + 'px)' : ''"
                 x-on:scroll.window.passive="follow()"
                 x-on:resize.window="measure()"
                 x-on:load.window="measure()"
@@ -1285,7 +1396,16 @@
                          обе величины из ширины экрана и перебивает эти
                          инлайновым стилем. Без него карточки просто шире
                          мобильных и лежат в ряд, без стопки — `sticky`
-                         вешает тот же скрипт. --}}
+                         вешает тот же скрипт.
+
+                         `--shift` (сдвиг стопки на задержке) объявлен здесь
+                         не ради запасного значения, а ради валидности: он
+                         стоит внутри `calc()` у смещения карточки, а `calc()`
+                         с неопределённой переменной невалиден целиком —
+                         браузер выбрасывает всё правило, то есть карточка
+                         теряет и `left`, и вместе с ним стопку. Объявление
+                         не под `lg:`: правило, которое оно спасает, живёт
+                         в `x-bind:class`, а тот про брейкпоинты не знает. --}}
                     <div
                         x-ref="track"
                         role="region"
@@ -1293,7 +1413,7 @@
                         tabindex="0"
                         x-on:scroll.passive="trail()"
                         x-bind:class="pinned ? '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : ''"
-                        class="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-5 px-5 py-1 lg:snap-none lg:scroll-px-8 lg:px-8 lg:[--card:34rem] lg:[--strip:12rem]"
+                        class="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-5 px-5 py-1 [--shift:0px] lg:snap-none lg:scroll-px-8 lg:px-8 lg:[--card:34rem] lg:[--strip:12rem]"
                     >
                         {{-- КАРТОЧКА. Две разные вещи по обе стороны `lg`,
                              и разводятся они классами, а не вторым куском
@@ -1320,6 +1440,20 @@
                              с пустым полем изображения — штатный случай
                              блока, а не исключение.
 
+                             ВЫСОТА карточки выведена из высоты ЭКРАНА,
+                             а не из его ширины (`32vw` до 14.08.2026),
+                             и причина не в красоте кадра: под прижатием
+                             карточка стоит в сцене высотой ровно в экран,
+                             и всё, чего ей до этого экрана не хватает,
+                             остаётся пустым полем над ней и под ней. Ширина
+                             про эту высоту ничего не знает: на ноутбуке
+                             1440×810 старое выражение давало 460px кадра
+                             на 700px сцены — четверть экрана пустоты,
+                             с которой блок и выглядел разреженным.
+                             Потолок 640px оставлен: карточка едет в стопку
+                             полоской в 190px, и слишком высокая полоска
+                             превращается из кадра в ленту.
+
                              Ширины карточки и полоски ставит скрипт в `--card`
                              и `--strip`; смещение в стопке считает CSS из `--i`.
                              Это единственное инлайновое значение в блоке,
@@ -1339,8 +1473,8 @@
                         @foreach ($steps as $step)
                             <article
                                 style="--i: {{ $loop->index }}"
-                                x-bind:class="pinned && stacked ? 'lg:sticky lg:left-[calc(var(--i)*var(--strip))]' : ''"
-                                class="relative w-[78vw] max-w-90 shrink-0 snap-start overflow-hidden rounded-card border border-line bg-surface transition duration-250 hover:border-accent/30 lg:h-[clamp(380px,32vw,480px)] lg:w-[var(--card)] lg:max-w-none"
+                                x-bind:class="pinned && stacked ? 'lg:sticky lg:left-[calc(var(--i)*var(--strip)_-_var(--shift))]' : ''"
+                                class="relative w-[78vw] max-w-90 shrink-0 snap-start overflow-hidden rounded-card border border-line bg-surface transition duration-250 hover:border-accent/30 lg:h-[clamp(380px,calc(100svh_-_10rem),640px)] lg:w-[var(--card)] lg:max-w-none"
                             >
                                 @if ($step['image_url'] !== null)
                                     {{-- На мобильных пропорция задана контейнером
@@ -1435,6 +1569,26 @@
                                 </div>
                             </article>
                         @endforeach
+
+                        {{-- ХВОСТ. Пустое место в конце ленты, на которое она
+                             доезжает уже ПОСЛЕ того, как последняя карточка
+                             открылась целиком, — то самое движение, которым
+                             задержка сообщает «блок заканчивается», а не
+                             «страница залипла».
+
+                             Это настоящая коробка, а не концевой `padding`
+                             ленты и не `margin` последней карточки: и то,
+                             и другое попадает в прокручиваемую область
+                             не во всех браузерах одинаково, а `scrollLeft`
+                             дальше своего максимума не уходит. Не хватило бы
+                             места — сложенная стопка поехала бы влево,
+                             а открытая карточка осталась стоять, и подписи
+                             отстали бы от кадра, который называют.
+
+                             Ширину и видимость ставит скрипт: без него
+                             задержки нет, а лишнее поле в конце ленты
+                             было бы. --}}
+                        <div x-ref="tail" aria-hidden="true" class="hidden shrink-0"></div>
                     </div>
 
                     {{-- Индикатор прогресса. Закрыт `x-cloak` по тому же
@@ -1446,7 +1600,11 @@
                          Источник прогресса разный по обе стороны `lg`, и это
                          одно и то же число: на десктопе его считает прижатие
                          из положения страницы, на мобильных — сама лента
-                         из своего `scrollLeft`. Полоса живёт в ТОЙ ЖЕ
+                         из своего `scrollLeft`. Ширину при этом задаёт
+                         `advance`, а не `progress`: на десктопе полоса
+                         показывает весь путь прижатия вместе с задержкой
+                         в конце, на мобильных задержки нет и обе величины
+                         совпадают. Полоса живёт в ТОЙ ЖЕ
                          `x-data`-обёртке, что и лента: область компонента
                          Alpine — поддерево DOM, и в соседней обёртке
                          обработчик не сработал бы вовсе.
@@ -1469,7 +1627,7 @@
                         <div class="mt-6 h-0.5 overflow-hidden rounded-full bg-line-strong lg:mt-8">
                             <div
                                 class="h-full rounded-full bg-accent-solid"
-                                x-bind:style="'width: ' + (progress * 100) + '%'"
+                                x-bind:style="'width: ' + (advance * 100) + '%'"
                             ></div>
                         </div>
                     </div>
