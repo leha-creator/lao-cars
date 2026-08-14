@@ -1,0 +1,103 @@
+# Автодеплой на прод после зелёного CI.
+#
+# ОТДЕЛЬНЫЙ WORKFLOW, А НЕ JOB ВНУТРИ ci.yml, И ОБЪЕДИНЯТЬ ИХ НЕЛЬЗЯ.
+#
+# У `ci.yml` стоит `concurrency` с `cancel-in-progress: true`, и для
+# тестов это правильно — незачем занимать раннеры проверкой заведомо
+# устаревшего коммита. Но job деплоя внутри того же workflow отменялся
+# бы ВМЕСТЕ с прогоном: новый пуш во время выката убил бы `deploy.sh`
+# на середине, между `composer install` и `migrate`. Здесь своя группа
+# и `cancel-in-progress: false`.
+
+name: Deploy
+
+on:
+  workflow_run:
+    # Строка обязана дословно совпадать с полем `name` в ci.yml — там
+    # именно `CI`. Опечатка здесь не даёт ни ошибки, ни предупреждения:
+    # workflow просто не запускается никогда, и выясняется это
+    # по отсутствию деплоя, а не по красному прогону.
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+
+  # Ручной выкат и ОТКАТ: тем же полем подставляется SHA предыдущего
+  # коммита. Отдельного скрипта отката нет — он и не нужен.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Ревизия для выката (SHA, тег). Пусто — origin/master'
+        required: false
+        default: ''
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Выкат на прод
+    runs-on: ubuntu-latest
+
+    # Красный CI до сервера не доезжает. Для `workflow_dispatch` условие
+    # верно вторым дизъюнктом: там прогона CI нет вовсе, и требовать
+    # от него `success` значило бы запретить ручной откат — то есть
+    # отобрать инструмент ровно в тот момент, когда он нужен.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    # Позволяет включить ручное подтверждение выката одной настройкой
+    # в интерфейсе GitHub, не трогая этот файл.
+    environment: production
+
+    steps:
+      - name: Поднять ssh-agent с ключом деплоя
+        # Ключ ОТДЕЛЬНЫЙ, не тот, которым ходит человек: скомпрометированный
+        # CI не должен давать интерактивный доступ к серверу.
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Записать known_hosts
+        # Заранее собранный ключ хоста, а НЕ `StrictHostKeyChecking=no`.
+        # Отключить проверку значит согласиться на подмену сервера:
+        # тот, кто перехватит соединение, получит и команду выката,
+        # и всё, что она печатает.
+        run: echo "${{ secrets.DEPLOY_HOST_KEY }}" >> ~/.ssh/known_hosts
+
+      - name: Выкатить
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          # Для workflow_run берём SHA того коммита, который прошёл CI,
+          # а не HEAD ветки: между зелёным прогоном и этим шагом в master
+          # мог приехать ещё один пуш, и выкатывать непроверенный код
+          # означало бы обойти собственный гейт.
+          TARGET_REF: ${{ github.event.inputs.ref || github.event.workflow_run.head_sha }}
+        # Передаётся ТОЛЬКО ревизия, а не команда. Ключ деплоя прописан
+        # в authorized_keys принудительной командой `ci-deploy.sh`,
+        # поэтому строка ниже приезжает на сервер в SSH_ORIGINAL_COMMAND
+        # и там проверяется по набору допустимых символов. Смысл в том,
+        # что укравший приватный ключ не получает оболочку: он может
+        # выкатить ревизию из origin и ничего больше.
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              "${DEPLOY_USER}@${DEPLOY_HOST}" \
+              "${TARGET_REF}"
+
+      - name: Итог
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "Выкат прошёл. Первичный лог — /var/log/laocars/deploy.log на сервере."
+          else
+            echo "ВЫКАТ УПАЛ. Смотреть /var/log/laocars/deploy.log на сервере:"
+            echo "  сайт поднят обратно trap-ом в deploy.sh, но код мог остаться промежуточным."
+            echo "  Откат: запустить этот workflow вручную с ref предыдущего коммита."
+          fi
