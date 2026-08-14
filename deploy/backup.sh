@@ -49,12 +49,20 @@ echo "=== Бэкап начат: ${STAMP} ==="
 # `exec -T` обязателен: без него docker выделяет псевдотерминал,
 # и дамп приезжает с подменёнными переводами строк — файл выглядит
 # целым, а pg_restore на нём падает.
+#
+# `< /dev/null` тоже обязателен, и это не перестраховка. `exec -T`
+# ПОДКЛЮЧАЕТ stdin к контейнеру, поэтому запуск скрипта из другого
+# скрипта, читающего stdin (`bash -s <<EOF`, ssh с heredoc), приводит
+# к тому, что pg_dump съедает остаток вызывающего скрипта. Симптом
+# читается как «команда молча оборвалась на середине» и ищется где
+# угодно, кроме перенаправления. Поймано ровно так при проверке
+# восстановления.
 DB_USER="$(grep -E '^POSTGRES_USER=' "${APP_DIR}/deploy/.env.docker" | cut -d= -f2-)"
 DB_NAME="$(grep -E '^POSTGRES_DB=' "${APP_DIR}/deploy/.env.docker" | cut -d= -f2-)"
 DB_FILE="${BACKUP_DIR}/db/laocars-${STAMP}.dump"
 
 docker compose -f "${COMPOSE_FILE}" exec -T postgres \
-    pg_dump -U "${DB_USER}" -Fc "${DB_NAME}" > "${DB_FILE}"
+    pg_dump -U "${DB_USER}" -Fc "${DB_NAME}" > "${DB_FILE}" < /dev/null
 
 # Пустой дамп — это отказ, который иначе заметят при восстановлении.
 if [ ! -s "${DB_FILE}" ]; then
