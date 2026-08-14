@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\PushSubscription;
+
 /*
 |--------------------------------------------------------------------------
 | Браузерные push-уведомления сотрудникам (веха 4.7)
@@ -52,7 +54,7 @@ return [
      * Модель подписки. Своя, а не пакетная: подписке нужны читаемое имя
      * устройства для списка в кабинете и скоуп выборки получателей.
      */
-    'model' => App\Models\PushSubscription::class,
+    'model' => PushSubscription::class,
 
     'table_name' => env('WEBPUSH_DB_TABLE', 'push_subscriptions'),
 
