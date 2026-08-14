@@ -1,0 +1,43 @@
+# Ротация логов ЛАО КАРС.
+#
+# Установка:
+#     sudo cp /var/www/laocars/deploy/logrotate/laocars /etc/logrotate.d/laocars
+#     sudo logrotate -d /etc/logrotate.d/laocars   # проверка вхолостую
+#
+# КАНАЛ `leads` СЮДА НЕ ВКЛЮЧЁН, И ЭТО НЕ УПУЩЕНИЕ.
+#
+# `config/logging.php` объявляет его драйвером `daily` со сроком
+# `LOG_LEADS_DAYS` — Laravel ротирует и удаляет эти файлы сам. Отдать
+# их ещё и logrotate значит завести два механизма, удаляющих одни и те
+# же файлы по разным правилам: при разборе «куда делся лид» окажется,
+# что нужного дня нет, и непонятно, кто его убрал. Поэтому шаблон ниже
+# перечисляет `laravel.log` поимённо, а не `storage/logs/*.log`.
+
+/var/www/laocars/storage/logs/laravel.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    # Файл открыт живым процессом (php-fpm держит дескриптор), поэтому
+    # `copytruncate`, а не переименование: без него php-fpm продолжил бы
+    # писать в переименованный файл, и свежий `laravel.log` оставался бы
+    # пустым до перезапуска пула — то есть логи «пропали» ровно тогда,
+    # когда понадобились.
+    copytruncate
+    su laocars laocars
+    create 0640 laocars laocars
+}
+
+/var/log/laocars/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su laocars laocars
+    create 0640 laocars laocars
+}

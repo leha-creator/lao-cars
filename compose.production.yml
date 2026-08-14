@@ -1,0 +1,126 @@
+# Прод-окружение ЛАО КАРС: только базы данных.
+#
+# Приложение на проде работает НАТИВНО — php-fpm и Node стоят пакетами,
+# кода в контейнерах нет. В Docker живут PostgreSQL и Redis: это даёт
+# те же версии, что локально и в CI (17 и 7), изоляцию данных в volume
+# и переносимость на другой сервер одной командой. PHP-слой без образа —
+# это отсутствие сборки, реестра и `docker pull` на машине с 2 vCPU.
+#
+# ЭТО ОТДЕЛЬНЫЙ ФАЙЛ, А НЕ ПРОФИЛЬ В compose.yml, И ОБЪЕДИНЯТЬ ИХ НЕЛЬЗЯ.
+#
+# Локальный `compose.yml` публикует порты на ВСЕ интерфейсы (`5432:5432`,
+# `6380:6379`) и хранит пароль `secret` литералом. На машине с публичным
+# IP это открытая наружу база с паролем из репозитория. Переписать
+# локальный файл на интерполяцию из `.env` тоже нельзя: причина записана
+# в его шапке — `.env.example` хранит канонический REDIS_PORT=6379 ради
+# сервисов GitHub Actions, и подстановка увела бы локальную публикацию
+# Redis на порт, занятый нативной службой разработчика.
+#
+# ПРИВЯЗКА К 127.0.0.1 — ЕДИНСТВЕННАЯ ЗАЩИТА ЭТИХ БАЗ.
+#
+# ufw её НЕ дублирует: Docker пишет свои правила в цепочки DOCKER-USER
+# и FORWARD раньше цепочек ufw, поэтому опубликованный контейнером порт
+# остаётся доступен снаружи при любом `default deny incoming`. Сняв
+# `127.0.0.1:` из публикации, вы откроете базу в интернет, не тронув
+# ни одного правила фаервола и не увидев ни одного предупреждения.
+# Проверка — `nc -vz <публичный-ip> 5432` с чужой машины, ожидается отказ.
+#
+# Запуск:   docker compose -f compose.production.yml up -d
+# Статус:   docker compose -f compose.production.yml ps
+# Логи:     docker compose -f compose.production.yml logs -f postgres
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: laocars-postgres
+    restart: unless-stopped
+    env_file:
+      - deploy/.env.docker
+    environment:
+      # Локаль `C` и кодировка UTF8 — как в локальном окружении. Иначе
+      # сортировка строк разойдётся между машинами, и порядок выдачи
+      # каталога на проде перестанет совпадать с проверенным локально.
+      # Читаются ТОЛЬКО при первичной инициализации пустого volume:
+      # смена значения на живой базе не делает ничего.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    # Тюнинг под 4 ГБ параметрами команды, а не файлом: умолчания образа
+    # рассчитаны на машину меньше этой и оставляют планировщику неверное
+    # представление о доступной памяти. Каталог живёт на частичных
+    # индексах (`cars_available_*`), которые планировщик обязан выбрать —
+    # при заниженном `effective_cache_size` он предпочтёт seq scan.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - max_connections=50
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Init-скрипт из `docker/postgres/init` здесь НЕ подключён намеренно:
+      # он создаёт базу `laocars_testing`, а тестовой базы на проде быть
+      # не должно. Это единственное отличие от локального файла по томам.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: laocars-redis
+    restart: unless-stopped
+    # Штатный порт 6379, а не локальные 6380: смещение существует только
+    # из-за нативной службы на машине разработчика, здесь её нет.
+    #
+    # `noeviction`, а НЕ `allkeys-lru`. В одном инстансе живут очередь
+    # и сессии (db0) и кеш (db1). Политика вытеснения по всем ключам
+    # при упоре в лимит молча удалит задачу уведомления о заявке — это
+    # потерянный лид без единого симптома. `noeviction` в той же ситуации
+    # даёт ошибку записи, то есть отказ, который видно. Триггер пересмотра:
+    # упор в лимит по кешу — разносить кеш и очередь по разным инстансам,
+    # а не менять политику.
+    #
+    # `appendonly` — чтобы очередь заявок пережила перезапуск контейнера.
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - noeviction
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres-data:
+    name: laocars-postgres-data
+  redis-data:
+    name: laocars-redis-data

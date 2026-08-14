@@ -1,0 +1,65 @@
+# Воркер очереди ЛАО КАРС.
+#
+# Установка:
+#     sudo cp /var/www/laocars/deploy/systemd/laocars-queue.service \
+#             /etc/systemd/system/
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable --now laocars-queue
+#
+# systemd, а не supervisor: роадмап пишет «под супервизором» про роль,
+# а не про пакет, и systemd в Ubuntu уже есть — supervisor был бы лишним
+# демоном ради того же самого.
+#
+# ПЕРЕЗАПУСК ПОСЛЕ ДЕПЛОЯ — `php artisan queue:restart`, А НЕ
+# `systemctl restart`. Первый кладёт в Redis сигнал: воркер доделывает
+# текущую задачу и выходит штатно, systemd поднимает его заново по
+# `Restart=always`. Второй рвёт задачу на середине — а задачи здесь
+# отправляют уведомления о заявках. И главное: `queue:restart` не
+# требует root, поэтому `deploy.sh` обходится без sudo целиком.
+
+[Unit]
+Description=Воркер очереди ЛАО КАРС (заявки, уведомления)
+# Redis живёт в контейнере, поэтому ждём docker, а не redis-server.
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=laocars
+Group=laocars
+WorkingDirectory=/var/www/laocars
+
+# Один воркер, и это не экономия. Заявок единицы в день; второй процесс
+# съел бы память, которую делят php-fpm, две базы и `vite build`
+# на каждом выкате.
+#
+# `--max-time=3600` — страховка от утечек памяти в длинном процессе:
+# воркер выходит сам раз в час, systemd поднимает заново, счётчик
+# памяти обнуляется. Выход по таймеру — штатный, а не аварийный.
+#
+# `--tries=3` НЕ отменяет собственных ретраев задачи уведомления: они
+# заданы в самой задаче (`NotifyManagerAboutLead::$tries`, веха 3.7)
+# и остаются главными. Здесь это потолок для всего остального.
+ExecStart=/usr/bin/php /var/www/laocars/artisan queue:work redis \
+    --queue=default \
+    --sleep=3 \
+    --tries=3 \
+    --backoff=10 \
+    --max-time=3600
+
+# Всегда, включая штатный выход по `queue:restart` и по `--max-time`.
+Restart=always
+RestartSec=5
+
+# Отдельный файл, чтобы вывод воркера не смешивался с журналом systemd:
+# при разборе «почему не пришло уведомление» читать нужно одно место,
+# а не сопоставлять journalctl с laravel.log по времени.
+StandardOutput=append:/var/log/laocars/queue.log
+StandardError=append:/var/log/laocars/queue.log
+
+# Каталог логов создаётся до первого запуска:
+#     sudo mkdir -p /var/log/laocars && sudo chown laocars:laocars /var/log/laocars
+
+[Install]
+WantedBy=multi-user.target
