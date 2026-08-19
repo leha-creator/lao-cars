@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\Storage;
  * реестр `MediaSettingKeys` и разделил ключ настройки с путём внутрь
  * её значения.
  */
-#[Fillable(['disk', 'path', 'thumb_path', 'name', 'alt', 'mime', 'size'])]
+#[Fillable(['disk', 'path', 'thumb_path', 'name', 'alt', 'mime', 'size', 'width', 'height', 'watermarked_at'])]
 final class Media extends Model
 {
     /** @use HasFactory<MediaFactory> */
@@ -154,6 +154,12 @@ final class Media extends Model
     {
         return [
             'size' => 'integer',
+            // Размеры файла и отметка о штампе (веха 4.14). Nullable:
+            // у файлов, залитых до вехи, их нет, пока по ним не пройдёт
+            // `images:restamp`.
+            'width' => 'integer',
+            'height' => 'integer',
+            'watermarked_at' => 'datetime',
         ];
     }
 }

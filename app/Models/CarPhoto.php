@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Storage;
  * общей медиабиблиотеки: галерее нужна сортировка внутри карточки,
  * а не переиспользование между разделами.
  */
-#[Fillable(['car_id', 'disk', 'path', 'thumb_path', 'alt', 'sort_order'])]
+#[Fillable(['car_id', 'disk', 'path', 'thumb_path', 'alt', 'sort_order', 'width', 'height', 'watermarked_at'])]
 final class CarPhoto extends Model
 {
     /** @use HasFactory<CarPhotoFactory> */
@@ -105,6 +105,11 @@ final class CarPhoto extends Model
     {
         return [
             'sort_order' => 'integer',
+            // Размеры файла (веха 4.14). Nullable: у фотографий, залитых
+            // до вехи, их нет, пока по ним не пройдёт `images:restamp`.
+            'width' => 'integer',
+            'height' => 'integer',
+            'watermarked_at' => 'datetime',
         ];
     }
 }

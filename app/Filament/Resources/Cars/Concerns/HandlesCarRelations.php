@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Cars\Concerns;
 
 use App\Enums\CarAttributeType;
 use App\Models\Car;
+use App\Services\StoredImage;
 
 /**
  * Запись связей автомобиля из формы: галерея и значения характеристик.
@@ -31,8 +32,39 @@ trait HandlesCarRelations
     /** @var array<int, string>|null */
     private ?array $carPhotoPaths = null;
 
+    /**
+     * Что `ImageProcessor` знает о только что загруженных файлах, но чего
+     * не видно по пути: размеры кадра и факт наложения логотипа.
+     *
+     * Состояние `FileUpload` — плоский список путей, поэтому результат
+     * обработки иначе теряется между загрузкой и записью связи. Хранить
+     * его в памяти компонента безопасно: файлы сохраняются
+     * в `beforeStateDehydrated`, то есть в ТОМ ЖЕ запросе, в котором
+     * потом отработает `syncCarRelations()`, а не в отдельном запросе
+     * загрузки.
+     *
+     * @var array<string, array{width: ?int, height: ?int, watermarked: bool}>
+     */
+    private array $carPhotoMeta = [];
+
     /** @var array<string, mixed>|null */
     private ?array $carAttributeValues = null;
+
+    /**
+     * Запомнить результат обработки только что загруженного файла.
+     *
+     * Публичный, потому что вызывается из колбэка `FileUpload`
+     * в `CarForm` через инъекцию `$livewire`: схема формы статическая
+     * и до приватного состояния страницы иначе не достаёт.
+     */
+    public function rememberProcessedPhoto(StoredImage $stored): void
+    {
+        $this->carPhotoMeta[$stored->path] = [
+            'width' => $stored->width,
+            'height' => $stored->height,
+            'watermarked' => $stored->watermarked,
+        ];
+    }
 
     /**
      * Снять связи из данных формы до записи модели.
@@ -62,7 +94,7 @@ trait HandlesCarRelations
         }
 
         if ($this->carPhotoPaths !== null) {
-            $record->syncPhotos($this->carPhotoPaths);
+            $record->syncPhotos($this->carPhotoPaths, $this->carPhotoMeta);
         }
 
         if ($this->carAttributeValues !== null) {

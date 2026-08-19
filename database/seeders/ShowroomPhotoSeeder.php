@@ -110,6 +110,10 @@ class ShowroomPhotoSeeder extends Seeder
                 directory: self::TARGET_DIR,
                 originalName: basename($source),
                 basename: $stem,
+                // Фон полосы доверия — служебное изображение, а не витрина
+                // товара: логотип компании поверх собственного шоу-рума
+                // на собственном сайте (веха 4.14, решение 9).
+                watermark: false,
             );
 
             $path = $stored->path;

@@ -20,6 +20,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 /**
@@ -76,11 +77,21 @@ final class CarForm
                     ->directory('cars')
                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                     ->maxSize((int) config('images.max_upload_kb'))
-                    ->saveUploadedFileUsing(
-                        fn (TemporaryUploadedFile $file, ImageProcessor $processor): string => $processor
-                            ->store($file, 'public', 'cars')
-                            ->path,
-                    )
+                    // Фотографии автомобилей штампуются ВСЕГДА, вопроса
+                    // о назначении здесь не задаётся: это витрина товара,
+                    // а не служебная картинка (веха 4.14).
+                    ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, ImageProcessor $processor, Component $livewire): string {
+                        $stored = $processor->store($file, 'public', 'cars');
+
+                        // Состояние поля — плоский список путей, и размеры
+                        // кадра вместе с отметкой о штампе иначе потерялись
+                        // бы между обработкой и записью связи.
+                        if (method_exists($livewire, 'rememberProcessedPhoto')) {
+                            $livewire->rememberProcessedPhoto($stored);
+                        }
+
+                        return $stored->path;
+                    })
                     ->formatStateUsing(
                         fn (?Car $record): array => $record?->photos->pluck('path')->all() ?? [],
                     ),

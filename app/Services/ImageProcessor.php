@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
+use Intervention\Image\Interfaces\ImageInterface;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Throwable;
 
@@ -33,13 +34,14 @@ final class ImageProcessor
     /**
      * Сохранить загруженный через форму файл.
      */
-    public function store(TemporaryUploadedFile $file, string $disk, string $directory): StoredImage
+    public function store(TemporaryUploadedFile $file, string $disk, string $directory, bool $watermark = true): StoredImage
     {
         return $this->storeFile(
             sourcePath: (string) $file->getRealPath(),
             disk: $disk,
             directory: $directory,
             originalName: $file->getClientOriginalName(),
+            watermark: $watermark,
         );
     }
 
@@ -56,15 +58,21 @@ final class ImageProcessor
      * По умолчанию имя случайное — у загрузок из админки исходные имена
      * повторяются («IMG_1760.PNG» с двух телефонов), и совпадение
      * затирало бы чужой файл.
+     *
+     * `$watermark` по умолчанию `true`, потому что это верно для всех
+     * вызовов, кроме служебных изображений: портретов сотрудников,
+     * аватаров отзывов, фонов и иллюстраций этапов. Логотип компании
+     * на портрете менеджера — это не забытая настройка, а видимая ошибка,
+     * поэтому исключения перечисляются явно у места вызова.
      */
-    public function storeFile(string $sourcePath, string $disk, string $directory, ?string $originalName = null, ?string $basename = null): StoredImage
+    public function storeFile(string $sourcePath, string $disk, string $directory, ?string $originalName = null, ?string $basename = null, bool $watermark = true): StoredImage
     {
         $originalName ??= basename($sourcePath);
         $base = $basename ?? Str::lower(Str::random(8)).'-'.uniqid();
         $originalSize = @filesize($sourcePath) ?: 0;
 
         try {
-            return $this->process($sourcePath, $disk, $directory, $base, $originalName, $originalSize);
+            return $this->process($sourcePath, $disk, $directory, $base, $originalName, $originalSize, $watermark);
         } catch (Throwable $e) {
             // Битый или экзотический файл не должен стоить администратору
             // ошибки 500: контент важнее оптимизации — тот же принцип, по
@@ -103,6 +111,7 @@ final class ImageProcessor
         string $base,
         string $originalName,
         int $originalSize,
+        bool $watermark,
     ): StoredImage {
         $quality = (int) config('images.quality');
 
@@ -111,7 +120,18 @@ final class ImageProcessor
         // scaleDown, а не resize: апскейл запрещён — снимок 800px,
         // растянутый до 1920, только тяжелее и мылит.
         $image->scaleDown(width: (int) config('images.max_width'));
+
+        // Штамп ставится ЗДЕСЬ — после ресайза и до конвертации оригинала:
+        // превью ниже строится масштабированием этого же объекта и
+        // наследует логотип вместе с ним. Обоснование — в config/images.php.
+        $stamped = $watermark && $this->watermark($image);
+
         $encoded = (string) $image->toWebp($quality);
+
+        // Размеры снимаются после ресайза и до освобождения растра: это
+        // те самые числа, что уедут в `width`/`height` тега `img`.
+        $width = $image->width();
+        $height = $image->height();
 
         $path = $directory.'/'.$base.'.webp';
         Storage::disk($disk)->put($path, $encoded);
@@ -146,7 +166,101 @@ final class ImageProcessor
             thumbPath: $thumbPath,
             mime: 'image/webp',
             size: $size,
+            width: $width,
+            height: $height,
+            watermarked: $stamped,
         );
+    }
+
+    /**
+     * Вжечь логотип в угол кадра. Возвращает «штамп поставлен».
+     *
+     * Отсутствующий или нечитаемый файл штампа НЕ РОНЯЕТ ЗАГРУЗКУ: тот же
+     * принцип, что у отката в `storeFile()` — контент важнее оформления.
+     * Но и молчать нельзя: без записи в лог сайт наберёт сотню фотографий
+     * без логотипа, и заметит это тот, кто откроет каталог через месяц.
+     */
+    private function watermark(ImageInterface $image): bool
+    {
+        if (! config('images.watermark.enabled')) {
+            return false;
+        }
+
+        // Кадр уже порога не штампуется вовсе: на аватаре 200px логотип
+        // занял бы четверть площади.
+        if ($image->width() < (int) config('images.watermark.min_width')) {
+            return false;
+        }
+
+        $file = base_path((string) config('images.watermark.path'));
+
+        if (! is_file($file) || ! is_readable($file)) {
+            Log::warning('Файл вотермарки не найден — изображение сохранено без логотипа', [
+                'path' => $file,
+            ]);
+
+            return false;
+        }
+
+        try {
+            $margin = (int) round($image->width() * (float) config('images.watermark.margin_ratio'));
+
+            $image->place(
+                element: $this->watermarkElement($file, $image->width()),
+                position: (string) config('images.watermark.position'),
+                offset_x: $margin,
+                offset_y: $margin,
+                opacity: (int) config('images.watermark.opacity'),
+            );
+        } catch (Throwable $e) {
+            Log::warning('Не удалось наложить вотермарку — изображение сохранено без логотипа', [
+                'path' => $file,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Логотип, при необходимости на тёмной подложке.
+     *
+     * Подложка рисуется НЕ на самом кадре, а под логотипом внутри одного
+     * элемента, который целиком и ставится в угол. Иначе положение
+     * прямоугольника и положение логотипа считались бы в двух местах —
+     * и разошлись бы молча на первом же кадре с другими пропорциями.
+     *
+     * Нужна она из-за самого файла: `logo-white.png` белый, и на светлом
+     * кадре — снег, белая машина, засвеченное небо — исчезает целиком.
+     */
+    private function watermarkElement(string $file, int $frameWidth): ImageInterface
+    {
+        $logo = $this->images->read($file);
+        $logo->scale(width: max(1, (int) round($frameWidth * (float) config('images.watermark.width_ratio'))));
+
+        if (! config('images.watermark.backdrop')) {
+            return $logo;
+        }
+
+        // Поле вокруг логотипа — доля от него самого, а не от кадра:
+        // подложка обязана быть пропорциональна тому, что подкладывает.
+        $padding = max(2, (int) round($logo->width() * 0.12));
+        $width = $logo->width() + $padding * 2;
+        $height = $logo->height() + $padding * 2;
+
+        $alpha = max(0, min(100, (int) config('images.watermark.backdrop_opacity'))) / 100;
+
+        $backdrop = $this->images->create($width, $height);
+        $backdrop->drawRectangle(0, 0, function ($rectangle) use ($width, $height, $alpha): void {
+            $rectangle->size($width, $height);
+            $rectangle->background('rgba(0, 0, 0, '.$alpha.')');
+        });
+
+        $backdrop->place($logo, 'center');
+
+        return $backdrop;
     }
 
     /**
@@ -159,11 +273,23 @@ final class ImageProcessor
 
         $path = Storage::disk($disk)->putFileAs($directory, new File($sourcePath), $name);
 
+        // Размеры читаются с исходного файла штатной функцией PHP, а не
+        // через Intervention: сюда попадают ровно те файлы, на которых
+        // Intervention уже споткнулся, и второй заход тем же инструментом
+        // дал бы то же исключение. `getimagesize()` не разворачивает
+        // растр — она читает заголовок, поэтому и не падает там, где
+        // падает декодер. Не прочиталось — `null`, а не выдуманные нули.
+        $dimensions = @getimagesize($sourcePath);
+
         return new StoredImage(
             path: (string) $path,
             thumbPath: null,
             mime: Storage::disk($disk)->mimeType((string) $path) ?: 'application/octet-stream',
             size: (int) Storage::disk($disk)->size((string) $path),
+            width: is_array($dimensions) ? $dimensions[0] : null,
+            height: is_array($dimensions) ? $dimensions[1] : null,
+            // Обработка не состоялась — значит, и штампа на файле нет.
+            watermarked: false,
         );
     }
 }

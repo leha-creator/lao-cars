@@ -95,6 +95,8 @@ class CarPhotoSeeder extends Seeder
                 $stem = mb_strtolower(pathinfo($source, PATHINFO_FILENAME));
                 $path = self::TARGET_DIR.'/'.$stem.'.webp';
 
+                $stored = null;
+
                 if ($disk->exists($path)) {
                     $reused++;
                     $thumbPath = $processor->thumbPathFor($path);
@@ -124,6 +126,16 @@ class CarPhotoSeeder extends Seeder
                         'thumb_path' => $thumbPath,
                         'alt' => "{$car->brand->name} {$car->model}, фото ".($i + 1),
                         'sort_order' => $i,
+                        // Размеры и отметка о штампе (веха 4.14). Отметка
+                        // обязательна именно здесь: без неё `images:restamp`
+                        // посчитает засеянные фотографии необработанными
+                        // и поставит второй логотип поверх первого.
+                        // При повторном прогоне на готовом файле `$stored`
+                        // нет — но нет и записи, которую надо заводить:
+                        // `firstOrCreate` вернёт существующую.
+                        'width' => $stored?->width,
+                        'height' => $stored?->height,
+                        'watermarked_at' => $stored?->watermarked ? now() : null,
                     ],
                 );
 

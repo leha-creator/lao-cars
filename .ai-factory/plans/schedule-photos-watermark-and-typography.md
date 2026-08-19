@@ -231,7 +231,7 @@
 
 ### Фаза 2 — Обработка изображений (пункт 4 и основа пункта 2)
 
-- [ ] **Задача 5: вотермарка в `ImageProcessor`**
+- [x] **Задача 5: вотермарка в `ImageProcessor`**
 
   - `config/images.php` — новая секция `watermark`:
     - `enabled` (`IMAGES_WATERMARK_ENABLED`, по умолчанию `true`);
@@ -250,7 +250,7 @@
 
   **Файлы:** `config/images.php`, `app/Services/ImageProcessor.php`, `app/Services/StoredImage.php`
 
-- [ ] **Задача 6: размеры и отметка штампа в схеме**
+- [x] **Задача 6: размеры и отметка штампа в схеме**
 
   - Миграция `add_dimensions_and_watermark_to_photo_tables` — одна на обе таблицы: `car_photos` и `media` получают `width` (`unsignedSmallInteger`, nullable), `height` (то же) и `watermarked_at` (`timestamp`, nullable).
   - Nullable во всех трёх: у уже загруженных файлов этих данных нет, и заполнит их команда перепрохода (задача 8), а не миграция — читать с диска тысячу файлов внутри миграции значит получить деплой, который висит и не объясняет почему.
@@ -266,7 +266,7 @@
   **Файлы:** `database/migrations/<ts>_add_dimensions_and_watermark_to_photo_tables.php`, `app/Models/CarPhoto.php`, `app/Models/Media.php`, `app/Models/Car.php`, `app/Filament/Resources/Media/Actions/UploadMediaAction.php`, `app/Filament/Resources/Cars/Schemas/CarForm.php`
   **Зависит от:** задачи 5
 
-- [ ] **Задача 7: назначение файла при загрузке в библиотеку**
+- [x] **Задача 7: назначение файла при загрузке в библиотеку**
 
   Решение 9 в коде.
 
@@ -283,7 +283,7 @@
   **Файлы:** `app/Services/ImageProcessor.php`, `app/Filament/Resources/Media/Actions/UploadMediaAction.php`, `database/seeders/ShowroomPhotoSeeder.php`, `database/seeders/StepPhotoSeeder.php`
   **Зависит от:** задачи 6
 
-- [ ] **Задача 8: команда `images:restamp`**
+- [x] **Задача 8: команда `images:restamp`**
 
   `app/Console/Commands/RestampImagesCommand.php` — разовый проход по уже загруженным файлам (решение 11).
 

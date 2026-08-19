@@ -143,6 +143,9 @@ class StepPhotoSeeder extends Seeder
                     directory: self::TARGET_DIR,
                     originalName: basename($source),
                     basename: $stem,
+                    // Иллюстрации этапов покупки — служебные изображения,
+                    // а не витрина товара (веха 4.14, решение 9).
+                    watermark: false,
                 );
 
                 $path = $stored->path;

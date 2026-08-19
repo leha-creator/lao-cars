@@ -250,9 +250,27 @@ final class Car extends Model
      *   модели, а не массовым запросом: массовое удаление не поднимает
      *   события Eloquent, и файлы остались бы на диске навсегда.
      *
+     * `$meta` — то, что известно об только что обработанных файлах
+     * и не выводится из пути: размеры кадра и факт наложения логотипа
+     * (веха 4.14). Приходит плоским массивом, а не `StoredImage`, чтобы
+     * модель не знала о сервисах — правило зависимостей
+     * `ARCHITECTURE.md`, то же основание, по которому `ThumbnailPath`
+     * живёт в `Support`.
+     *
+     * Отметка о штампе НЕ УГАДЫВАЕТСЯ: без неё пришлось бы решать
+     * «логотип, наверное, поставился», а `images:restamp` потом пропустил
+     * бы фотографию, на которой штампа нет. Файл, о котором `$meta`
+     * молчит (залит до вехи, приехал импортом), остаётся с `null` —
+     * ровно то состояние, которое команда перепрохода и ищет.
+     *
+     * Существующие записи `$meta` не трогает вовсе: пересортировка
+     * галереи не должна ни обнулять размеры, ни переставлять дату
+     * штампа.
+     *
      * @param  array<int, string>  $paths
+     * @param  array<string, array{width: ?int, height: ?int, watermarked: bool}>  $meta
      */
-    public function syncPhotos(array $paths): void
+    public function syncPhotos(array $paths, array $meta = []): void
     {
         $paths = array_values(array_filter($paths, static fn (mixed $path): bool => is_string($path) && $path !== ''));
 
@@ -283,12 +301,17 @@ final class Car extends Model
                 $thumbPath = null;
             }
 
+            $processed = $meta[$path] ?? null;
+
             $this->photos()->create([
                 'disk' => 'public',
                 'path' => $path,
                 'thumb_path' => $thumbPath,
                 'alt' => trim(sprintf('%s %s', $this->brand?->name ?? '', $this->model)).', фото '.($index + 1),
                 'sort_order' => $index,
+                'width' => $processed['width'] ?? null,
+                'height' => $processed['height'] ?? null,
+                'watermarked_at' => ($processed['watermarked'] ?? false) ? now() : null,
             ]);
         }
 

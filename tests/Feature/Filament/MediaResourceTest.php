@@ -9,6 +9,7 @@
  * перед удалением и отказ от массового удаления.
  */
 
+use App\Filament\Resources\Media\Actions\UploadMediaAction;
 use App\Filament\Resources\Media\MediaResource;
 use App\Filament\Resources\Media\Pages\EditMedia;
 use App\Filament\Resources\Media\Pages\ListMedia;
@@ -50,6 +51,12 @@ it('creates records from an upload, converting files to webp with a thumbnail', 
     // наследник Action, и в таблице действие зарегистрировано как `upload`.
     livewire(ListMedia::class)
         ->callAction('upload', [
+            // Назначение обязательно с вехи 4.14: у переключателя нет
+            // умолчания, и без него загрузка не проходит валидацию.
+            // Сторож проверяет обработку файла, а не выбор назначения,
+            // поэтому здесь просто заполняется поле — отдельные сторожа
+            // на сам выбор стоят ниже.
+            'purpose' => UploadMediaAction::PURPOSE_CATALOG,
             'files' => [
                 UploadedFile::fake()->image('Промо баннер.png', 1200, 800),
             ],
