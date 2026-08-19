@@ -48,8 +48,17 @@
                         <a href="mailto:{{ $contact('email') }}" class="transition-colors hover:text-accent">{{ $contact('email') }}</a>
                     @endif
 
-                    @if ($contact('work_hours') !== null)
-                        <div>{{ $contact('work_hours') }}</div>
+                    {{-- Часы собираются из структуры расписания (веха 4.14),
+                         а не берутся строкой из настройки. Пустое расписание
+                         не выводится вовсе — как незаполненная соцсеть:
+                         пустая строка в столбце контактов читается как
+                         поломка вёрстки, а не как «часы не заданы». --}}
+                    @if ($schedule()->label() !== null)
+                        <div>{{ $schedule()->label() }}</div>
+
+                        @if ($schedule()->note() !== null)
+                            <div class="text-[13px] text-ink-muted/70">{{ $schedule()->note() }}</div>
+                        @endif
                     @endif
                 </div>
             </div>

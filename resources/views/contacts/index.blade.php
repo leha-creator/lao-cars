@@ -16,6 +16,13 @@
 @section('description', 'Адрес, телефон, почта и мессенджеры ЛАО КАРС. Форма обратной связи — ответим в рабочее время.')
 
 @section('content')
+    {{-- Микроразметка организации (веха 4.14). Печатается через `@json`
+         с `JSON_HEX_TAG` по правилу проекта: сюда попадают адрес, телефон
+         и почта, введённые администратором, то есть данные из базы в HTML
+         без экранирования Blade. Обоснование флагов разобрано подробно
+         в `catalog/show.blade.php`, где стоит тот же тег. --}}
+    <script type="application/ld+json">@json($structuredData, JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)</script>
+
     {{-- Страница светлая целиком (веха 4.11). Вёрстка при этом не трогается:
          контакты остаются заглушкой вехи 4.1 до вехи 4.5
          (`showroom-and-about-page.md`), и доведён здесь только фон. --}}
@@ -27,12 +34,18 @@
                 'Адрес' => $contacts['contacts.address'] ?? null,
                 'Телефон' => $contacts['contacts.phone'] ?? null,
                 'E-mail' => $contacts['contacts.email'] ?? null,
-                'Часы работы' => $contacts['contacts.work_hours'] ?? null,
+                {{-- Та же собранная строка, что в подвале и в микроразметке:
+                     источник один — настройка `contacts.schedule`. --}}
+                'Часы работы' => $schedule->label(),
             ] as $label => $value)
                 @if ($value !== null && $value !== '')
                     <div class="rounded-card border border-line bg-surface p-6">
                         <div class="mb-2 text-[13px] tracking-[0.1em] text-ink-muted uppercase">{{ $label }}</div>
                         <div class="text-[15px]">{{ $value }}</div>
+
+                        @if ($label === 'Часы работы' && $schedule->note() !== null)
+                            <div class="mt-1 text-[13px] text-ink-muted">{{ $schedule->note() }}</div>
+                        @endif
                     </div>
                 @endif
             @endforeach

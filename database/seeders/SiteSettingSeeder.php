@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Models\Setting;
+use App\Support\WorkSchedule;
 use Illuminate\Database\Seeder;
 
 /**
@@ -25,7 +26,14 @@ class SiteSettingSeeder extends Seeder
             'contacts.phone' => '+7 495 123-45-67',
             'contacts.email' => 'info@laocars.ru',
             'contacts.address' => 'Москва, ул. Осенняя, 17, корп. 1',
-            'contacts.work_hours' => 'Пн–Вс, 9:00–21:00',
+
+            // Расписание работы структурой, а не строкой (веха 4.14).
+            // Умолчание — то, чем компания работает сегодня: семь рабочих
+            // дней 09:00–21:00, то есть «Без выходных, 9:00–21:00» после
+            // сборки. Значение берётся из `WorkSchedule`, а не пишется
+            // руками: те же семь строк нужны ещё пресету формы админки,
+            // и три копии разошлись бы на первой же правке часов.
+            'contacts.schedule' => WorkSchedule::defaultSetting(),
 
             'socials.telegram' => 'https://t.me/laocars',
             'socials.whatsapp' => 'https://wa.me/74951234567',

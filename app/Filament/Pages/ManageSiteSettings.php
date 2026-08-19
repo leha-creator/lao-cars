@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Enums\Weekday;
 use App\Filament\Actions\HelpAction;
 use App\Filament\Forms\Components\MediaPicker;
 use App\Filament\NavigationGroup;
 use App\Models\Setting;
+use App\Support\WorkSchedule;
 use BackedEnum;
+use Closure;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Concerns\InteractsWithFormActions;
 use Filament\Pages\Page;
@@ -20,8 +26,12 @@ use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\EmbeddedSchema;
 use Filament\Schemas\Components\Form;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Arr;
@@ -74,7 +84,11 @@ final class ManageSiteSettings extends Page
             'contacts.phone',
             'contacts.email',
             'contacts.address',
-            'contacts.work_hours',
+            // Расписание работы (веха 4.14) — ОДИН ключ с объектом внутри,
+            // а не семь ключей по дню: реестр сверяется с сидом по ключу
+            // целиком, и семь ключей дали бы семь шансов разойтись.
+            // Прецедент формы значения — `home.promo`.
+            'contacts.schedule',
         ],
         'socials' => [
             'socials.telegram',
@@ -340,9 +354,154 @@ final class ManageSiteSettings extends Page
             TextInput::make('contacts.address')
                 ->label('Адрес'),
 
-            TextInput::make('contacts.work_hours')
-                ->label('Часы работы'),
+            self::scheduleSection(),
         ]);
+    }
+
+    /**
+     * Расписание работы: семь именованных строк и пресеты (веха 4.14).
+     *
+     * НЕ `Repeater`. Дней ровно семь, они не добавляются и не удаляются,
+     * а репитер разрешил бы и то и другое, дал бы перетаскивание порядка
+     * недели и вернул бы `null` при удалении всех элементов — правило
+     * `RULES.md` про репитеры настроек. Семь именованных строк — это
+     * форма, которая не может выразить неверное состояние.
+     */
+    private static function scheduleSection(): Section
+    {
+        return Section::make('Часы работы')
+            // Ключ нужен не вёрстке, а адресации: действия-пресеты живут
+            // в шапке ЭТОЙ секции, а не на странице, и без ключа до них
+            // не добраться ни тесту, ни вложенному действию.
+            ->key('work_schedule')
+            ->description('Отметьте рабочие дни и укажите время. На сайте строка собирается сама: семь одинаковых дней превращаются в «Без выходных, 9:00–21:00».')
+            ->headerActions(self::schedulePresets())
+            ->schema([
+                ...array_map(self::scheduleDay(...), Weekday::cases()),
+
+                TextInput::make('contacts.schedule.note')
+                    ->label('Примечание')
+                    ->helperText('Короткая приписка рядом с часами: например, «в праздничные дни по записи».'),
+
+                // Администратор задаёт структуру, а посетитель видит текст.
+                // Без предпросмотра связь между семью строками формы и одной
+                // строкой в подвале приходится угадывать — и проверять
+                // сохранением, то есть на живом сайте.
+                Placeholder::make('contacts.schedule.preview')
+                    ->label('На сайте это выглядит так')
+                    ->content(fn (Get $get): string => WorkSchedule::fromSetting($get('contacts.schedule'))->label()
+                        ?? 'Ни одного рабочего дня — часы работы на сайте показаны не будут.'),
+            ]);
+    }
+
+    /**
+     * Одна строка расписания: переключатель рабочего дня и время.
+     */
+    private static function scheduleDay(Weekday $day): Component
+    {
+        $path = 'contacts.schedule.days.'.$day->value;
+
+        return Grid::make(3)->schema([
+            // Поле привязано к `closed`, а показывается как «Рабочий день»:
+            // администратор отмечает рабочие дни, а не закрытые. Инверсия
+            // живёт в паре format/dehydrate, а не в отдельном ключе формы —
+            // лишний ключ уехал бы в значение настройки, где `WorkSchedule`
+            // о нём ничего не знает.
+            Toggle::make($path.'.closed')
+                ->label($day->fullLabel())
+                ->inline(false)
+                ->live()
+                ->formatStateUsing(static fn (mixed $state): bool => ! filter_var($state ?? false, FILTER_VALIDATE_BOOLEAN))
+                ->dehydrateStateUsing(static fn (mixed $state): bool => ! $state),
+
+            TimePicker::make($path.'.open')
+                ->label('Открытие')
+                ->seconds(false)
+                ->format('H:i')
+                ->live(onBlur: true)
+                ->required(fn (Get $get): bool => (bool) $get($path.'.closed'))
+                ->visible(fn (Get $get): bool => (bool) $get($path.'.closed')),
+
+            TimePicker::make($path.'.close')
+                ->label('Закрытие')
+                ->seconds(false)
+                ->format('H:i')
+                ->live(onBlur: true)
+                ->required(fn (Get $get): bool => (bool) $get($path.'.closed'))
+                ->visible(fn (Get $get): bool => (bool) $get($path.'.closed'))
+                // Без проверки «с 21:00 до 09:00» сохранится молча и даст
+                // в микроразметке заведомо ложные часы, а на сайте — день,
+                // который `WorkSchedule` посчитает выходным.
+                ->rule(static fn (Get $get): Closure => static function (string $attribute, mixed $value, Closure $fail) use ($get, $path): void {
+                    $open = $get($path.'.open');
+
+                    // Строго, а не через `empty()`: правило `RULES.md`,
+                    // и «00:00» здесь ровно тот случай, ради которого оно
+                    // написано.
+                    if ($open === null || $open === '' || $value === null || $value === '') {
+                        return;
+                    }
+
+                    if ((string) $value <= (string) $open) {
+                        $fail('Время закрытия должно быть позже времени открытия.');
+                    }
+                }),
+        ]);
+    }
+
+    /**
+     * Кнопки-пресеты в шапке секции.
+     *
+     * «Без выходных» — прямая просьба заказчика и значение по умолчанию;
+     * два других набора закрывают остальные разумные случаи. Заполняют
+     * семь строк разом: выставлять четырнадцать полей руками ради
+     * типового графика — работа, которую форма обязана делать сама.
+     *
+     * @return list<Action>
+     */
+    private static function schedulePresets(): array
+    {
+        $workdays = [Weekday::Mon, Weekday::Tue, Weekday::Wed, Weekday::Thu, Weekday::Fri];
+
+        // Имя действия — латиницей и читаемое: по нему пресет адресуется
+        // из теста, и `md5()` от подписи превратил бы сторож в загадку,
+        // а переименование кнопки — в молчаливо отвалившийся тест.
+        $presets = [
+            'schedule_preset_all_week' => ['Без выходных', [...$workdays, Weekday::Sat, Weekday::Sun]],
+            'schedule_preset_mon_fri' => ['Пн–Пт', $workdays],
+            'schedule_preset_mon_sat' => ['Пн–Сб', [...$workdays, Weekday::Sat]],
+        ];
+
+        $actions = [];
+
+        foreach ($presets as $name => [$label, $working]) {
+            $actions[] = Action::make($name)
+                ->label($label)
+                ->link()
+                ->action(static function (Get $get, Set $set) use ($working): void {
+                    // Время берётся из первого заполненного дня, а не
+                    // из константы: пресет отвечает на вопрос «какие дни
+                    // рабочие», и подменять уже введённые часы своими
+                    // он не должен.
+                    $current = WorkSchedule::fromSetting($get('contacts.schedule'))->days();
+                    $hours = Arr::first($current, static fn (?array $day): bool => $day !== null)
+                        ?? ['open' => '09:00', 'close' => '21:00'];
+
+                    foreach (Weekday::cases() as $day) {
+                        $path = 'contacts.schedule.days.'.$day->value;
+                        $isWorking = in_array($day, $working, strict: true);
+
+                        // Состояние формы, а не значение настройки:
+                        // переключатель инвертирован, и в форме «включено»
+                        // означает рабочий день.
+                        $set($path.'.closed', $isWorking);
+                        $set($path.'.open', $isWorking ? $hours['open'] : null);
+                        $set($path.'.close', $isWorking ? $hours['close'] : null);
+                    }
+                });
+        }
+
+        return $actions;
     }
 
     private static function socialsTab(): Tab

@@ -7,6 +7,7 @@ namespace App\View\Components;
 use App\Models\Setting;
 use App\Support\SiteMenu;
 use App\Support\SocialLinks;
+use App\Support\WorkSchedule;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\Component;
@@ -66,6 +67,19 @@ final class SiteFooter extends Component
         $value = $this->contacts['contacts.'.$key] ?? null;
 
         return $value === null || $value === '' ? null : (string) $value;
+    }
+
+    /**
+     * Расписание работы (веха 4.14).
+     *
+     * До неё часы приходили через `contact('work_hours')` — свободной
+     * строкой. Настройка стала структурой, и подвал получает её через
+     * `WorkSchedule`, а не через `contact()`: значение здесь объект,
+     * и приведение его к строке дало бы «Array» в подвале.
+     */
+    public function schedule(): WorkSchedule
+    {
+        return WorkSchedule::fromSetting($this->contacts['contacts.schedule'] ?? null);
     }
 
     public function guaranteeValue(string $key): ?string

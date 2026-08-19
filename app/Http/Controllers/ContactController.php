@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Services\OrganizationStructuredData;
 use App\Support\SocialLinks;
+use App\Support\WorkSchedule;
 use Illuminate\Contracts\View\View;
 
 /**
@@ -20,11 +22,21 @@ use Illuminate\Contracts\View\View;
  */
 final class ContactController extends Controller
 {
-    public function index(): View
+    public function index(OrganizationStructuredData $structuredData): View
     {
+        $contacts = Setting::group('contacts');
+
         return view('contacts.index', [
-            'contacts' => Setting::group('contacts'),
+            'contacts' => $contacts,
             'socials' => SocialLinks::from(Setting::group('socials')),
+            // Расписание собирается здесь, а не в шаблоне: строка на
+            // странице и часы в микроразметке обязаны прийти из одного
+            // значения, иначе однажды разойдутся — и разойдутся молча,
+            // потому что видно будет только одно из двух.
+            'schedule' => WorkSchedule::fromSetting($contacts['contacts.schedule'] ?? null),
+            // schema.org в разметке — это словари, которые не место
+            // держать в Blade (прецедент — `CarStructuredData`).
+            'structuredData' => $structuredData->forContactsPage(),
         ]);
     }
 }

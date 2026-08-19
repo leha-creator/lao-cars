@@ -3,6 +3,7 @@
 use App\Models\Car;
 use App\Models\Setting;
 use App\Support\SiteMenu;
+use App\Support\WorkSchedule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
@@ -27,7 +28,13 @@ it('shows the phone from site settings in the header', function () {
 it('shows contacts, socials and the guarantee block in the footer', function () {
     Setting::set('contacts.address', 'Москва, Тестовая, 1');
     Setting::set('contacts.email', 'test@laocars.test');
-    Setting::set('contacts.work_hours', 'Круглосуточно');
+    // Веха 4.14: свободной строки `contacts.work_hours` больше нет,
+    // часы приходят структурой. Сторож переведён на новый ключ, а НЕ
+    // подменён проверкой вёрстки: он и раньше, и теперь отвечает
+    // на один вопрос — «доезжают ли часы из настроек до подвала».
+    // Круглосуточная работа выбрана значением по той же причине, что
+    // и раньше: строка ни с чем на странице не совпадает случайно.
+    Setting::set('contacts.schedule', WorkSchedule::defaultSetting('00:00', '24:00'));
     Setting::set('socials.telegram', 'https://t.me/test-laocars');
     Setting::set('footer.guarantee', [
         'title' => 'Гарантия 45 дней',
