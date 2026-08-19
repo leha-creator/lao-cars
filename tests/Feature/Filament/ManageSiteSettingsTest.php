@@ -14,7 +14,9 @@ use App\Models\Media;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\MediaSettingKeys;
+use App\Support\WorkSchedule;
 use Database\Seeders\SiteSettingSeeder;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Support\Facades\Log;
 
 use function Pest\Livewire\livewire;
@@ -288,4 +290,72 @@ it('keeps the media key list pointing at real settings', function () {
     foreach (MediaSettingKeys::settings() as $setting) {
         expect(ManageSiteSettings::settingKeys())->toContain($setting);
     }
+});
+
+/*
+ * Расписание работы (веха 4.14).
+ *
+ * Настройка `contacts.schedule` — объект целиком, а не семь ключей:
+ * реестр сверяется с сидом по ключу, и семь ключей дали бы семь шансов
+ * разойтись. Сторож `has a key registry matching the seeder` выше
+ * проверяет уже новый ключ и падал бы, забудь мы поправить одно из мест.
+ */
+
+it('saves the schedule as one object with every day in it', function () {
+    livewire(ManageSiteSettings::class)
+        ->fillForm([
+            // Переключатель инвертирован: в форме «включено» = рабочий день.
+            'contacts.schedule.days.sat.closed' => false,
+            'contacts.schedule.days.sun.closed' => false,
+            'contacts.schedule.note' => 'в праздничные дни по записи',
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    Setting::flushCache();
+    $value = Setting::get('contacts.schedule');
+
+    // Все семь дней лежат в значении, а не только тронутые: неполный
+    // объект заставил бы `WorkSchedule` домысливать отсутствующие дни.
+    expect($value['days'])->toHaveCount(7)
+        ->and(WorkSchedule::fromSetting($value)->label())->toBe('Пн–Пт 9:00–21:00, Сб, Вс выходные')
+        ->and(WorkSchedule::fromSetting($value)->note())->toBe('в праздничные дни по записи');
+});
+
+it('fills all seven days from the «Без выходных» preset', function () {
+    // Пресет — прямая просьба заказчика. Выставлять четырнадцать полей
+    // руками ради типового графика админ не станет, а забытая суббота
+    // видна только на сайте.
+    Setting::set('contacts.schedule', WorkSchedule::defaultSetting());
+    Setting::flushCache();
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['contacts.schedule.days.sun.closed' => false])
+        ->callAction(TestAction::make('schedule_preset_all_week')->schemaComponent('work_schedule'))
+        ->call('save')
+        ->assertHasNoErrors();
+
+    Setting::flushCache();
+
+    expect(WorkSchedule::fromSetting(Setting::get('contacts.schedule'))->label())
+        ->toBe('Без выходных, 9:00–21:00');
+});
+
+it('refuses a closing time earlier than the opening one', function () {
+    // Без проверки «с 21:00 до 09:00» сохранится молча и даст в
+    // микроразметке заведомо ложные часы, а на сайте — день, который
+    // `WorkSchedule` посчитает выходным. Оба следствия невидимы в форме.
+    livewire(ManageSiteSettings::class)
+        ->fillForm([
+            'contacts.schedule.days.mon.open' => '21:00',
+            'contacts.schedule.days.mon.close' => '09:00',
+        ])
+        ->call('save')
+        ->assertHasErrors('data.contacts.schedule.days.mon.close');
+
+    Setting::flushCache();
+
+    // Настройка осталась прежней, а не сохранилась наполовину.
+    expect(WorkSchedule::fromSetting(Setting::get('contacts.schedule'))->label())
+        ->toBe('Без выходных, 9:00–21:00');
 });

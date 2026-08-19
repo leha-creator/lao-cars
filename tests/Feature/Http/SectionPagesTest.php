@@ -2,6 +2,7 @@
 
 use App\Models\Lead;
 use App\Models\Setting;
+use App\Support\Typography;
 use Illuminate\Support\Facades\Queue;
 
 /*
@@ -116,4 +117,47 @@ it('captures part details from the parts page form', function () {
 
     expect($lead->isPartsRequest())->toBeTrue()
         ->and($lead->part_vin)->toBe('XW8ZZZ61ZJG000001');
+});
+
+it('runs section page intros through typography', function () {
+    // Веха 4.14, пункт 6: висячие слова лечатся не только `text-pretty`,
+    // но и неразрывными пробелами — та рекомендация браузеру, а требование
+    // заказчика названо числом слов.
+    //
+    // Проверяется ИМЕННО символ U+00A0: неразрывный пробел невидим и в
+    // diff, и в редакторе, поэтому «выглядит правильно» здесь не работает.
+    //
+    // Тексты подобраны так, чтобы склейке было что делать: у фикстур
+    // соседних тестов хвост слишком длинный, и они прошли бы и без
+    // всякой типографики.
+    Setting::set('services_page.intro_text', 'Свой сервис, а не партнёрская сеть');
+    Setting::set('parts_page.intro_text', 'Подберём деталь по VIN и привезём');
+    Setting::set('about_page.intro_text', 'Возим автомобили из Китая и Европы');
+    Setting::flushCache();
+
+    foreach (['/services' => 'а'.Typography::NBSP.'не', '/parts' => 'и'.Typography::NBSP.'привезём', '/about' => 'и'.Typography::NBSP.'Европы'] as $url => $expected) {
+        expect($this->get($url)->assertOk()->getContent())->toContain($expected);
+    }
+});
+
+it('keeps the intro paragraph marked text-pretty on every section page', function () {
+    // Склейка отвечает за хвост, `text-pretty` — за всё остальное
+    // распределение слов по строкам. Одно другое не заменяет.
+    //
+    // Вступления задаются явно: пустая настройка убирает абзац целиком
+    // (рабочий сценарий «блок выключен»), и без них сторож проверял бы
+    // отсутствующий тег. У `/contacts` вступление живёт в шаблоне.
+    Setting::set('services_page.intro_text', 'Проверочное вступление автосервиса.');
+    Setting::set('parts_page.intro_text', 'Проверочное вступление запчастей.');
+    Setting::set('about_page.intro_text', 'Проверочное вступление компании.');
+    Setting::flushCache();
+
+    foreach (['/services', '/parts', '/about', '/contacts'] as $url) {
+        $content = $this->get($url)->assertOk()->getContent();
+
+        preg_match('/<p class="mt-5[^"]*"/', $content, $intro);
+
+        expect($intro)->not->toBeEmpty()
+            ->and($intro[0])->toContain('text-pretty');
+    }
 });

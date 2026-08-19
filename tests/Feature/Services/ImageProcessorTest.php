@@ -134,3 +134,178 @@ it('stores under a caller-provided basename so seeders stay idempotent', functio
 
     expect($stored->path)->toBe('cars/img_1760.webp');
 });
+
+/*
+ * Вотермарка (веха 4.14).
+ *
+ * Проверяется ПО ПИКСЕЛЯМ, а не по факту «файл записан»: логотип может
+ * не наложиться — не тем размером, не в тот угол, вовсе прозрачным, —
+ * и файл при этом запишется как ни в чём не бывало.
+ */
+
+/**
+ * Доля пикселей в правом нижнем углу, отличающихся от левого верхнего.
+ *
+ * Фон фейка `UploadedFile::fake()->image()` однотонный, поэтому любое
+ * отличие в углу со штампом — это то, что нарисовала вотермарка.
+ */
+function cornerInk(string $path): float
+{
+    $image = imagecreatefromstring(Storage::disk('public')->get($path));
+    $width = imagesx($image);
+    $height = imagesy($image);
+    $reference = imagecolorat($image, 2, 2);
+
+    $box = 0;
+    $different = 0;
+
+    for ($x = (int) ($width * 0.6); $x < $width; $x++) {
+        for ($y = (int) ($height * 0.6); $y < $height; $y++) {
+            $box++;
+
+            if (imagecolorat($image, $x, $y) !== $reference) {
+                $different++;
+            }
+        }
+    }
+
+    return $box === 0 ? 0.0 : $different / $box;
+}
+
+/** Средняя яркость правого нижнего угла, 0…255. */
+function cornerBrightness(string $path): float
+{
+    $image = imagecreatefromstring(Storage::disk('public')->get($path));
+    $width = imagesx($image);
+    $height = imagesy($image);
+
+    $sum = 0;
+    $count = 0;
+
+    for ($x = (int) ($width * 0.6); $x < $width; $x++) {
+        for ($y = (int) ($height * 0.6); $y < $height; $y++) {
+            $rgb = imagecolorat($image, $x, $y);
+            $sum += (($rgb >> 16) & 0xFF) + (($rgb >> 8) & 0xFF) + ($rgb & 0xFF);
+            $count++;
+        }
+    }
+
+    return $count === 0 ? 0.0 : $sum / $count / 3;
+}
+
+/** Белый кадр на диске — тот случай, ради которого заведена подложка. */
+function whiteFrame(): string
+{
+    $gd = imagecreatetruecolor(1200, 800);
+    imagefill($gd, 0, 0, imagecolorallocate($gd, 255, 255, 255));
+    $path = tempnam(sys_get_temp_dir(), 'white').'.png';
+    imagepng($gd, $path);
+
+    return $path;
+}
+
+it('stamps the original and lets the thumbnail inherit the stamp', function () {
+    config()->set('images.max_width', 800);
+    config()->set('images.thumb_width', 300);
+    config()->set('images.watermark.min_width', 100);
+
+    $file = UploadedFile::fake()->image('car.png', 1200, 800);
+
+    $stored = $this->processor->storeFile($file->getRealPath(), 'public', 'cars', 'car.png');
+
+    // Штамп ставится ОДИН раз, до конвертации оригинала, и превью
+    // наследует его масштабированием. Два наложения — два места, где
+    // размер и положение могут разойтись, и разойдутся они молча.
+    expect($stored->watermarked)->toBeTrue()
+        ->and(cornerInk($stored->path))->toBeGreaterThan(0.01)
+        ->and(cornerInk($stored->thumbPath))->toBeGreaterThan(0.01);
+});
+
+it('reports the real dimensions of the processed frame', function () {
+    // Без них лайтбокс врёт: «открыть в полном размере» обязано знать,
+    // есть ли у файла размер, которого не видно в карточке.
+    config()->set('images.max_width', 800);
+
+    $file = UploadedFile::fake()->image('car.png', 1200, 800);
+
+    $stored = $this->processor->storeFile($file->getRealPath(), 'public', 'cars', 'car.png');
+
+    expect($stored->width)->toBe(800)
+        ->and($stored->height)->toBe(533)
+        ->and(storedWidth($stored->path))->toBe($stored->width);
+});
+
+it('leaves a frame clean when the caller asks for no watermark', function () {
+    config()->set('images.max_width', 800);
+    config()->set('images.watermark.min_width', 100);
+
+    $file = UploadedFile::fake()->image('avatar.png', 1200, 800);
+
+    $stored = $this->processor->storeFile(
+        $file->getRealPath(), 'public', 'media', 'avatar.png', watermark: false,
+    );
+
+    // Логотип компании на портрете сотрудника — не забытая настройка,
+    // а видимая ошибка, и чинится она только перезаливкой файла.
+    expect($stored->watermarked)->toBeFalse()
+        ->and(cornerInk($stored->path))->toBe(0.0);
+});
+
+it('does not stamp a frame narrower than the configured floor', function () {
+    // На аватаре 200px штамп занял бы четверть площади.
+    config()->set('images.max_width', 800);
+    config()->set('images.watermark.min_width', 600);
+
+    $file = UploadedFile::fake()->image('small.png', 400, 300);
+
+    $stored = $this->processor->storeFile($file->getRealPath(), 'public', 'media', 'small.png');
+
+    expect($stored->watermarked)->toBeFalse()
+        ->and(cornerInk($stored->path))->toBe(0.0);
+});
+
+it('survives a missing watermark file, saves the image and warns', function () {
+    Log::spy();
+    config()->set('images.max_width', 800);
+    config()->set('images.watermark.min_width', 100);
+    config()->set('images.watermark.path', 'resources/images/does-not-exist.png');
+
+    $file = UploadedFile::fake()->image('car.png', 1200, 800);
+
+    $stored = $this->processor->storeFile($file->getRealPath(), 'public', 'cars', 'car.png');
+
+    // Контент важнее оформления — тот же принцип, что у отката выше.
+    expect($stored->watermarked)->toBeFalse();
+    Storage::disk('public')->assertExists($stored->path);
+
+    // Но и молчать нельзя: без записи сайт наберёт сотню фотографий
+    // без логотипа, и заметит это тот, кто откроет каталог через месяц.
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => str_contains($message, 'вотермарки'))
+        ->once();
+});
+
+it('keeps a white logo visible on a white frame only because of the backdrop', function () {
+    // Главный сторож решения 8. `logo-white.png` белый, и на светлом
+    // кадре — снег, белая машина, засвеченное небо — без подложки он
+    // исчезает целиком. Штамп, которого не видно, штампом не является,
+    // а проверить это можно только яркостью: доля изменённых пикселей
+    // у белого на белом почти та же, что у подложки.
+    config()->set('images.max_width', 800);
+    config()->set('images.watermark.min_width', 100);
+
+    $withBackdrop = $this->processor->storeFile(whiteFrame(), 'public', 'cars', 'a.png', 'a');
+
+    config()->set('images.watermark.backdrop', false);
+    $logoOnly = $this->processor->storeFile(whiteFrame(), 'public', 'cars', 'b.png', 'b');
+
+    config()->set('images.watermark.enabled', false);
+    $clean = $this->processor->storeFile(whiteFrame(), 'public', 'cars', 'c.png', 'c');
+
+    $cleanBrightness = cornerBrightness($clean->path);
+
+    // Белое на белом практически неотличимо от чистого кадра.
+    expect(abs(cornerBrightness($logoOnly->path) - $cleanBrightness))->toBeLessThan(2.0)
+        // С подложкой угол заметно темнее.
+        ->and(cornerBrightness($withBackdrop->path))->toBeLessThan($cleanBrightness - 5);
+});

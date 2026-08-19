@@ -1140,3 +1140,47 @@ it('hides the duplicated ticker copy from screen readers', function () {
     // тезисы дважды подряд.
     expect(substr_count($html, 'Единственный тезис ленты'))->toBe(2);
 });
+
+it('keeps the lede tail from hanging by a single word', function () {
+    // Пункт 6 постановки, дословно: «перенесено на последнюю строку слово
+    // „заявки“, надо либо чтобы было минимум два-три слова, в нашем случае
+    // „ещё до заявки“».
+    //
+    // Проверяется ИМЕННО символ U+00A0, а не «выглядит правильно»:
+    // неразрывный пробел невидим и в diff, и в редакторе, и в выводе
+    // теста, поэтому «посмотрел глазами» здесь не работает в принципе.
+    //
+    // `text-pretty` рядом со склейкой не заменяет её: он рекомендация
+    // браузеру, а требование заказчика названо числом слов.
+    Car::factory()->onHomepage()->create();
+
+    $content = $this->get('/')->assertOk()->getContent();
+
+    expect($content)->toContain("ещё\u{00A0}до\u{00A0}заявки");
+});
+
+it('renders every lede through the component that ties it', function () {
+    // Семь копий одного абзаца — семь мест, где надо не забыть и про
+    // `text-pretty`, и про склейку. Компонент делает и то и другое один
+    // раз, и сторож ловит копию, заведённую мимо него.
+    Car::factory()->onHomepage()->create();
+
+    $content = $this->get('/')->assertOk()->getContent();
+
+    preg_match_all('/<p class="[^"]*lg:text-right[^"]*"[^>]*>(.*?)<\/p>/s', $content, $ledes);
+
+    expect($ledes[1])->not->toBeEmpty();
+
+    foreach ($ledes[0] as $lede) {
+        // Классы компонента: `text-pretty` — база, которую вручную
+        // написанный абзац забудет первой.
+        expect($lede)->toContain('text-pretty');
+    }
+
+    foreach ($ledes[1] as $text) {
+        // Текст УЖЕ прошёл склейку: повторный прогон ничего не меняет.
+        // Абзац, заведённый мимо компонента, «и ведём» с обычным пробелом
+        // сохранит — и вот на нём равенство и разъедется.
+        expect(Typography::tie($text))->toBe($text);
+    }
+});

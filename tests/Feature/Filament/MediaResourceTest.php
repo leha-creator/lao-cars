@@ -264,3 +264,65 @@ it('offers no bulk deletion', function () {
 
     expect($table->getFlatBulkActions())->toBe([]);
 });
+
+/*
+ * Назначение файла при загрузке (веха 4.14, решение 9).
+ *
+ * Ответ заказчика «штамповать всё, кроме медиабиблиотеки» буквально
+ * невыполним: фотографии услуг и запчастей, которые штамповать нужно,
+ * физически лежат здесь же. Развилку разрешает назначение файла,
+ * а не место хранения.
+ */
+
+it('refuses an upload without a purpose instead of guessing one', function () {
+    Storage::fake('public');
+
+    // Умолчание отклонено в ОБЕ стороны: «да» ставит логотип компании
+    // на аватар автора отзыва, «нет» оставляет фото услуги без штампа,
+    // и оба промаха видны только на сайте и только тому, кто заметит.
+    livewire(ListMedia::class)
+        ->callAction('upload', [
+            'files' => [UploadedFile::fake()->image('a.png', 1200, 800)],
+        ])
+        ->assertHasActionErrors(['purpose']);
+
+    expect(Media::query()->count())->toBe(0);
+});
+
+it('stamps a catalog photo and leaves a utility image clean', function () {
+    Storage::fake('public');
+    config()->set('images.max_width', 800);
+    config()->set('images.watermark.min_width', 100);
+
+    livewire(ListMedia::class)
+        ->callAction('upload', [
+            'purpose' => UploadMediaAction::PURPOSE_CATALOG,
+            'files' => [UploadedFile::fake()->image('service.png', 1200, 800)],
+        ]);
+
+    livewire(ListMedia::class)
+        ->callAction('upload', [
+            'purpose' => UploadMediaAction::PURPOSE_UTILITY,
+            'files' => [UploadedFile::fake()->image('portrait.png', 1200, 800)],
+        ]);
+
+    expect(Media::query()->where('name', 'service')->sole()->watermarked_at)->not->toBeNull()
+        ->and(Media::query()->where('name', 'portrait')->sole()->watermarked_at)->toBeNull();
+});
+
+it('records the dimensions of an uploaded library file', function () {
+    Storage::fake('public');
+    config()->set('images.max_width', 800);
+    config()->set('images.watermark.min_width', 100);
+
+    livewire(ListMedia::class)
+        ->callAction('upload', [
+            'purpose' => UploadMediaAction::PURPOSE_CATALOG,
+            'files' => [UploadedFile::fake()->image('promo.png', 1200, 800)],
+        ]);
+
+    $media = Media::query()->sole();
+
+    expect($media->width)->toBe(800)
+        ->and($media->height)->toBe(533);
+});

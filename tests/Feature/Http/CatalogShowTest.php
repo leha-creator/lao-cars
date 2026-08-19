@@ -241,3 +241,89 @@ it('does not run a query per attribute row', function () {
     expect($singleQueries)->toBeGreaterThan(0)
         ->and($fullQueries)->toBe($singleQueries);
 });
+
+/*
+ * Кадр без обрезки и просмотр в полный размер (веха 4.14, пункт 2).
+ */
+
+it('fits the main frame instead of cropping it, and keeps thumbnails cropped', function () {
+    $car = Car::factory()->create();
+    CarPhoto::factory()->count(3)->sequenced()->for($car)->create();
+
+    $content = $this->get('/catalog/'.$car->slug)->assertOk()->getContent();
+
+    preg_match_all('/<a[^>]*cursor-zoom-in[^>]*>\s*<img[^>]*>/s', $content, $stack);
+
+    // Фотография вписывается целиком: обрезка съедала у вертикальных
+    // снимков верх и низ, о чём заказчик и написал.
+    foreach ($stack[0] as $frame) {
+        expect($frame)->toContain('object-contain');
+    }
+
+    // А миниатюры ОСТАЛИСЬ обрезанными, и это не забытая правка:
+    // миниатюра — указатель на кадр, и вписанная в пятую часть ширины
+    // она превращается в марку с полями на всю плитку.
+    //
+    // Отбор по обработчику переключения, а не по пути файла: `thumb_url`
+    // откатывается на оригинал, когда превью не построилось, и якорь
+    // по слову «thumbs» ловил бы то пусто, то густо.
+    preg_match_all('/<a[^>]*x-on:click\.prevent="active = \d+"[^>]*>\s*<img[^>]*>/s', $content, $thumbs);
+
+    expect($thumbs[0])->not->toBeEmpty();
+
+    foreach ($thumbs[0] as $thumb) {
+        expect($thumb)->toContain('object-cover');
+    }
+});
+
+it('wraps the main frame in a real link so it works without javascript', function () {
+    // «Открыть в полном размере» обязано работать и без скрипта: клик
+    // по кадру открывает оригинал штатным просмотрщиком браузера.
+    // Сквозное правило проекта — фильтры каталога, форма заявки
+    // и галерея деградируют, а не ломаются.
+    $car = Car::factory()->create();
+    $photo = CarPhoto::factory()->for($car)->create();
+
+    $content = $this->get('/catalog/'.$car->slug)->assertOk()->getContent();
+
+    expect($content)->toContain('href="'.$photo->url.'"')
+        // Лайтбокс перехватывает клик, а не заменяет ссылку.
+        ->and($content)->toContain('x-on:click.prevent="show(0, $event)"');
+});
+
+it('gives the main frame its real dimensions and omits them when unknown', function () {
+    $car = Car::factory()->create();
+    $known = CarPhoto::factory()->for($car)->create(['width' => 1600, 'height' => 900, 'sort_order' => 0]);
+    CarPhoto::factory()->for($car)->create(['width' => null, 'height' => null, 'sort_order' => 1]);
+
+    $content = $this->get('/catalog/'.$car->slug)->assertOk()->getContent();
+
+    preg_match_all('/<a[^>]*cursor-zoom-in[^>]*>\s*<img[^>]*>/s', $content, $stack);
+
+    expect($stack[0][0])->toContain('width="1600"')
+        ->and($stack[0][0])->toContain('height="900"')
+        // У фотографии, залитой до вехи 4.14, размеров нет, пока по ней
+        // не пройдёт `images:restamp`. Пустые атрибуты не пишутся вовсе:
+        // `width="0"` схлопнул бы кадр, а место и так держит контейнер.
+        ->and($stack[0][1])->not->toContain('width=')
+        ->and($stack[0][1])->not->toContain('height=');
+});
+
+it('renders the lightbox once for the whole page, not per frame', function () {
+    // Семь копий разметки — это семь мест, где надо не забыть про фокус
+    // и Escape.
+    $car = Car::factory()->create();
+    CarPhoto::factory()->count(4)->sequenced()->for($car)->create();
+
+    $content = $this->get('/catalog/'.$car->slug)->assertOk()->getContent();
+
+    // Считается ИМЕННО окно просмотра: `role="dialog"` есть и у модалки
+    // формы заявки на этой же странице, и счёт по нему проверял бы
+    // не то. `x-ref="dialog"` принадлежит только лайтбоксу.
+    expect(substr_count($content, 'x-ref="dialog"'))->toBe(1)
+        ->and(substr_count($content, 'x-data="photoLightbox('))->toBe(1)
+        ->and($content)->toContain('aria-modal="true"')
+        // Без `x-cloak` окно мелькает во всю страницу на каждой загрузке,
+        // пока Alpine не отработал.
+        ->and($content)->toMatch('/x-cloak[^>]*x-show="open"|x-show="open"[^>]*x-cloak/');
+});

@@ -326,3 +326,21 @@ it('does not run a query per card', function () {
         // же запросов, сколько список из одной. Расхождение — это N+1.
         ->and($full)->toBe($single);
 });
+
+it('fits the card photo instead of cropping it', function () {
+    // Веха 4.14, пункт 2 постановки: «в карточках автомобилей обрезаются
+    // фотографии, нужно чтобы изображение не обрезалось». Контейнер
+    // `aspect-16/9` при этом ОСТАЁТСЯ — карточка по пропорциям файла
+    // означала бы, что одна вертикальная фотография в ряду из трёх делает
+    // ряд вдвое выше и разносит сетку.
+    $car = Car::factory()->create();
+    CarPhoto::factory()->for($car)->create();
+
+    $content = $this->get('/catalog')->assertOk()->getContent();
+
+    preg_match('/<div class="aspect-16\/9 bg-photo">\s*<img[^>]*>/s', $content, $card);
+
+    expect($card)->not->toBeEmpty()
+        ->and($card[0])->toContain('object-contain')
+        ->and($card[0])->not->toContain('object-cover');
+});
