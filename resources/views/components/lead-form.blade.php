@@ -173,7 +173,7 @@
                 {{-- Группировка по категориям, а не плоский список из семнадцати
                      позиций. Порядок групп наследуется от порядка блоков
                      прайса: коллекция приходит собранной из них. --}}
-                @foreach ($services->groupBy(fn ($service) => $service->category->label()) as $categoryLabel => $categoryServices)
+                @foreach ($services->groupBy(fn ($service) => $service->category->name) as $categoryLabel => $categoryServices)
                     <optgroup label="{{ $categoryLabel }}">
                         @foreach ($categoryServices as $service)
                             {{-- `old()` во всех полях без исключения, и селект

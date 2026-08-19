@@ -78,7 +78,7 @@ laocars/
 ├── app/
 │   ├── Console/Commands/     # MakeAdminCommand: первый администратор на проде
 │   ├── Enums/                # CarStatus, EngineType, DriveType, CarAttributeType,
-│   │   └── Concerns/         # ServiceCategory, LeadStatus, ContactMethod,
+│   │   └── Concerns/         # ServicePage, LeadStatus, ContactMethod,
 │   │                         # PreferredTime, UserRole, CatalogSort
 │   │                         # + HasLabels, HasColors
 │   ├── Http/
@@ -107,12 +107,13 @@ laocars/
 │   │   ├── Forms/Components/ # MediaPicker: выбор из библиотеки, со связью и без
 │   │   ├── Pages/            # ManageSiteSettings: настройки сайта через content()
 │   │   └── Resources/        # Cars, Brands, CarAttributes, Media, Services,
-│   │                         # Employees, Reviews, Users, Leads — Schemas/,
-│   │                         # Tables/, Pages/, Actions/, Concerns/,
-│   │                         # RelationManagers/ (комментарии к заявке)
+│   │                         # ServiceCategories, Employees, Reviews, Users,
+│   │                         # Leads — Schemas/, Tables/, Pages/, Actions/,
+│   │                         # Concerns/, RelationManagers/ (комментарии)
 │   ├── Models/               # Brand, Car, CarPhoto, CarAttribute, Media,
-│   │   └── Concerns/         # CarAttributeValue, Service, Lead, LeadComment,
-│   │                         # Employee, Review, Setting, User + HasSlug
+│   │   └── Concerns/         # CarAttributeValue, Service, ServiceCategory,
+│   │                         # Lead, LeadComment, Employee, Review,
+│   │                         # Setting, User + HasSlug
 │   ├── Policies/             # AdminOnlyPolicy и StaffPolicy — вся матрица прав
 │   │                         # в двух файлах; конкретная политика = одна строка
 │   ├── Providers/            # AppServiceProvider: morph map + ImageManager (GD)
@@ -175,7 +176,8 @@ laocars/
 │       ├── layouts/app.blade.php  # Каркас: SEO-секции, @fonts, шапка,
 │       │                     # подвал, above-header — бегущая строка главной
 │       ├── components/       # lead-form, lead-section, car-card,
-│       │                     # page-heading, site-header, site-footer
+│       │                     # page-heading, site-header, site-footer;
+│       │                     # ui/ (icon, modal), services/ (card, details)
 │       ├── pagination/       # catalog.blade.php — свой вид пагинации,
 │       │                     # передаётся именем в links()
 │       ├── home/             # index — собрана вехой 4.2, переверстана

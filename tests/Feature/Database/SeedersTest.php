@@ -2,7 +2,6 @@
 
 use App\Enums\CarAttributeType;
 use App\Enums\CarStatus;
-use App\Enums\ServiceCategory;
 use App\Models\Brand;
 use App\Models\Car;
 use App\Models\CarAttribute;
@@ -11,6 +10,7 @@ use App\Models\CarPhoto;
 use App\Models\Employee;
 use App\Models\Review;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Models\Setting;
 
 it('fills every content table', function () {
@@ -66,10 +66,36 @@ it('stays idempotent on a repeated run', function () {
 it('seeds every service category so the service page has no empty blocks', function () {
     $this->seed();
 
-    foreach (ServiceCategory::cases() as $category) {
+    // Категории приходят из справочника, а не из кейсов енама (веха 4.13),
+    // но проверяемое свойство прежнее: категория без опубликованных
+    // позиций выпадает со страницы целиком, и свежезасеянная база
+    // не должна давать пустых блоков.
+    $categories = ServiceCategory::all();
+
+    expect($categories)->not->toBeEmpty('справочник категорий пуст после сидов');
+
+    foreach ($categories as $category) {
         expect(Service::inCategory($category)->published()->count())
-            ->toBeGreaterThan(0, "категория {$category->value} пуста");
+            ->toBeGreaterThan(0, "категория {$category->slug} пуста");
     }
+});
+
+it('marks a couple of positions featured so the wide card is visible from scratch', function () {
+    $this->seed();
+
+    // Без этого новый вид карточки не увидит никто, кто разворачивает
+    // проект с нуля, и дефект в нём доживёт до прода.
+    expect(Service::query()->where('is_featured', true)->count())->toBeGreaterThan(0);
+});
+
+it('leaves the seeded positions without a photo on purpose', function () {
+    $this->seed();
+
+    // Решение, а не пропуск: шесть кадров из `assets/photo` — иллюстрации
+    // этапов покупки вехи 4.9, и одна фотография в двух ролях на одном
+    // сайте читается как ошибка. Пустой `media_id` — штатное состояние,
+    // и сид, показывающий именно его, честнее сида с чужим кадром.
+    expect(Service::query()->whereNotNull('media_id')->count())->toBe(0);
 });
 
 it('leaves one review pending so moderation has something to show', function () {

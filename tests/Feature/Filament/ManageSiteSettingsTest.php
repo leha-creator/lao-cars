@@ -9,7 +9,6 @@
  * ключей страницы с ключами сида.
  */
 
-use App\Enums\ServiceCategory;
 use App\Filament\Pages\ManageSiteSettings;
 use App\Models\Media;
 use App\Models\Setting;
@@ -185,27 +184,27 @@ it('keeps the services advantages a list of objects', function () {
         ->and($advantages[0])->toHaveKeys(['number', 'title', 'text']);
 });
 
-it('keeps the services notes an object with a field per service category', function () {
-    // Описания категорий — ОДНА настройка-объект, а не четыре ключа, и поля
-    // формы строятся циклом по енаму. Новая категория, не получившая поля,
-    // провалилась бы молча: реестр сверяется с сидом по ключу
-    // `services_page.notes` целиком.
+it('no longer stores category notes in the settings at all', function () {
+    // ЗДЕСЬ БЫЛ сторож «описания категорий — одна настройка-объект с полем
+    // на каждую категорию»: поля формы строились циклом по кейсам енама,
+    // и новая категория, не получившая поля, провалилась бы молча.
+    //
+    // Вехой 4.13 настройка удалена целиком — из реестра, из формы и из сида.
+    // Ключами объекта были значения енама, и с редактируемым справочником
+    // такой объект превращается в мусор при первом же удалении категории:
+    // поле в форме исчезает, ключ остаётся в jsonb навсегда и никому
+    // не виден. Описания переехали в `service_categories.description`.
+    //
+    // Сторож переписан ЧЕРЕЗ ОТРИЦАНИЕ, а не удалён: сохранение настроек
+    // не должно воскресить ключ. Воскресший он не сломал бы ничего видимого
+    // — просто копил бы вторую, никем не читаемую копию описаний.
     livewire(ManageSiteSettings::class)
         ->call('save')
         ->assertHasNoErrors();
 
-    $notes = Setting::get('services_page.notes');
+    expect(Setting::get('services_page.notes'))->toBeNull();
 
-    expect($notes)->toBeArray()
-        ->and(array_is_list($notes))->toBeFalse();
-
-    foreach (ServiceCategory::serviceCategories() as $category) {
-        expect($notes)->toHaveKey($category->value);
-    }
-
-    // Запчасти живут на своей посадочной странице и описания категории
-    // в этой настройке не имеют.
-    expect($notes)->not->toHaveKey(ServiceCategory::Parts->value);
+    $this->assertDatabaseMissing('site_settings', ['key' => 'services_page.notes']);
 });
 
 it('keeps the new home repeaters lists of objects', function () {

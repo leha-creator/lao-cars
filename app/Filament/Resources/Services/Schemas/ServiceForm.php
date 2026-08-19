@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Services\Schemas;
 
-use App\Enums\ServiceCategory;
+use App\Filament\Forms\Components\MediaPicker;
 use App\Models\Service;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -24,6 +24,7 @@ final class ServiceForm
         return $schema
             ->components([
                 self::mainSection(),
+                self::appearanceSection(),
                 self::priceSection(),
                 self::publicationSection(),
             ]);
@@ -33,10 +34,13 @@ final class ServiceForm
     {
         return Section::make('Основное')
             ->components([
-                Select::make('category')
+                // `preload()` уместен: категорий единицы, не тысячи.
+                Select::make('service_category_id')
                     ->label('Категория')
-                    ->options(ServiceCategory::class)
-                    ->helperText('Запчасти уходят на свою посадочную страницу, остальные категории — блоками страницы автосервиса.')
+                    ->relationship('category', 'name')
+                    ->preload()
+                    ->searchable()
+                    ->helperText('Страница, на которой выводится позиция, задаётся у самой категории.')
                     ->required(),
 
                 TextInput::make('title')
@@ -55,10 +59,37 @@ final class ServiceForm
                     ->rule('regex:/^[a-z0-9-]+$/')
                     ->maxLength(255),
 
+                // Короткое описание. Уточнение в подсказке не косметика:
+                // без него два текстовых поля рядом неразличимы, и длинный
+                // текст уедет в то, что выше.
                 Textarea::make('description')
                     ->label('Описание')
+                    ->helperText('Одна-две строки под названием. Длинный текст — в «Подробное описание».')
                     ->rows(4)
                     ->maxLength(2000),
+            ]);
+    }
+
+    private static function appearanceSection(): Section
+    {
+        return Section::make('Оформление')
+            ->components([
+                // Режим со связью — тот же вызов, что у сотрудников
+                // и отзывов.
+                MediaPicker::make('media_id')
+                    ->relationship('media', 'name')
+                    ->label('Фотография')
+                    ->helperText('Позиции с фотографией выводятся карточками выше строк прайса. Без фотографии позиция остаётся строкой — это штатно.'),
+
+                Toggle::make('is_featured')
+                    ->label('Акцентная')
+                    ->helperText('Широкая карточка во всю ширину контента с фотографией на фоне. Без фотографии карточка остаётся широкой, но обычной.'),
+
+                Textarea::make('details')
+                    ->label('Подробное описание')
+                    ->helperText('Раскрывается по кнопке «Подробнее» под карточкой. Пустое — кнопки нет.')
+                    ->rows(8)
+                    ->maxLength(5000),
             ]);
     }
 
@@ -103,9 +134,13 @@ final class ServiceForm
                     ->label('Опубликовано')
                     ->default(true),
 
+                // Про группы сказано прямо, и это не косметика: перетаскивание
+                // строки без фотографии выше строки с фотографией не изменит
+                // на сайте ничего — администратор потянет, отпустит, увидит
+                // новый порядок в таблице и решит, что сделал.
                 TextInput::make('sort_order')
                     ->label('Порядок')
-                    ->helperText('Порядок внутри категории; удобнее задавать перетаскиванием на вкладке категории.')
+                    ->helperText('Порядок действует внутри группы: сначала акцентные позиции, затем позиции с фотографией, затем остальные. Удобнее задавать перетаскиванием на вкладке категории.')
                     ->numeric()
                     ->default(0)
                     ->required(),

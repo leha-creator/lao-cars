@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import collapse from '@alpinejs/collapse';
 
 import leadForm from './lead-form';
 
@@ -34,5 +35,12 @@ window.Alpine = Alpine;
 // в `x-data`: сюда уехал только тот, что в атрибут не помещается —
 // обработчик отправки формы заявки с разбором четырёх кодов ответа.
 Alpine.data('leadForm', leadForm);
+
+// `x-collapse` — раскрытие подробного описания услуги (веха 4.13).
+// Плагин обязателен: НЕзарегистрированная директива Alpine не бросает
+// ошибку и не пишет в консоль — она просто ничего не делает, и блок
+// раскрывается рывком при полностью зелёной сборке. Регистрация идёт
+// ДО `Alpine.start()` по той же причине, что и `Alpine.data()` выше.
+Alpine.plugin(collapse);
 
 Alpine.start();

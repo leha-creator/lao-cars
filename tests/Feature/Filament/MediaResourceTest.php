@@ -15,6 +15,7 @@ use App\Filament\Resources\Media\Pages\ListMedia;
 use App\Models\Employee;
 use App\Models\Media;
 use App\Models\Review;
+use App\Models\Service;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\ImageProcessor;
@@ -100,19 +101,52 @@ it('deletes the record together with its files on disk', function () {
 });
 
 it('reports where a record is used', function () {
+    // Сторожа `usages()` живут все в этом файле, а не разъезжаются
+    // по `MediaTest`: утверждение здесь — ТОЧНЫЙ список с порядком,
+    // и второй файл с частичными проверками разошёлся бы с ним молча.
     $media = Media::factory()->create();
 
     expect($media->usages())->toBe([]);
 
     Employee::factory()->for($media)->create(['name' => 'Андрей Волков']);
     Review::factory()->for($media)->create(['author_name' => 'Ольга Ким']);
+    Service::factory()->withPhoto($media)->create(['title' => 'Полировка кузова']);
     Setting::set('home.promo', ['title' => 'Промо', 'image_id' => $media->getKey()]);
 
     expect($media->usages())->toBe([
         'Сотрудник: Андрей Волков',
         'Отзыв: Ольга Ким',
+        'Услуга: Полировка кузова',
         'Настройки: промо-блок на главной',
     ]);
+});
+
+it('reports a record used as a service photo', function () {
+    // Веха 4.13. Без этой строки файл, выбранный в услуге, числится
+    // свободным: он удаляется по кнопке «Удалить», а `nullOnDelete()`
+    // оставляет карточку услуги без кадра. Администратор увидит
+    // исчезнувшую фотографию и не свяжет её с удалением файла неделей
+    // раньше — перечень использования единственное место, где эта связь
+    // видна человеку.
+    $media = Media::factory()->create();
+
+    expect($media->usages())->toBe([]);
+
+    Service::factory()->withPhoto($media)->create(['title' => 'Защитное керамическое покрытие']);
+
+    expect($media->fresh()->usages())->toBe(['Услуга: Защитное керамическое покрытие']);
+});
+
+it('leaves a record free when another service uses a different photo', function () {
+    // Обратная сторона: перебор не должен объявлять занятым любой файл
+    // при любой услуге с фотографией.
+    $media = Media::factory()->create();
+    $other = Media::factory()->create();
+
+    Service::factory()->withPhoto($other)->create(['title' => 'Полировка кузова']);
+    Service::factory()->create(['title' => 'Позиция без кадра']);
+
+    expect($media->usages())->toBe([]);
 });
 
 it('reports a record used inside a settings repeater', function () {

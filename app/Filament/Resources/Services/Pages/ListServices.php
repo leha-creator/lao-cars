@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Services\Pages;
 
-use App\Enums\ServiceCategory;
 use App\Filament\Actions\HelpAction;
 use App\Filament\Resources\Services\ServiceResource;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -38,6 +38,10 @@ final class ListServices extends ListRecords
      * сужает выборку, а пересортировка на «Всех» выключена
      * (см. `ServicesTable`).
      *
+     * Состав вкладок с вехи 4.13 приходит выборкой из справочника, а не
+     * циклом по кейсам енама: категории заводит заказчик. Пустой справочник
+     * даёт одну вкладку «Все» — это штатное состояние, а не отказ.
+     *
      * @return array<string, Tab>
      */
     public function getTabs(): array
@@ -47,10 +51,12 @@ final class ListServices extends ListRecords
                 ->badge(Service::query()->count()),
         ];
 
-        foreach (ServiceCategory::cases() as $category) {
-            $tabs[$category->value] = Tab::make($category->label())
-                ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('category', $category))
-                ->badge(Service::query()->where('category', $category)->count());
+        foreach (ServiceCategory::query()->ordered()->get() as $category) {
+            $categoryId = $category->getKey();
+
+            $tabs[$category->slug] = Tab::make($category->name)
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('service_category_id', $categoryId))
+                ->badge(Service::query()->where('service_category_id', $categoryId)->count());
         }
 
         return $tabs;

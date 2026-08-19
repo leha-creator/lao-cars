@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Services\Tables;
 
-use App\Enums\ServiceCategory;
 use App\Filament\Resources\Services\Pages\ListServices;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -25,10 +25,22 @@ final class ServicesTable
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('category')
+                TextColumn::make('category.name')
                     ->label('Категория')
                     ->badge()
                     ->sortable(),
+
+                // Обе колонки — не украшение: порядок выдачи на сайте
+                // складывается из трёх групп («акцентные», «с фотографией»,
+                // «остальные»), и без них группу позиции из таблицы
+                // не видно вовсе — только открыв сайт.
+                IconColumn::make('media_id')
+                    ->label('Фото')
+                    ->boolean(),
+
+                IconColumn::make('is_featured')
+                    ->label('Акцент')
+                    ->boolean(),
 
                 TextColumn::make('price')
                     ->label('Цена')
@@ -53,6 +65,10 @@ final class ServicesTable
                     ->numeric()
                     ->sortable(),
             ])
+            // `defaultSort` и `reorderable` — пара: подменить сортировку
+            // порядком выдачи сайта («акцентные, затем с фотографией»)
+            // значило бы сломать перетаскивание. Группу показывают колонки
+            // «Фото» и «Акцент» выше.
             ->defaultSort('sort_order')
             // Пересортировка разрешена только внутри вкладки категории.
             // На вкладке «Все» первый же перетаск присвоил бы сквозные
@@ -62,9 +78,10 @@ final class ServicesTable
                 fn (ListServices $livewire): bool => $livewire->activeTab !== ListServices::ALL_TAB,
             )
             ->filters([
-                SelectFilter::make('category')
+                SelectFilter::make('service_category_id')
                     ->label('Категория')
-                    ->options(ServiceCategory::class),
+                    ->relationship('category', 'name')
+                    ->preload(),
 
                 TernaryFilter::make('is_published')
                     ->label('Публикация')

@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\ServiceCategory;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\View\ViewException;
 
@@ -47,13 +46,17 @@ it('fails loudly on an unknown icon name', function (): void {
     // Проверяется поэтому текст — в нём имя, которого нет в наборе.
 })->throws(ViewException::class, 'definitely-not-an-icon');
 
-it('draws an icon for every service category', function (): void {
-    // Новая категория в перечислении приходит на страницу автосервиса
-    // и на главную сама. Имя иконки, которого нет в наборе, уронит обе —
-    // причём не на той вехе, где категорию завели.
-    foreach (ServiceCategory::cases() as $category) {
-        $html = Blade::render('<x-ui.icon :name="$name" class="size-6" />', ['name' => $category->icon()]);
-
-        expect($html)->toContain('<svg');
-    }
-});
+/*
+ * Сторожа «иконка на каждую категорию услуг» здесь БОЛЬШЕ НЕТ, и это
+ * не потеря покрытия.
+ *
+ * Он проверял, что `ServiceCategory::icon()` возвращает имя из набора:
+ * новая категория приходила на страницу автосервиса и на главную сама,
+ * и опечатка в имени роняла обе. Вехой 4.13 иконки сняты с заголовков
+ * категорий по просьбе заказчика, а сам метод удалён вместе с енамом —
+ * категории стали редактируемым справочником, и значка у них нет вовсе.
+ * Сторожить стало нечего: имени иконки в данных категории не существует.
+ *
+ * Имена `wrench`, `sparkle` и `gear` ОСТАЮТСЯ в наборе выше: их использует
+ * блок «Экосистема» на главной, записывая строками.
+ */

@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Enums\ServiceCategory;
+use App\Enums\ServicePage;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
@@ -38,7 +39,7 @@ final class ServicesPageContent
      * @return array{
      *     title: string,
      *     intro: ?string,
-     *     blocks: list<array{category: ServiceCategory, icon: string, anchor: string, note: ?string, items: EloquentCollection<int, Service>}>,
+     *     blocks: list<array{category: ServiceCategory, anchor: string, note: ?string, featured: EloquentCollection<int, Service>, withPhoto: EloquentCollection<int, Service>, plain: EloquentCollection<int, Service>}>,
      *     services: EloquentCollection<int, Service>,
      *     disclaimer: ?string,
      *     advantages: list<array{number: ?string, title: string, text: ?string}>,
@@ -65,10 +66,12 @@ final class ServicesPageContent
     /**
      * Блоки прайса по категориям.
      *
-     * Состав и порядок задаёт `ServiceCategory::serviceCategories()`, а не
-     * список в этом методе: второй список разошёлся бы с первым на первой же
-     * новой категории. Запчасти исключает сам енам (`isParts()`), а не
-     * условие в цикле.
+     * Состав и порядок с вехи 4.13 задаёт справочник (`service_categories`),
+     * а не кейсы енама: категории заводит заказчик. Запчасти исключает
+     * колонка `page`, а не имя категории, — до вехи отбор шёл по кейсу
+     * `ServiceCategory::Parts`, то есть по константе языка, и первое же
+     * переименование из админки опустошило бы посадочную страницу подбора
+     * молча.
      *
      * Категория без опубликованных позиций выпадает целиком — правило
      * проекта «блок, управляемый данными, при пустом значении не рендерится
@@ -77,17 +80,49 @@ final class ServicesPageContent
      * несуществующий якорь не работает молча. Оба списка шаблон строит
      * из ЭТОГО массива, а не собирает независимо.
      *
-     * @return list<array{category: ServiceCategory, icon: string, anchor: string, note: ?string, items: EloquentCollection<int, Service>}>
+     * ТРИ ГРУППЫ РАЗДЕЛЯЮТСЯ ЗДЕСЬ, А НЕ В ШАБЛОНЕ. Граница
+     * `ARCHITECTURE.md`: «если данные надо приводить к форме, прежде чем
+     * отдать их в Blade, это сервис». Три `@if` на карточку в трёх местах
+     * шаблона разъедутся при первой же правке одного из них. Сам порядок
+     * при этом приходит из SQL (`Service::ordered()`), а не из PHP:
+     * фильтрация коллекции относительный порядок сохраняет.
+     *
+     * @return list<array{category: ServiceCategory, anchor: string, note: ?string, featured: EloquentCollection<int, Service>, withPhoto: EloquentCollection<int, Service>, plain: EloquentCollection<int, Service>}>
      */
     private function blocks(): array
     {
-        $notes = Setting::get('services_page.notes');
-        $notes = is_array($notes) ? $notes : [];
+        $categories = ServiceCategory::query()
+            ->onPage(ServicePage::Services)
+            ->ordered()
+            ->get();
+
+        if ($categories->isEmpty()) {
+            // Отдельный WARN, а не общий с пустым прайсом ниже: это разные
+            // конфигурационные дыры с разными починками. Пустой прайс лечится
+            // публикацией позиций, пустой справочник — заведением категории,
+            // и одно сообщение на обе отправило бы администратора публиковать
+            // позиции в категорию, которой нет.
+            //
+            // Состояние стало достижимым вместе со справочником: до вехи 4.13
+            // категорий было ровно пять и убрать их было нельзя. Теперь можно
+            // — переключив всем поле «Страница», — и страница отдаёт 200
+            // с заголовком и формой, но без единого блока. Снаружи она
+            // выглядит работающей, поэтому заметить это больше нечем.
+            Log::warning('[Автосервис] на странице нет ни одной категории', [
+                'hint' => 'заведите категорию со страницей «Автосервис» в разделе «Категории услуг» админки',
+            ]);
+        }
 
         // Один запрос на всю страницу, группировка в PHP. Запрос на категорию
         // означал бы четыре запроса ради четырёх блоков плюс пятый на селект
         // формы — и все пять отличались бы одним `where`.
-        $published = Service::query()->published()->ordered()->get();
+        //
+        // Предзагрузка обязательна и у фотографии, и у категории: без
+        // первой карточка с кадром даёт N+1 ровно там, где позиций больше
+        // всего, без второй — селект «Интересует» в форме заявки, который
+        // группирует позиции по имени категории. Ни то ни другое не роняет
+        // ни одного теста, кроме того, который считает запросы.
+        $published = Service::query()->published()->ordered()->with(['media', 'category'])->get();
 
         if ($published->isEmpty()) {
             // WARN на каждый рендер — осознанно, по прецеденту `HomeContent`
@@ -102,21 +137,27 @@ final class ServicesPageContent
 
         $blocks = [];
 
-        foreach (ServiceCategory::serviceCategories() as $category) {
-            $items = $published->where('category', $category);
+        foreach ($categories as $category) {
+            $items = $published->where('service_category_id', $category->getKey());
 
             if ($items->isEmpty()) {
                 continue;
             }
 
+            $regular = $items->where('is_featured', false);
+
             $blocks[] = [
                 'category' => $category,
-                'icon' => $category->icon(),
-                'anchor' => $category->anchor(),
+                // Якорь блока — это slug и есть. Второго метода,
+                // возвращающего то же значение, у модели нет намеренно:
+                // он разошёлся бы со слагом при первой правке.
+                'anchor' => $category->slug,
                 // Пустое описание убирает абзац, но НЕ блок: прайс важнее
                 // текста, и категория без описания остаётся на странице.
-                'note' => $this->string($notes[$category->value] ?? null),
-                'items' => $items,
+                'note' => $this->string($category->description),
+                'featured' => $items->where('is_featured', true)->values(),
+                'withPhoto' => $regular->whereNotNull('media_id')->values(),
+                'plain' => $regular->whereNull('media_id')->values(),
             ];
         }
 
@@ -132,7 +173,11 @@ final class ServicesPageContent
      * от блоков, поэтому `<optgroup>` в шаблоне выстраиваются в том же
      * порядке, что и категории.
      *
-     * @param  list<array{category: ServiceCategory, icon: string, anchor: string, note: ?string, items: EloquentCollection<int, Service>}>  $blocks
+     * Три группы склеиваются в ТОМ ЖЕ порядке, в каком их рисует шаблон:
+     * набор обязан совпадать с прайсом до позиции, а список, собранный
+     * в другом порядке, отличался бы от увиденного посетителем.
+     *
+     * @param  list<array{category: ServiceCategory, anchor: string, note: ?string, featured: EloquentCollection<int, Service>, withPhoto: EloquentCollection<int, Service>, plain: EloquentCollection<int, Service>}>  $blocks
      * @return EloquentCollection<int, Service>
      */
     private function flatten(array $blocks): EloquentCollection
@@ -141,7 +186,10 @@ final class ServicesPageContent
         $services = new EloquentCollection;
 
         foreach ($blocks as $block) {
-            $services = $services->concat($block['items']);
+            $services = $services
+                ->concat($block['featured'])
+                ->concat($block['withPhoto'])
+                ->concat($block['plain']);
         }
 
         return $services;

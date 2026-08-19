@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\EngineType;
-use App\Enums\ServiceCategory;
+use App\Enums\ServicePage;
 use App\Models\Car;
 use App\Models\Media;
 use App\Models\Review;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
@@ -55,6 +56,15 @@ final class HomeContent
     private const int SELECTOR_CARS_WARNING_THRESHOLD = 500;
 
     /**
+     * Слаги категорий, на блоки которых ведут плашки «Экосистемы».
+     *
+     * Список живёт здесь, а не в шаблоне: адрес плашки надо СВЕРИТЬ
+     * со справочником, а Blade в БД не ходит. Сами плашки (заголовок,
+     * текст, иконка) остаются в шаблоне — они не данные, а вёрстка.
+     */
+    private const array ECOSYSTEM_ANCHORS = ['maintenance', 'detailing'];
+
+    /**
      * `CatalogFilterOptions` внедряется через конструктор, а не создаётся
      * `new` внутри: правило `ARCHITECTURE.md` — иначе его не подменить
      * в тесте. Границы бюджета и список двигателей быстрого подбора
@@ -75,8 +85,9 @@ final class HomeContent
      *     priceBreakdown: list<array{title: string, note: ?string}>,
      *     faq: list<array{question: string, answer: string}>,
      *     reviews: EloquentCollection<int, Review>,
-     *     serviceGroups: list<array{category: ServiceCategory, icon: string, note: ?string, items: EloquentCollection<int, Service>}>,
+     *     serviceGroups: list<array{category: ServiceCategory, note: ?string, items: EloquentCollection<int, Service>}>,
      *     services: EloquentCollection<int, Service>,
+     *     ecosystemLinks: array<string, string>,
      *     selector: array{cars: list<array{price: ?int, engine: ?string, status: string}>, engines: list<array{value: string, label: string}>, price_min: ?int, price_max: ?int, total: int},
      *     contacts: array{phone: ?string, email: ?string, address: ?string},
      *     seo: array{title: ?string, description: ?string},
@@ -121,6 +132,7 @@ final class HomeContent
             'reviews' => $reviews,
             'serviceGroups' => $price['groups'],
             'services' => $price['services'],
+            'ecosystemLinks' => $this->ecosystemLinks($price['categories']),
             'selector' => $this->selector(),
             'contacts' => $this->contacts(),
             'seo' => $this->seo(),
@@ -529,29 +541,45 @@ final class HomeContent
      * Обратное было бы дефектом — клик подставлял бы несуществующую опцию,
      * и Alpine молча ничего не сделал бы.
      *
-     * Состав и порядок категорий задаёт `ServiceCategory::serviceCategories()`,
-     * а не список здесь: запчасти исключает сам енам (`isParts()`), у них
-     * своя посадочная страница. Порядок селекта наследуется от категорий,
-     * поэтому `<optgroup>` в форме выстраиваются так же, как блоки витрины.
+     * Состав и порядок категорий с вехи 4.13 задаёт справочник
+     * (`service_categories`), а не кейсы енама: категории заводит заказчик.
+     * Запчасти исключает колонка `page` — у них своя посадочная страница.
+     * Порядок селекта наследуется от категорий, поэтому `<optgroup>`
+     * в форме выстраиваются так же, как блоки витрины.
      *
-     * Описание категории берётся из `services_page.notes` — тех же четырёх
-     * текстов, что показывает страница услуг. Второй набор ключей под те же
-     * описания разошёлся бы с первым при первой правке одного из них.
+     * Описание категории приходит из её собственной колонки. До вехи 4.13
+     * оно бралось из настройки `services_page.notes` — того же ключа, что
+     * читала страница услуг, — и здесь стоял отдельный абзац о том, почему
+     * второй набор ключей заводить нельзя. Объяснять больше нечего: поле
+     * одно и живёт у категории.
+     *
+     * Категории возвращаются третьим значением ради плашек «Экосистемы»
+     * (`ecosystemLinks()`): им нужен тот же справочник, и второй запрос
+     * за теми же строками был бы платой за раздельность методов.
      *
      * @return array{
-     *     groups: list<array{category: ServiceCategory, icon: string, note: ?string, items: EloquentCollection<int, Service>}>,
+     *     groups: list<array{category: ServiceCategory, note: ?string, items: EloquentCollection<int, Service>}>,
      *     services: EloquentCollection<int, Service>,
+     *     categories: EloquentCollection<int, ServiceCategory>,
      * }
      */
     private function servicePrice(): array
     {
-        $notes = Setting::get('services_page.notes');
-        $notes = is_array($notes) ? $notes : [];
+        $categories = ServiceCategory::query()
+            ->onPage(ServicePage::Services)
+            ->ordered()
+            ->get();
 
         // Один запрос на весь блок, группировка в PHP. Запрос на категорию
         // означал бы четыре запроса ради четырёх карточек плюс пятый
         // на селект формы — тот же приём, что в `ServicesPageContent`.
-        $published = Service::query()->published()->ordered()->get();
+        //
+        // Предзагрузка обязательна и у фотографии, и у категории:
+        // `Service::ordered()` сортирует по наличию фотографии, а селект
+        // «Интересует» в форме заявки группирует позиции по имени
+        // категории. Без обеих — N+1 на пустом месте, и не падает при этом
+        // ни один тест, кроме того, который считает запросы.
+        $published = Service::query()->published()->ordered()->with(['media', 'category'])->get();
 
         if ($published->isEmpty()) {
             // WARN на каждый рендер — по прецеденту `ServicesPageContent`:
@@ -569,8 +597,8 @@ final class HomeContent
         /** @var EloquentCollection<int, Service> $services */
         $services = new EloquentCollection;
 
-        foreach (ServiceCategory::serviceCategories() as $category) {
-            $items = $published->where('category', $category);
+        foreach ($categories as $category) {
+            $items = $published->where('service_category_id', $category->getKey());
 
             // Категория без опубликованных позиций выпадает: карточка
             // с заголовком «Шиномонтаж» и пустым списком читается
@@ -584,13 +612,54 @@ final class HomeContent
 
             $groups[] = [
                 'category' => $category,
-                'icon' => $category->icon(),
-                'note' => $this->string($notes[$category->value] ?? null),
+                'note' => $this->string($category->description),
                 'items' => $items->take($limit),
             ];
         }
 
-        return ['groups' => $groups, 'services' => $services];
+        return ['groups' => $groups, 'services' => $services, 'categories' => $categories];
+    }
+
+    /**
+     * Адреса плашек «Экосистемы», ведущих в блоки категорий на `/services`.
+     *
+     * Разрешение живёт здесь, а не в шаблоне, по правилу проекта «Blade
+     * не ходит в БД». До вехи 4.13 разрешать было нечего: якорь выдавал
+     * `ServiceCategory::anchor()` у кейса енама, и промахнуться мимо
+     * существующего блока было физически нельзя. Теперь слаг правится
+     * из админки, то есть промах стал ДОСТИЖИМЫМ состоянием, а ссылка
+     * на несуществующий якорь не работает МОЛЧА — ни ошибки в консоли,
+     * ни падения теста разметки.
+     *
+     * Промах даёт ссылку на страницу услуг БЕЗ якоря: она приводит туда,
+     * куда обещала плашка, просто без прокрутки к блоку. Ссылка в никуда
+     * была бы хуже — человек остаётся на главной и решает, что сайт сломан.
+     *
+     * @param  EloquentCollection<int, ServiceCategory>  $categories
+     * @return array<string, string>
+     */
+    private function ecosystemLinks(EloquentCollection $categories): array
+    {
+        $slugs = $categories->pluck('slug')->all();
+
+        $links = [];
+
+        foreach (self::ECOSYSTEM_ANCHORS as $slug) {
+            if (in_array($slug, $slugs, true)) {
+                $links[$slug] = route('services.index').'#'.$slug;
+
+                continue;
+            }
+
+            Log::warning('[Главная] плашка экосистемы ссылается на несуществующую категорию', [
+                'slug' => $slug,
+                'hint' => 'заведите категорию с этим слагом в разделе «Категории услуг» или поправьте плашку в шаблоне главной',
+            ]);
+
+            $links[$slug] = route('services.index');
+        }
+
+        return $links;
     }
 
     /**

@@ -1,12 +1,12 @@
 <?php
 
 use App\Enums\CarStatus;
-use App\Enums\ServiceCategory;
 use App\Models\Car;
 use App\Models\CarPhoto;
 use App\Models\Media;
 use App\Models\Review;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Log;
 
@@ -39,6 +39,45 @@ use Illuminate\Support\Facades\Log;
 beforeEach(function (): void {
     resetRateLimiters();
 });
+
+/**
+ * Категория витрины услуг со своим слагом.
+ *
+ * Слаг задаётся явно, потому что пять исходных категорий (`maintenance`,
+ * `tire-service`, `detailing`, `extra`, `parts`) заводит миграция вехи 4.13
+ * на ЛЮБОЙ базе, включая тестовую: перенос данных без ветвления «если прод»
+ * — её условие. Имя и слаг у них заняты, отсюда `test-` в слагах тестов.
+ */
+function showcaseCategory(string $name, string $slug): ServiceCategory
+{
+    return ServiceCategory::factory()->create([
+        'name' => $name,
+        'slug' => $slug,
+        'description' => null,
+    ]);
+}
+
+/**
+ * Разметка секции витрины услуг — от её тега до ближайшего закрытия.
+ *
+ * Резать страницу обязательно: сторож «у заголовка категории нет кружка
+ * со значком» неверен для остальной страницы — тот же кружок стоит
+ * у плашек экосистемы и у карточек «Почему мы» законно.
+ *
+ * Прецедент и разбор — `processSectionHtml()` ниже.
+ */
+function servicesSectionHtml(string $html): string
+{
+    $start = strpos($html, '<section id="services"');
+
+    expect($start)->not->toBeFalse('секция `#services` не найдена в разметке страницы');
+
+    $end = strpos($html, '</section>', (int) $start);
+
+    expect($end)->not->toBeFalse('у секции `#services` не найдено закрытие');
+
+    return substr($html, (int) $start, (int) $end - (int) $start);
+}
 
 /**
  * Сколько карточек авто на странице.
@@ -839,14 +878,16 @@ it('caps the services showcase per category but keeps every position in the form
     // несуществующую опцию, и Alpine молча ничего не сделал бы.
     $limit = (int) config('home.services_per_category');
 
+    $category = showcaseCategory('Проверочные работы', 'test-maintenance');
+
     foreach (range(1, $limit) as $position) {
-        Service::factory()->maintenance()->create([
+        Service::factory()->inCategory($category)->create([
             'title' => "Работа {$position}",
             'sort_order' => $position,
         ]);
     }
 
-    $overflow = Service::factory()->maintenance()->create([
+    $overflow = Service::factory()->inCategory($category)->create([
         'title' => 'Работа сверх витрины',
         'sort_order' => $limit + 1,
     ]);
@@ -863,18 +904,62 @@ it('caps the services showcase per category but keeps every position in the form
 });
 
 it('drops a service category without published positions from the showcase', function () {
-    Service::factory()->maintenance()->create(['title' => 'Живая работа']);
-    Service::factory()->tireService()->unpublished()->create(['title' => 'Снятая с публикации работа']);
+    $alive = showcaseCategory('Живая категория витрины', 'test-maintenance');
+    $dead = showcaseCategory('Мёртвая категория витрины', 'test-tire-service');
 
-    // Категория проверяется по подписи, которой больше нигде на странице
-    // нет: «Детейлинг» для этого не годится — так называется одна из плашек
-    // экосистемы, и тест прошёл бы вхолостую.
+    Service::factory()->inCategory($alive)->create(['title' => 'Живая работа']);
+    Service::factory()->inCategory($dead)->unpublished()->create(['title' => 'Снятая с публикации работа']);
+
+    // Имена категорий заданы тестом и больше нигде на странице
+    // не встречаются: брать «Детейлинг» нельзя — так называется одна
+    // из плашек экосистемы, и тест прошёл бы вхолостую.
     $this->get('/')
         ->assertOk()
-        ->assertSee(ServiceCategory::Maintenance->label())
+        ->assertSee('Живая категория витрины')
         ->assertSee('Живая работа')
-        ->assertDontSee(ServiceCategory::TireService->label())
+        ->assertDontSee('Мёртвая категория витрины')
         ->assertDontSee('Снятая с публикации работа');
+});
+
+it('shows no icon next to the showcase category heading', function () {
+    // Иконки сняты с заголовков категорий по просьбе заказчика 19.08.2026,
+    // и снятие сквозное: те же категории набирались тем же значком
+    // в том же кружке на `/services`. Сторож — через отрицание кружка,
+    // потому что положительная проверка заголовка прошла бы и с ним.
+    $category = showcaseCategory('Категория без значка', 'test-maintenance');
+
+    Service::factory()->inCategory($category)->create(['title' => 'Работа без значка']);
+
+    $section = servicesSectionHtml($this->get('/')->assertOk()->getContent());
+
+    expect($section)->toContain('Категория без значка')
+        // Кружок значка — единственное место секции с этой заливкой.
+        ->and($section)->not->toContain('bg-accent-solid/14');
+});
+
+it('resolves ecosystem tiles through the directory and warns on a missing slug', function () {
+    Log::spy();
+
+    // Слаг категории правится из админки, то есть промах мимо блока стал
+    // ДОСТИЖИМЫМ состоянием, а ссылка на несуществующий якорь не работает
+    // МОЛЧА. Плашка при этом обязана довести до страницы услуг — ссылка
+    // в никуда хуже ссылки без якоря.
+    //
+    // Категорию `maintenance` заводит миграция вехи 4.13; здесь она
+    // переименована в другой слаг, то есть повторяет ровно то, что сделает
+    // заказчик в админке.
+    ServiceCategory::query()->where('slug', 'maintenance')->update(['slug' => 'test-renamed']);
+
+    $html = $this->get('/')->assertOk()->getContent();
+
+    expect($html)->toContain('href="'.route('services.index').'#detailing"')
+        ->and($html)->toContain('href="'.route('services.index').'"')
+        ->and($html)->not->toContain('href="'.route('services.index').'#maintenance"');
+
+    Log::shouldHaveReceived('warning')->withArgs(
+        fn (string $message, array $context): bool => str_contains($message, 'плашка экосистемы ссылается на несуществующую категорию')
+            && ($context['slug'] ?? null) === 'maintenance',
+    )->once();
 });
 
 it('keeps the chosen service selected after a validation error', function () {
@@ -883,7 +968,7 @@ it('keeps the chosen service selected after a validation error', function () {
     // тест разметки не поймает — Alpine затирает значение уже после ответа
     // сервера, — но он ловит обратное: исчезновение серверного `@selected`,
     // без которого затирать будет нечего и симптом станет постоянным.
-    $service = Service::factory()->detailing()->create(['title' => 'Полировка кузова']);
+    $service = Service::factory()->inCategory(showcaseCategory('Проверочный детейлинг', 'test-detailing'))->create(['title' => 'Полировка кузова']);
 
     // `followingRedirects()`, а не отдельный `get()` после `post()`: флеш
     // ошибок к следующему запросу теста уже состарен, и проверка «форма
@@ -979,15 +1064,18 @@ it('does not add a query per review or price position', function () {
     // и промах на первом запросе добавил бы ему один лишний запрос.
     warmSettingsCache();
 
+    $maintenance = showcaseCategory('Проверочные работы', 'test-maintenance');
+    $detailing = showcaseCategory('Проверочный детейлинг', 'test-detailing');
+
     Car::factory()->onHomepage()->create();
     Review::factory()->published()->create();
-    Service::factory()->maintenance()->create();
+    Service::factory()->inCategory($maintenance)->create();
 
     $few = countQueries(fn () => $this->get('/')->assertOk());
 
     Review::factory()->published()->count(5)->create();
-    Service::factory()->maintenance()->count(5)->create();
-    Service::factory()->detailing()->count(3)->create();
+    Service::factory()->inCategory($maintenance)->count(5)->create();
+    Service::factory()->inCategory($detailing)->count(3)->create();
 
     $many = countQueries(fn () => $this->get('/')->assertOk());
 
