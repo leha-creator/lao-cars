@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CatalogFilterRequest;
 use App\Models\Car;
+use App\Models\CarPhoto;
 use App\Services\CarStructuredData;
 use App\Services\CatalogFilter;
 use App\Services\CatalogFilterOptions;
@@ -79,6 +80,16 @@ final class CatalogController extends Controller
             // schema.org в разметке — это словари, которые никто
             // не найдёт при следующей переверстке.
             'structuredData' => $structuredData->for($car),
+            // Список для окна просмотра (веха 4.14). Собирается здесь,
+            // а не в шаблоне: `photoLightbox` — не разметка, а данные,
+            // и ширина ему нужна не для показа, а чтобы решить, есть ли
+            // что приближать. Адрес абсолютный не нужен — окно живёт
+            // на этой же странице.
+            'lightboxPhotos' => $car->photos->map(fn (CarPhoto $photo): array => [
+                'url' => $photo->url,
+                'alt' => $photo->alt,
+                'width' => $photo->width,
+            ])->all(),
         ]);
     }
 

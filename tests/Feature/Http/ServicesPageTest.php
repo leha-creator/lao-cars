@@ -6,6 +6,7 @@ use App\Models\Media;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Setting;
+use App\Support\Typography;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 
@@ -209,14 +210,16 @@ it('shows the category note from the directory and keeps the block when it is em
 
     $this->get('/services')
         ->assertOk()
-        ->assertSee('Проверочное описание категории.');
+        // Описание категории с вехи 4.14 проходит типографику
+        // в `ServicesPageContent`; проверяемое свойство прежнее.
+        ->assertSee(Typography::tie('Проверочное описание категории.'));
 
     $category->update(['description' => '']);
 
     $this->get('/services')
         ->assertOk()
         ->assertSee('Работа с описанием')
-        ->assertDontSee('Проверочное описание категории.');
+        ->assertDontSee(Typography::tie('Проверочное описание категории.'));
 });
 
 it('drops the price disclaimer block when the setting is emptied', function () {
@@ -228,7 +231,8 @@ it('drops the price disclaimer block when the setting is emptied', function () {
 
     $this->get('/services')
         ->assertOk()
-        ->assertSee('Проверочная оговорка о ценах.')
+        // Оговорка о ценах проходит типографику (веха 4.14).
+        ->assertSee(Typography::tie('Проверочная оговорка о ценах.'))
         ->assertSee('Не публичная оферта');
 
     Setting::set('services_page.price_disclaimer', null);

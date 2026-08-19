@@ -8,6 +8,7 @@ use App\Models\Review;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Setting;
+use App\Support\Typography;
 use Illuminate\Support\Facades\Log;
 
 /*
@@ -183,6 +184,12 @@ it('renders ticker, promo and advantages from site settings', function () {
         ['number' => '09', 'title' => 'Проверочное преимущество', 'text' => 'Текст преимущества.'],
     ]);
 
+    // Тексты преимуществ с вехи 4.14 проходят типографику в `HomeContent`,
+    // поэтому ожидание прогоняется через ту же функцию. Сторож при этом
+    // проверяет ровно то же, что и раньше, — «текст из настроек доезжает
+    // до страницы»: подставь сюда чужую строку, и он покраснеет.
+    // Поведение самой склейки пришпилено отдельно, в `TypographyTest`, —
+    // здесь оно не проверяется и проверяться не должно.
     $this->get('/')
         ->assertOk()
         ->assertSee('Первый тезис ленты')
@@ -191,7 +198,7 @@ it('renders ticker, promo and advantages from site settings', function () {
         ->assertSee('Проверочный текст промо-блока.')
         ->assertSee('Проверочная кнопка')
         ->assertSee('Проверочное преимущество')
-        ->assertSee('Текст преимущества.');
+        ->assertSee(Typography::tie('Текст преимущества.'));
 });
 
 it('calls the first trust card a showroom, not a physical salon', function () {
@@ -358,6 +365,26 @@ it('caps the homepage selection at the configured limit', function () {
     expect(carCardCount($html))->toBe($limit);
 });
 
+it('names the car block «Актуальные предложения»', function () {
+    // Пункт 5 постановки вехи 4.14, дословно: «переименовать блок
+    // с автомобилями на главной странице просто в „Актуальные
+    // предложения“». Сторож стоит на самом заголовке, а не на слове:
+    // соседние тесты пользуются словом «Актуальные» как признаком
+    // присутствия секции, и они прошли бы и на «Актуальные варианты».
+    //
+    // Проверяется разметка целиком, вместе со `<span>`: акцентное слово
+    // — часть решения (без него `h2` выпадает из ритма остальных шести
+    // секций главной), и снятый `<span>` этот сторож обязан заметить.
+    Car::factory()->onHomepage()->create();
+
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('Актуальные <span class="text-accent">предложения</span>', escape: false)
+        // Надзаголовок остаётся: он метка направления, а не заголовок
+        // блока, и есть у всех семи секций главной.
+        ->assertSee('Продажа автомобилей');
+});
+
 it('does not add a query per car in the homepage selection', function () {
     // Прогрев обязателен: кеш настроек сбрасывается перед каждым тестом,
     // и промах на первом запросе добавил бы ему один запрос — разницу
@@ -367,12 +394,12 @@ it('does not add a query per car in the homepage selection', function () {
     Car::factory()->onHomepage()->count(2)->create()
         ->each(fn (Car $car) => CarPhoto::factory()->for($car)->create());
 
-    $few = countQueries(fn () => $this->get('/')->assertOk()->assertSee('Не бесконечный каталог'));
+    $few = countQueries(fn () => $this->get('/')->assertOk()->assertSee('Актуальные'));
 
     Car::factory()->onHomepage()->count(4)->create()
         ->each(fn (Car $car) => CarPhoto::factory()->for($car)->create());
 
-    $many = countQueries(fn () => $this->get('/')->assertOk()->assertSee('Не бесконечный каталог'));
+    $many = countQueries(fn () => $this->get('/')->assertOk()->assertSee('Актуальные'));
 
     // Нижняя граница обязательна — правило `RULES.md`: выборка, не поймавшая
     // ни одного запроса, иначе проходит вхолостую.
@@ -384,13 +411,21 @@ it('drops the selection section entirely when nothing is flagged', function () {
     Car::factory()->count(3)->create();
 
     // Проверка по заголовку секции, а не по классу: класс переживёт правку
-    // вёрстки, заголовок и есть содержание. Ссылка «Весь каталог →» уходит
+    // вёрстки, заголовок и есть содержание.
+    //
+    // Слово одно, потому что второе завёрнуто в `<span class="text-accent">`
+    // и в разметке от первого отделено тегом: «Актуальные предложения»
+    // целиком в выводе не встречается вовсе. На главной «Актуальные»
+    // больше нигде не выводится — сторож на сам заголовок целиком стоит
+    // в отдельном тесте выше.
+    //
+    // Ссылка «Весь каталог →» уходит
     // вместе с секцией — заголовок над пустой сеткой и ссылка в никуда
     // читаются как поломка. Вместе с ними уходит и карточка-приглашение:
     // «Не нашли модель?» над пустой сеткой обещает подбор из ничего.
     $this->get('/')
         ->assertOk()
-        ->assertDontSee('Не бесконечный каталог')
+        ->assertDontSee('Актуальные')
         ->assertDontSee('Не нашли модель?')
         ->assertDontSee('Весь каталог');
 });
@@ -493,11 +528,16 @@ it('renders steps, price breakdown and faq from site settings', function () {
     $this->get('/')
         ->assertOk()
         ->assertSee('Проверочный этап')
-        ->assertSee('Текст проверочного этапа.')
+        // Прозаические поля (текст этапа, уточнение к расходам, ответ FAQ)
+        // с вехи 4.14 проходят типографику в `HomeContent` — обоснование
+        // такой сверки в тесте преимуществ выше. Заголовки и вопросы через
+        // неё НЕ проходят, поэтому здесь и сравниваются как есть: сторож
+        // заодно ловит попытку прогнать через склейку всё подряд.
+        ->assertSee(Typography::tie('Текст проверочного этапа.'))
         ->assertSee('Проверочная статья расходов')
-        ->assertSee('проверочное уточнение')
+        ->assertSee(Typography::tie('проверочное уточнение'))
         ->assertSee('Проверочный вопрос?')
-        ->assertSee('Проверочный ответ.');
+        ->assertSee(Typography::tie('Проверочный ответ.'));
 });
 
 it('illustrates a step and keeps a step without an image textual', function () {
@@ -517,7 +557,9 @@ it('illustrates a step and keeps a step without an image textual', function () {
         // Этап без картинки остаётся на странице целиком — с номером,
         // заголовком и текстом.
         ->assertSee('Этап без картинки')
-        ->assertSee('Текст второго.')
+        // Текст этапа проходит типографику (веха 4.14) — как и в тесте
+        // выше; проверяется по-прежнему присутствие текста на странице.
+        ->assertSee(Typography::tie('Текст второго.'))
         ->assertSee($media->url)
         // Осмысленный `alt`: картинка несёт смысл, а не декорирует.
         ->assertSee('alt="Этап покупки: Этап с картинкой"', escape: false)
@@ -668,7 +710,10 @@ it('keeps every step in the markup instead of feeding the track on the fly', fun
 
     foreach (range(1, 6) as $i) {
         expect($section)->toContain('Этап ленты '.$i)
-            ->and($section)->toContain('Описание этапа номер '.$i.'.');
+            // Описание проходит типографику (веха 4.14); проверяется
+            // по-прежнему то, что все шесть описаний лежат в разметке,
+            // а не подгружаются на лету.
+            ->and($section)->toContain(Typography::tie('Описание этапа номер '.$i.'.'));
     }
 
     expect(substr_count($section, '<article'))->toBe(6);

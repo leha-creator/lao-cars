@@ -132,6 +132,21 @@
                 — по причине, разобранной в `catalog/index.blade.php`
                 и записанной правилом в `RULES.md`.
             --}}
+            {{--
+                Просмотр в полный размер с приближением (веха 4.14).
+
+                Обёртка ОТДЕЛЬНАЯ от `{ active }` ниже и снаружи неё:
+                переключение кадров существует только при двух и более
+                снимках, а «открыть в полном размере» нужно и одному.
+                Слить их в один `x-data` значило бы потерять лайтбокс
+                ровно на тех карточках, где фотография одна.
+
+                Список снимков уезжает в компонент через `@js` — ему нужны
+                не только адреса, но и ширина: по ней решается, есть ли что
+                приближать (кнопка зума на снимке 800px предлагала бы
+                увеличение, которого не будет).
+            --}}
+            <div x-data="photoLightbox(@js($lightboxPhotos))">
             <div
                 @if ($car->photos->count() > 1)
                     x-data="{ active: 0, total: {{ $car->photos->count() }} }"
@@ -169,7 +184,27 @@
                              800px, и дескриптор `1920w` на нём заставил бы
                              браузер выбрать заведомо не тот файл. Хранить
                              ширину и апскейлить — разные вещи, и правило
-                             `RULES.md` остаётся верным как есть. --}}
+                             `RULES.md` остаётся верным как есть.
+
+                             Кадр обёрнут в НАСТОЯЩУЮ ссылку на оригинал —
+                             ровно как миниатюры ниже и по той же причине:
+                             при неработающем `app.js` клик открывает файл
+                             в полном размере штатным просмотрщиком браузера,
+                             то есть просьба заказчика выполняется и без
+                             скрипта, просто без зума. `x-on:click.prevent`
+                             перехватывает клик и открывает лайтбокс. --}}
+                        <a
+                            href="{{ $photo->url }}"
+                            x-on:click.prevent="show({{ $index }}, $event)"
+                            aria-label="Открыть фото в полном размере"
+                            @if ($car->photos->count() > 1)
+                                x-show="active === {{ $index }}"
+                            @endif
+                            @if ($index !== 0)
+                                x-cloak
+                            @endif
+                            class="absolute inset-0 block cursor-zoom-in"
+                        >
                         <img
                             src="{{ $photo->url }}"
                             alt="{{ $photo->alt }}"
@@ -180,19 +215,16 @@
                             @if ($index === 0)
                                 fetchpriority="high"
                             @else
-                                {{-- Остальные снимки до клика не нужны;
-                                     `x-cloak` держит их скрытыми и без Alpine,
-                                     а у первого его нет намеренно — иначе
-                                     страница без JS осталась бы вовсе
-                                     без фотографии. --}}
+                                {{-- Остальные снимки до клика не нужны.
+                                     Показ и `x-cloak` переехали на обёртку
+                                     `<a>` вехой 4.14: два `x-show` на
+                                     вложенных элементах — это две правды
+                                     об одном, и расходятся они молча. --}}
                                 loading="lazy"
-                                x-cloak
                             @endif
-                            @if ($car->photos->count() > 1)
-                                x-show="active === {{ $index }}"
-                            @endif
-                            class="absolute inset-0 size-full object-cover"
+                            class="size-full object-contain"
                         >
+                        </a>
                     @empty
                         {{-- Пустой прямоугольник читается как недогруженная
                              страница, поэтому место фото занимает подпись. --}}
@@ -226,6 +258,12 @@
                     @endif
                 </div>
 
+                {{-- Миниатюры ОСТАЮТСЯ `object-cover`, хотя главный кадр
+                     с вехи 4.14 вписывается целиком. Разъезд осознанный:
+                     миниатюра — указатель на кадр, а не сам кадр, и
+                     вписанная целиком в пятую часть ширины она
+                     превращается в марку с полями на всю плитку.
+                     Не «забыли поправить» — не надо. --}}
                 @if ($car->photos->count() > 1)
                     <div class="grid grid-cols-5 gap-3">
                         @foreach ($car->photos as $index => $photo)
@@ -245,6 +283,97 @@
                         @endforeach
                     </div>
                 @endif
+            </div>
+
+            {{--
+                Окно просмотра — ОДИН блок на страницу, а не копия
+                на каждый кадр: показываемый снимок подставляется
+                привязками, и семь копий разметки означали бы семь мест,
+                где надо не забыть про фокус и Escape.
+
+                `x-cloak` обязателен: без него окно мелькает во всю
+                страницу на каждой загрузке, пока Alpine не отработал.
+            --}}
+            <div
+                x-cloak
+                x-show="open"
+                x-ref="dialog"
+                x-on:keydown.escape.window="open && hide()"
+                x-on:keydown.left.window="open && total > 1 && previous()"
+                x-on:keydown.right.window="open && total > 1 && next()"
+                x-on:keydown="onKeydown($event)"
+                x-on:wheel.prevent="onWheel($event)"
+                x-on:touchstart="onTouchStart($event)"
+                x-on:touchmove.prevent="onTouchMove($event)"
+                x-on:touchend="onTouchEnd()"
+                x-on:mousemove="onDrag($event)"
+                x-on:mouseup="endDrag()"
+                x-on:mouseleave="endDrag()"
+                role="dialog"
+                aria-modal="true"
+                aria-label="{{ $car->brand->name }} {{ $car->model }}, {{ $car->year }} — фотография в полном размере"
+                tabindex="-1"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 focus-visible:outline-none"
+            >
+                {{-- Клик по фону закрывает. Обработчик висит на подложке,
+                     а не на самом окне: иначе он ловил бы и клик по кадру,
+                     то есть закрывал бы окно при попытке его подвинуть. --}}
+                <div class="absolute inset-0" x-on:click="hide()"></div>
+
+                <img
+                    x-bind:src="photo?.url"
+                    x-bind:alt="photo?.alt"
+                    x-bind:style="`transform: translate(${offsetX}px, ${offsetY}px) scale(${scale})`"
+                    x-bind:class="scale > 1 ? 'cursor-grab' : (zoomable ? 'cursor-zoom-in' : 'cursor-default')"
+                    x-on:dblclick="onDoubleClick()"
+                    x-on:mousedown.prevent="startDrag($event)"
+                    draggable="false"
+                    class="max-h-[92vh] max-w-[92vw] origin-center touch-none object-contain transition-transform duration-100"
+                >
+
+                <button
+                    type="button"
+                    x-on:click="hide()"
+                    aria-label="Закрыть"
+                    class="absolute top-4 right-4 flex size-11 items-center justify-center rounded-full border border-line-strong bg-page/70 text-xl backdrop-blur-sm transition hover:border-accent/50 hover:text-accent"
+                >×</button>
+
+                {{-- Сброс масштаба предлагается только когда есть что
+                     сбрасывать: кнопка, которая ничего не делает, — это
+                     вопрос «а она сломана?» на каждом открытии. --}}
+                <button
+                    type="button"
+                    x-show="scale > 1"
+                    x-on:click="reset()"
+                    class="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-line-strong bg-page/70 px-4 py-2 text-sm backdrop-blur-sm transition hover:border-accent/50 hover:text-accent"
+                >Сбросить масштаб</button>
+
+                {{-- Листалка — на серверном `@if`, а не на `x-if`: у
+                     единственной фотографии листать нечего, и стрелки,
+                     которые ничего не делают, — обман. `x-if` оставил бы
+                     их подписи в разметке страницы, где сторож
+                     `CatalogShowTest` их и ловит — справедливо. --}}
+                @if ($car->photos->count() > 1)
+                    <button
+                        type="button"
+                        x-on:click.stop="previous()"
+                        aria-label="Предыдущее фото"
+                        class="absolute top-1/2 left-4 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-line-strong bg-page/70 text-xl backdrop-blur-sm transition hover:border-accent/50 hover:text-accent"
+                    >‹</button>
+
+                    <button
+                        type="button"
+                        x-on:click.stop="next()"
+                        aria-label="Следующее фото"
+                        class="absolute top-1/2 right-4 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-line-strong bg-page/70 text-xl backdrop-blur-sm transition hover:border-accent/50 hover:text-accent"
+                    >›</button>
+
+                    <div
+                        x-text="(index + 1) + ' / ' + total"
+                        class="absolute right-4 bottom-4 rounded-full border border-line-strong bg-page/70 px-3 py-1 text-xs text-ink-muted backdrop-blur-sm"
+                    ></div>
+                @endif
+            </div>
             </div>
 
             <div>

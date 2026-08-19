@@ -8,6 +8,7 @@ use App\Enums\ServicePage;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Setting;
+use App\Support\Typography;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
 
@@ -93,7 +94,10 @@ final class PartsController extends Controller
             // при живой настройке и без единой ошибки в логе. Парная
             // нормализация — в `ServicesPageContent::build()`.
             'title' => self::heading(Setting::get('parts_page.intro_title')),
-            'intro' => Setting::get('parts_page.intro_text'),
+            // Вступление проходит типографику (веха 4.14) — как и на
+            // остальных внутренних страницах: заголовок нет, он короткий
+            // и склейка ему не нужна.
+            'intro' => Typography::tie(self::text(Setting::get('parts_page.intro_text'))),
             'deliveryTerms' => Setting::get('parts_page.delivery_terms'),
             // Именно `items`, а не `categories`: до вехи 4.13 позиции
             // страницы и были единственной категорией, теперь категория —
@@ -112,5 +116,19 @@ final class PartsController extends Controller
         $title = is_scalar($value) ? trim((string) $value) : '';
 
         return $title === '' ? 'Запчасти' : $title;
+    }
+
+    /**
+     * Настройка со свободным текстом строкой — или `null`.
+     *
+     * Отдельно от `heading()`, потому что фолбэка здесь нет: пустое
+     * вступление — рабочий сценарий «блок выключен», и подставлять вместо
+     * него текст было бы выдумкой за администратора.
+     */
+    private static function text(mixed $value): ?string
+    {
+        $text = is_scalar($value) ? trim((string) $value) : '';
+
+        return $text === '' ? null : $text;
     }
 }

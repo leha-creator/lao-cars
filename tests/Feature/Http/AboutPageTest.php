@@ -4,6 +4,7 @@ use App\Models\Employee;
 use App\Models\Media;
 use App\Models\Review;
 use App\Models\Setting;
+use App\Support\Typography;
 use Illuminate\Support\Facades\Log;
 
 /*
@@ -30,7 +31,10 @@ it('takes the heading and intro from site settings, not from a constant', functi
     $this->get('/about')
         ->assertOk()
         ->assertSee('Проверочный заголовок компании')
-        ->assertSee('Проверочное вступление компании.');
+        // Вступление с вехи 4.14 проходит типографику в `x-page-heading`,
+        // заголовок — нет. Сторож проверяет то же, что и раньше: оба
+        // значения приходят из настроек, а не из константы макета.
+        ->assertSee(Typography::tie('Проверочное вступление компании.'));
 });
 
 it('falls back to a default heading when the setting is cleared, not left empty', function () {

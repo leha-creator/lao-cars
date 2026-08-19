@@ -107,7 +107,15 @@ it('keeps every photo in the markup, not only the main one', function () {
     $content = $this->get('/catalog/'.$car->slug)->assertOk()->getContent();
 
     // Стопка главного фото: все снимки лежат в разметке, показывается один.
-    preg_match_all('/<img[^>]*absolute inset-0[^>]*>/', $content, $stack);
+    //
+    // Якорь сменился вехой 4.14 с `absolute inset-0` на `cursor-zoom-in`,
+    // и это не подгонка под новую разметку: позиционирование переехало
+    // с `img` на обёртку `<a href>`, которая появилась ради просмотра
+    // в полный размер без JS. `cursor-zoom-in` есть только у этих обёрток
+    // — у миниатюр и у карточек похожих автомобилей его нет, — поэтому
+    // считается ровно то же, что и раньше: сколько снимков реально лежит
+    // в разметке главного кадра.
+    preg_match_all('/<a[^>]*cursor-zoom-in[^>]*>/', $content, $stack);
 
     expect($stack[0])->toHaveCount(3);
 
@@ -122,7 +130,12 @@ it('loads the main photo eagerly and the thumbnails lazily', function () {
 
     $content = $this->get('/catalog/'.$car->slug)->assertOk()->getContent();
 
-    preg_match_all('/<img[^>]*absolute inset-0[^>]*>/', $content, $stack);
+    // Обёртка `<a>` вместе с её `<img>`: с вехи 4.14 позиционирование
+    // живёт на ссылке, а `fetchpriority`/`loading` — по-прежнему
+    // на изображении, и проверять их надо на нём.
+    preg_match_all('/<a[^>]*cursor-zoom-in[^>]*>\s*<img[^>]*>/s', $content, $stack);
+
+    expect($stack[0])->toHaveCount(3);
 
     // Главное фото — LCP этой страницы (правило RULES.md). Рефлекс,
     // выработанный на карточках списка, откладывает загрузку главного

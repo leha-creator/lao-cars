@@ -58,8 +58,13 @@
 
         <h1 class="font-display text-3xl font-semibold lg:text-[38px]">{{ $slot->hasActualContent() ? $slot : $title }}</h1>
 
+        {{-- Вступление проходит через ту же типографику, что и сноски
+             блоков главной (веха 4.14): `text-pretty` как база плюс
+             склейка хвоста неразрывными пробелами, потому что первая
+             остаётся рекомендацией браузеру, а требование заказчика
+             сформулировано числом слов. --}}
         @if ($intro !== null && $intro !== '')
-            <p class="mt-5 max-w-2xl leading-relaxed text-ink-muted">{{ $intro }}</p>
+            <p class="mt-5 max-w-2xl leading-relaxed text-ink-muted text-pretty">{{ \App\Support\Typography::tie($intro) }}</p>
         @endif
 
         {{-- Отступ задаёт компонент, а не вызывающая сторона: ритм шапки

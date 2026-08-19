@@ -8,6 +8,7 @@ use App\Enums\ServicePage;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Setting;
+use App\Support\Typography;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
 
@@ -55,10 +56,10 @@ final class ServicesPageContent
             // нормализации страница получила бы пустой H1 при живой
             // настройке — заодно и пустой `<title>` в шапке документа.
             'title' => $this->string(Setting::get('services_page.intro_title')) ?? 'Автосервис',
-            'intro' => $this->string(Setting::get('services_page.intro_text')),
+            'intro' => $this->prose(Setting::get('services_page.intro_text')),
             'blocks' => $blocks,
             'services' => $this->flatten($blocks),
-            'disclaimer' => $this->string(Setting::get('services_page.price_disclaimer')),
+            'disclaimer' => $this->prose(Setting::get('services_page.price_disclaimer')),
             'advantages' => $this->advantages(),
         ];
     }
@@ -154,7 +155,7 @@ final class ServicesPageContent
                 'anchor' => $category->slug,
                 // Пустое описание убирает абзац, но НЕ блок: прайс важнее
                 // текста, и категория без описания остаётся на странице.
-                'note' => $this->string($category->description),
+                'note' => $this->prose($category->description),
                 'featured' => $items->where('is_featured', true)->values(),
                 'withPhoto' => $regular->whereNotNull('media_id')->values(),
                 'plain' => $regular->whereNull('media_id')->values(),
@@ -220,7 +221,7 @@ final class ServicesPageContent
             $advantages[] = [
                 'number' => $this->string($item['number'] ?? null),
                 'title' => $title,
-                'text' => $this->string($item['text'] ?? null),
+                'text' => $this->prose($item['text'] ?? null),
             ];
         }
 
@@ -255,5 +256,16 @@ final class ServicesPageContent
         $string = trim((string) $value);
 
         return $string === '' ? null : $string;
+    }
+
+    /**
+     * То же, что `string()`, плюс типографика (веха 4.14).
+     *
+     * Отдельный метод по той же причине, что и в `HomeContent`: склейка
+     * хвоста нужна прозе, а не заголовкам и номерам.
+     */
+    private function prose(mixed $value): ?string
+    {
+        return Typography::tie($this->string($value));
     }
 }

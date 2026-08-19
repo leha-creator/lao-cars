@@ -12,6 +12,7 @@ use App\Models\Review;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Setting;
+use App\Support\Typography;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
 
@@ -322,7 +323,7 @@ final class HomeContent
             $advantages[] = [
                 'number' => $this->string($item['number'] ?? null),
                 'title' => $title,
-                'text' => $this->string($item['text'] ?? null),
+                'text' => $this->prose($item['text'] ?? null),
             ];
         }
 
@@ -359,7 +360,7 @@ final class HomeContent
             $steps[] = [
                 'number' => $this->string($item['number'] ?? null),
                 'title' => $title,
-                'text' => $this->string($item['text'] ?? null),
+                'text' => $this->prose($item['text'] ?? null),
                 'image_id' => $item['image_id'] ?? null,
             ];
         }
@@ -461,7 +462,7 @@ final class HomeContent
 
             $rows[] = [
                 'title' => $title,
-                'note' => $this->string($item['note'] ?? null),
+                'note' => $this->prose($item['note'] ?? null),
             ];
         }
 
@@ -488,7 +489,7 @@ final class HomeContent
             }
 
             $question = $this->string($item['question'] ?? null);
-            $answer = $this->string($item['answer'] ?? null);
+            $answer = $this->prose($item['answer'] ?? null);
 
             if ($question === null || $answer === null) {
                 continue;
@@ -612,7 +613,7 @@ final class HomeContent
 
             $groups[] = [
                 'category' => $category,
-                'note' => $this->string($category->description),
+                'note' => $this->prose($category->description),
                 'items' => $items->take($limit),
             ];
         }
@@ -806,5 +807,23 @@ final class HomeContent
         $string = trim((string) $value);
 
         return $string === '' ? null : $string;
+    }
+
+    /**
+     * То же, что `string()`, плюс типографика (веха 4.14).
+     *
+     * Отдельный метод, а не типографика внутри `string()`: через `string()`
+     * проходят и заголовки, и номера этапов, и вопросы FAQ, а склеивать
+     * хвост нужно только у ПРОЗЫ — у абзацев, которые переносятся
+     * по строкам. Заголовку из двух слов склейка не нужна, а номеру «01»
+     * вредна.
+     *
+     * Тексты из настроек прогоняются здесь, а не в шаблоне, по тому же
+     * принципу, по которому здесь уже нормализуются репитеры: шаблон
+     * получает готовое значение и не решает, что с ним делать.
+     */
+    private function prose(mixed $value): ?string
+    {
+        return Typography::tie($this->string($value));
     }
 }

@@ -592,17 +592,28 @@
             <div class="mx-auto max-w-page">
                 <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
                     <div>
+                        {{-- Надзаголовок ОСТАЁТСЯ, хотя заказчик просил
+                             «переименовать блок просто в „Актуальные
+                             предложения“» (веха 4.14, пункт 5). Он не
+                             заголовок блока, а метка направления в ритме
+                             страницы: такая же строка стоит у всех семи
+                             секций главной, и снятая у одной оставила бы
+                             дыру, которую видно именно потому, что
+                             у соседей она есть. --}}
                         <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Продажа автомобилей</div>
 
+                        {{-- Акцентное слово сохраняется: без `<span>` этот
+                             `h2` выпал бы из того же ритма — у всех
+                             заголовков главной последнее слово акцентное. --}}
                         <h2 class="font-display text-3xl leading-[1.15] font-semibold text-pretty lg:text-[34px]">
-                            Не бесконечный каталог, а понятные <span class="text-accent">предложения</span>
+                            Актуальные <span class="text-accent">предложения</span>
                         </h2>
                     </div>
 
-                    <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                    <x-ui.lede class="lg:max-w-110 lg:text-right">
                         Показываем статус автомобиля и ведём к следующему действию: посмотреть,
                         запросить точный расчёт или подобрать альтернативу.
-                    </p>
+                    </x-ui.lede>
                 </div>
 
                 {{--
@@ -762,10 +773,10 @@
                         </h2>
                     </div>
 
-                    <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                    <x-ui.lede class="lg:max-w-110 lg:text-right">
                         Короткая форма вместо длинного каталога: видно, сколько автомобилей
                         подходит под запрос, ещё до заявки.
-                    </p>
+                    </x-ui.lede>
                 </div>
 
                 {{--
@@ -1027,10 +1038,10 @@
                             </h2>
                         </div>
 
-                        <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                        <x-ui.lede class="lg:max-w-110 lg:text-right">
                             Что делает ЛАО КАРС, что требуется от клиента и какой статус
                             он видит на каждом шаге.
-                        </p>
+                        </x-ui.lede>
                     </div>
                 </div>
             </div>
@@ -1830,10 +1841,10 @@
                             </h2>
                         </div>
 
-                        <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                        <x-ui.lede class="lg:max-w-110 lg:text-right">
                             Свой сервис, а не партнёрская сеть: работы, шиномонтаж, детейлинг
                             и подготовка автомобиля выполняются в одной мастерской.
-                        </p>
+                        </x-ui.lede>
                     </div>
 
                     <div class="grid gap-6 min-[900px]:grid-cols-2">
@@ -1928,10 +1939,10 @@
                             </h2>
                         </div>
 
-                        <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                        <x-ui.lede class="lg:max-w-110 lg:text-right">
                             Точные суммы рассчитываются под конкретный автомобиль и дату —
                             здесь только состав расходов.
-                        </p>
+                        </x-ui.lede>
                     </div>
 
                     <div class="grid gap-6 lg:grid-cols-[1.3fr_1fr] lg:gap-8">
@@ -2010,10 +2021,10 @@
                             </h2>
                         </div>
 
-                        <p class="leading-[1.7] text-ink-muted lg:max-w-110 lg:text-right">
+                        <x-ui.lede class="lg:max-w-110 lg:text-right">
                             Публикуем после проверки: каждый отзыв проходит модерацию
                             в админке перед тем, как попасть на сайт.
-                        </p>
+                        </x-ui.lede>
                     </div>
 
                     <div class="grid gap-6 md:grid-cols-3">
