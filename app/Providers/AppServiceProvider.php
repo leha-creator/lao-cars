@@ -7,6 +7,7 @@ use App\Models\Service;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Foundation\Console\ServeCommand;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -51,6 +52,44 @@ class AppServiceProvider extends ServiceProvider
 
         $this->configureRateLimiting();
         $this->warnOnUnreachableMediaUrl();
+        $this->keepTempDirectoryForServeCommand();
+    }
+
+    /**
+     * Пропустить `TMP` и `TEMP` в дочерний процесс `php artisan serve`.
+     *
+     * БЕЗ ЭТОГО НА WINDOWS НЕ РАБОТАЕТ НИ ОДИН POST-ЗАПРОС, и отказ
+     * молчаливый до неприличия.
+     *
+     * `ServeCommand` вычищает из окружения дочернего процесса всё, чего
+     * нет в белом списке `$passthroughVariables` (там есть `PATH`
+     * и `SYSTEMROOT`, но нет `TMP` и `TEMP`). На Unix это безобидно —
+     * временная папка по умолчанию `/tmp`. На Windows временную папку
+     * PHP берёт как раз из `TMP`/`TEMP`, и без них откатывается
+     * к каталогу Windows, куда обычный процесс писать не может.
+     *
+     * Дальше по цепочке: PHP не может создать временный файл под тело
+     * POST-запроса → печатает предупреждение в вывод → тело отбрасывается
+     * («POST data can't be buffered; all data discarded») → из-за уже
+     * напечатанного предупреждения не отправляются заголовки. Livewire
+     * получает вместо JSON кусок HTML и падает с «Unexpected token '<'»
+     * в консоли браузера. Связь между этим сообщением и отсутствующей
+     * переменной окружения не читается вообще никак.
+     *
+     * Найдено приёмкой вехи 4.14: в админке не срабатывал ни один
+     * переключатель, при этом GET-страницы открывались нормально
+     * и все тесты были зелёными — тесты HTTP-сервер не поднимают.
+     *
+     * Правка касается только локальной разработки: на проде сайт отдаёт
+     * Nginx с php-fpm, а `artisan serve` не используется.
+     */
+    private function keepTempDirectoryForServeCommand(): void
+    {
+        foreach (['TMP', 'TEMP'] as $variable) {
+            if (! in_array($variable, ServeCommand::$passthroughVariables, true)) {
+                ServeCommand::$passthroughVariables[] = $variable;
+            }
+        }
     }
 
     /**
