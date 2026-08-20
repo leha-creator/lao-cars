@@ -688,3 +688,27 @@ it('keeps the query count independent of the number of positions with a photo', 
     expect($one)->toBeGreaterThan(0)
         ->and($many)->toBe($one);
 });
+
+it('fits the card photo instead of cropping it', function () {
+    // Веха 4.14 изначально трогала только карточки автомобилей — заказчик
+    // говорил про них. Решение пересмотрено на приёмке: посетитель видел
+    // вписанный кадр в каталоге и обрезанный в услугах, а болезнь у них
+    // одна — у вертикального снимка исчезают верх и низ.
+    //
+    // Проверяется ПАРА «контейнер + кадр», а не один класс: пропорция
+    // живёт на контейнере (он держит сетку ровной и красит поля),
+    // а вписывание — на самом изображении. Порознь любой из них
+    // бессмыслен: `object-contain` без подложки даёт поля цвета карточки,
+    // а контейнер без него ничего не меняет.
+    $category = serviceBlock('Проверочная категория', 'test-maintenance');
+
+    Service::factory()->inCategory($category)->withPhoto()->create(['title' => 'Позиция с фотографией']);
+
+    $html = $this->get('/services')->assertOk()->getContent();
+
+    preg_match('/<div class="aspect-4\/3 w-full bg-photo">\s*<img[^>]*>/s', $html, $card);
+
+    expect($card)->not->toBeEmpty()
+        ->and($card[0])->toContain('object-contain')
+        ->and($card[0])->not->toContain('object-cover');
+});
