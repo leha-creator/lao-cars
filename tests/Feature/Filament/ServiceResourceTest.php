@@ -17,6 +17,7 @@
 use App\Filament\Resources\Services\Pages\CreateService;
 use App\Filament\Resources\Services\Pages\EditService;
 use App\Filament\Resources\Services\Pages\ListServices;
+use App\Models\Media;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\User;
@@ -77,7 +78,7 @@ it('saves the photo, the featured flag and the details', function () {
     // выглядит как «карточка не изменилась»: страница отдаёт 200,
     // позиция на месте, просто рисуется прежним видом.
     $category = ServiceCategory::factory()->create();
-    $media = App\Models\Media::factory()->create();
+    $media = Media::factory()->create();
 
     livewire(CreateService::class)
         ->fillForm([
