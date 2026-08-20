@@ -389,9 +389,42 @@ final class ManageSiteSettings extends Page
                 // сохранением, то есть на живом сайте.
                 Placeholder::make('contacts.schedule.preview')
                     ->label('На сайте это выглядит так')
-                    ->content(fn (Get $get): string => WorkSchedule::fromSetting($get('contacts.schedule'))->label()
+                    ->content(fn (Get $get): string => self::scheduleFromForm($get)->label()
                         ?? 'Ни одного рабочего дня — часы работы на сайте показаны не будут.'),
             ]);
+    }
+
+    /**
+     * Расписание, собранное из ТЕКУЩЕГО СОСТОЯНИЯ ФОРМЫ.
+     *
+     * Отдельный метод, потому что состояние формы и значение настройки —
+     * не одно и то же: переключатель привязан к `closed`, но показывается
+     * как «рабочий день», то есть в форме он ИНВЕРТИРОВАН. Инверсию снимает
+     * `dehydrateStateUsing()` при сохранении, а предпросмотр рисуется
+     * до сохранения — и, читая состояние напрямую, видит семь закрытых дней
+     * там, где включены семь рабочих.
+     *
+     * Поймано приёмкой в браузере: сторожа этого не показывали, потому что
+     * ходили через `save()`, где инверсия уже снята.
+     */
+    private static function scheduleFromForm(Get $get): WorkSchedule
+    {
+        $days = [];
+
+        foreach (Weekday::cases() as $day) {
+            $path = 'contacts.schedule.days.'.$day->value;
+
+            $days[$day->value] = [
+                'closed' => ! $get($path.'.closed'),
+                'open' => $get($path.'.open'),
+                'close' => $get($path.'.close'),
+            ];
+        }
+
+        return WorkSchedule::fromSetting([
+            'days' => $days,
+            'note' => $get('contacts.schedule.note'),
+        ]);
     }
 
     /**

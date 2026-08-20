@@ -359,3 +359,50 @@ it('refuses a closing time earlier than the opening one', function () {
     expect(WorkSchedule::fromSetting(Setting::get('contacts.schedule'))->label())
         ->toBe('Без выходных, 9:00–21:00');
 });
+
+/*
+ * Предпросмотр собранной строки.
+ *
+ * ПОЙМАНО ПРИЁМКОЙ В БРАУЗЕРЕ, а не тестами: предпросмотр читал состояние
+ * формы напрямую, а переключатель в ней ИНВЕРТИРОВАН («рабочий день»
+ * вместо «выходной»). При семи включённых днях он писал «ни одного
+ * рабочего дня» — противоположность тому, что администратор видел
+ * строкой выше.
+ *
+ * Остальные сторожа этого показать не могли: они ходят через `save()`,
+ * где инверсию уже сняла `dehydrateStateUsing()`. Предпросмотр рисуется
+ * ДО сохранения, и в этом вся его суть.
+ *
+ * Сверять с «Без выходных, 9:00–21:00» НЕЛЬЗЯ: ровно эта строка стоит
+ * в описании самой секции как пример, и сторож на неё проходит вхолостую
+ * при любом сломанном предпросмотре. Проверено — такой сторож оставался
+ * зелёным на баге. Поэтому здесь только те строки, которых на странице
+ * больше нет нигде.
+ */
+
+it('previews a schedule with one day off', function () {
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['contacts.schedule.days.sun.closed' => false])
+        ->assertSee('Пн–Сб 9:00–21:00, Вс выходной');
+});
+
+it('previews a schedule with a weekend', function () {
+    livewire(ManageSiteSettings::class)
+        ->fillForm([
+            'contacts.schedule.days.sat.closed' => false,
+            'contacts.schedule.days.sun.closed' => false,
+        ])
+        ->assertSee('Пн–Пт 9:00–21:00, Сб, Вс выходные');
+});
+
+it('previews the emptied schedule as a warning, not as silence', function () {
+    $state = [];
+
+    foreach (['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as $day) {
+        $state['contacts.schedule.days.'.$day.'.closed'] = false;
+    }
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm($state)
+        ->assertSee('Ни одного рабочего дня');
+});
