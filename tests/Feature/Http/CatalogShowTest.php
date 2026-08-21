@@ -276,6 +276,42 @@ it('fits the main frame instead of cropping it, and keeps thumbnails cropped', f
     }
 });
 
+it('keeps one base 3:2 ratio on the main frame and the thumbnails', function () {
+    // Заказчик, 21.08.2026: «большинство картинок будут 3:2, они должны
+    // показываться полностью, без полей и без форматирования; поля —
+    // если загружено фото другого формата».
+    //
+    // С `object-contain` ширину полей задаёт пропорция КОНТЕЙНЕРА:
+    // у кадра в неё поля нулевые, у файла другого формата — видимые.
+    // Так что «показать целиком» — это ровно про число в `aspect-*`,
+    // и число проверяется, а не подразумевается.
+    $car = Car::factory()->create();
+    CarPhoto::factory()->count(3)->sequenced()->for($car)->create();
+
+    $content = $this->get('/catalog/'.$car->slug)->assertOk()->getContent();
+
+    preg_match('/<div class="relative mb-4 ([^"]*)"/', $content, $frame);
+
+    expect($frame)->not->toBeEmpty()
+        ->and($frame[1])->toContain('aspect-3/2')
+        // Брейкпойнта быть не должно: 16:10 на телефоне и 16:9 на
+        // компьютере означали, что «правильный формат» у одного файла
+        // разный на разной ширине экрана, то есть без полей он не
+        // показывался нигде.
+        ->and($frame[1])->not->toMatch('/\b(?:sm|md|lg|xl|2xl):aspect-/');
+
+    // Миниатюры держат ТУ ЖЕ пропорцию, хотя и остаются обрезанными:
+    // разная пропорция у кадра и плитки означала бы, что один файл
+    // показывается целиком в одном месте и режется в другом.
+    preg_match_all('/<a[^>]*x-on:click\.prevent="active = \d+"[^>]*>/s', $content, $thumbs);
+
+    expect($thumbs[0])->not->toBeEmpty();
+
+    foreach ($thumbs[0] as $thumb) {
+        expect($thumb)->toContain('aspect-3/2');
+    }
+});
+
 it('wraps the main frame in a real link so it works without javascript', function () {
     // «Открыть в полном размере» обязано работать и без скрипта: клик
     // по кадру открывает оригинал штатным просмотрщиком браузера.
