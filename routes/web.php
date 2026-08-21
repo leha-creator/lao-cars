@@ -3,6 +3,7 @@
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\HelpScreenshotController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PartsController;
@@ -57,3 +58,24 @@ Route::middleware(['auth', 'throttle:30,1'])->group(function (): void {
     Route::delete('/admin/push-subscriptions', [PushSubscriptionController::class, 'destroy'])
         ->name('push-subscriptions.destroy');
 });
+
+/*
+ * Снимки экрана для статей справки (веха 4.15).
+ *
+ * Здесь, а не в провайдере панели, по тому же основанию, что и подписка
+ * выше: это раздача файла, а не страница панели, и спрятанный
+ * в провайдере роут теряется при первом же поиске по маршрутам.
+ *
+ * Отдельным объявлением, а НЕ внутри группы подписки: у той стоит
+ * `throttle:30,1`. Там это верно — ручка пишет в базу по запросу
+ * из браузера; здесь читается файл, а страница статьи запрашивает разом
+ * столько картинок, сколько их в тексте. Общий лимит на статье с шестью
+ * снимками сработал бы как отказ при пятом её открытии.
+ *
+ * Гость под `auth` уезжает на страницу входа панели, а не в
+ * `RouteNotFoundException`: `redirectGuestsTo()` настроен
+ * в `bootstrap/app.php` вехой 4.7.
+ */
+Route::get('/admin/help/image/{name}', HelpScreenshotController::class)
+    ->middleware('auth')
+    ->name('help.screenshot');
