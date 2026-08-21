@@ -62,7 +62,10 @@ it('shows an admin every article of both sections', function () {
  * из реестра, прошла бы тот цикл вхолостую — проверять было бы нечего.
  */
 it('registers exactly the planned number of articles per section', function () {
-    expect(HelpLibrary::inSection(HelpSection::Scenarios))->toHaveCount(8)
+    // 8 → 9 вехой 4.15: в «Сценарии работы» добавлена «Обновить контакты
+    // компании». Число правится вместе с реестром намеренно — оно и есть
+    // тот сторож, который замечает статью, молча выпавшую из реестра.
+    expect(HelpLibrary::inSection(HelpSection::Scenarios))->toHaveCount(9)
         ->and(HelpLibrary::inSection(HelpSection::Settings))->toHaveCount(7);
 });
 
@@ -83,6 +86,24 @@ it('hides closed articles from a manager in the section list', function () {
     $response->assertDontSee('Сотрудники и роли');
 });
 
+/*
+ * Второй раздел проверяется отдельным сторожем с вехи 4.15, и до неё
+ * его не существовало по простой причине: в «Сценариях работы» не было
+ * НИ ОДНОЙ статьи, закрытой от менеджера, — скрывать там было нечего.
+ * «Обновить контакты компании» стала первой: всё, что она описывает,
+ * правится на странице настроек сайта, куда менеджер не ходит.
+ */
+it('hides closed articles from a manager in the scenarios list', function () {
+    $this->actingAs(User::factory()->manager()->create());
+
+    $response = $this->get(Scenarios::getUrl())->assertOk();
+
+    $response->assertSee('С чего начать');
+    $response->assertSee('Работа с заявкой');
+
+    $response->assertDontSee('Обновить контакты компании');
+});
+
 it('forbids a manager from opening a closed article by its direct address', function (string $slug) {
     $this->actingAs(User::factory()->manager()->create());
 
@@ -91,6 +112,10 @@ it('forbids a manager from opening a closed article by its direct address', func
     'home-blocks',
     'service-pages-texts',
     'contacts-and-footer',
+    // Веха 4.15. Статья живёт в «Сценариях работы», но ключ доступа
+    // у неё от настроек сайта — набор закрытых слагов перестал
+    // совпадать с составом одного раздела.
+    'contacts-update',
     'seo-defaults',
     'staff-and-roles',
     'price-list',
@@ -266,6 +291,161 @@ it('keeps article slugs unique', function () {
     );
 
     expect(array_unique($slugs))->toHaveCount(count($slugs));
+});
+
+/*
+|--------------------------------------------------------------------------
+| Снимки экрана (веха 4.15)
+|--------------------------------------------------------------------------
+|
+| До вехи 4.15 скриншотов в справке не было намеренно, и записанное
+| основание звучало так: снимок устаревает на первой правке вёрстки
+| панели, а переснимать его не будет никто. Заказчик попросил снимки
+| прямо, то есть цена отсутствия наглядности оказалась выше.
+|
+| Аргумент не опровергнут — он ЗАМЕЩЁН, и замещают его в том числе эти
+| сторожа. Они сверяют текст статей и папку со снимками в ОБЕ стороны:
+| ссылка без файла и файл без ссылки одинаково роняют набор. Ровно так
+| же устроена пара сторожей выше для самих статей.
+|
+| Отсюда же следует, почему пропавший снимок не пишется в лог
+| (см. PHPDoc `HelpScreenshotController`): состояние «ссылка есть,
+| файла нет» до продакшена не доезжает. Снимут эти сторожа — WARN
+| придётся возвращать.
+*/
+
+/**
+ * Все картинки, на которые ссылаются статьи: имя файла → список слагов.
+ *
+ * @return array<string, list<string>>
+ */
+function helpScreenshotReferences(): array
+{
+    $prefix = helpScreenshotUrlPrefix();
+    $references = [];
+
+    foreach (File::files(resource_path('help')) as $file) {
+        $text = (string) file_get_contents($file->getPathname());
+        $slug = $file->getBasename('.md');
+
+        preg_match_all('/!\[[^\]]*\]\(([^)]+)\)/u', $text, $matches);
+
+        foreach ($matches[1] as $url) {
+            $name = str_starts_with($url, $prefix) ? substr($url, strlen($prefix)) : $url;
+            $references[$name][] = $slug;
+        }
+    }
+
+    return $references;
+}
+
+/**
+ * Адресный префикс раздачи снимков, взятый У САМОГО МАРШРУТА.
+ *
+ * Не константа со строкой: тогда переименование маршрута расходилось бы
+ * с текстами статей молча, а сторож ниже подтверждал бы согласие текста
+ * сам с собой.
+ */
+function helpScreenshotUrlPrefix(): string
+{
+    // Заглушка ОБЯЗАНА быть латиницей: `route()` кодирует параметр
+    // процентами, и кириллическое слово вернулось бы из адреса как
+    // `%D0%98...`, а `str_replace()` его уже не нашёл бы. Префикс
+    // при этом получился бы длиннее настоящего, и сторож ниже начал бы
+    // ронять КАЖДУЮ картинку — что и произошло при написании.
+    return str_replace('NAME', '', route('help.screenshot', ['name' => 'NAME'], absolute: false));
+}
+
+it('has a file for every screenshot referenced from an article', function () {
+    $references = helpScreenshotReferences();
+
+    expect($references)->not->toBeEmpty('Ни одна статья не ссылается на снимки — сторож проверяет пустоту.');
+
+    foreach ($references as $name => $slugs) {
+        $path = resource_path("help/screenshots/{$name}");
+
+        expect(is_file($path))->toBeTrue(
+            "Снимка «{$name}» нет на диске, а на него ссылается: ".implode(', ', $slugs).'.',
+        );
+    }
+});
+
+/*
+ * Адрес картинки записан ровно в одной форме.
+ *
+ * Ловит опечатку `images/` вместо `image/` и относительный путь: обе
+ * дают битую картинку МОЛЧА — разметка валидна, страница 200, на экране
+ * рамка с подписью. Проверяются любые ссылки на `.png`, а не только те,
+ * что уже начинаются с нужного префикса: иначе сторож подтверждал бы
+ * только то, что и так верно.
+ */
+it('writes every screenshot address in exactly one form', function () {
+    $prefix = helpScreenshotUrlPrefix();
+
+    foreach (File::files(resource_path('help')) as $file) {
+        $text = (string) file_get_contents($file->getPathname());
+
+        preg_match_all('/\]\(([^)]*\.png[^)]*)\)/u', $text, $matches);
+
+        foreach ($matches[1] as $url) {
+            expect($url)->toStartWith(
+                $prefix,
+                "В статье «{$file->getBasename('.md')}» адрес снимка «{$url}» не начинается с «{$prefix}».",
+            );
+        }
+    }
+});
+
+/*
+ * Обратная сторона первого сторожа: осиротевший снимок не показывается
+ * нигде и не мешает ничему — именно поэтому он и живёт годами, занимая
+ * место в истории репозитория, из которой его уже не убрать.
+ */
+it('references every screenshot lying in the screenshots directory', function () {
+    $referenced = array_keys(helpScreenshotReferences());
+
+    foreach (File::files(resource_path('help/screenshots')) as $file) {
+        expect($file->getFilename())->toBeIn(
+            $referenced,
+            "Снимок «{$file->getFilename()}» не упомянут ни в одной статье.",
+        );
+    }
+});
+
+/*
+ * Картинка без подписи бесполезна тому, у кого она не загрузилась,
+ * и невидима для программы чтения с экрана. Пустой `alt` при этом
+ * выглядит в исходнике статьи как заполненный — скобки на месте.
+ */
+it('gives every screenshot a non-empty alt text', function () {
+    foreach (File::files(resource_path('help')) as $file) {
+        $text = (string) file_get_contents($file->getPathname());
+
+        preg_match_all('/!\[([^\]]*)\]\(([^)]+)\)/u', $text, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as [, $alt, $url]) {
+            expect(trim($alt))->not->toBe(
+                '',
+                "В статье «{$file->getBasename('.md')}» у снимка «{$url}» пустая подпись.",
+            );
+        }
+    }
+});
+
+/*
+ * Потолок веса. Ловит полноэкранный снимок в несколько мегабайт ДО
+ * того, как он попадёт в историю репозитория навсегда: удалить файл
+ * из следующего коммита можно, из истории — нет.
+ */
+it('keeps every screenshot under the weight ceiling', function () {
+    $ceiling = 300 * 1024;
+
+    foreach (File::files(resource_path('help/screenshots')) as $file) {
+        expect($file->getSize())->toBeLessThanOrEqual(
+            $ceiling,
+            "Снимок «{$file->getFilename()}» весит ".round($file->getSize() / 1024).' КБ при потолке 300 КБ.',
+        );
+    }
 });
 
 /*
