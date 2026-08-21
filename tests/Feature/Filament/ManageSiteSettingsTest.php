@@ -171,6 +171,40 @@ it('has a key registry matching the seeder', function () {
         ->and(array_diff(ManageSiteSettings::settingKeys(), $seederKeys))->toBe([]);
 });
 
+it('refuses a map url that does not lead to yandex maps', function () {
+    // Первый из двух рубежей (веха 4.5). Значение поля едет прямо в `src`
+    // iframe на странице контактов, то есть администратор описывает, чей
+    // сайт покажется внутри страницы «ЛАО КАРС». Правило формы ловит
+    // опечатку в момент ввода и объясняет её человеку; второй рубеж —
+    // проверка на выводе (`MapEmbedTest`, `ContactsPageTest`) — ловит
+    // значение, приехавшее мимо формы: сидом, миграцией, `psql`.
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['contacts.map_embed' => 'https://example.com/map'])
+        ->call('save')
+        ->assertHasErrors('data.contacts.map_embed');
+
+    expect(Setting::get('contacts.map_embed'))->toBeNull();
+});
+
+it('accepts a yandex map url and an emptied one', function () {
+    // Пустое поле — рабочий сценарий, а не ошибка: карта тогда собирается
+    // по адресу компании. Правило, отклоняющее пустоту, сделало бы форму
+    // несохраняемой у всех, кто карту не настраивал.
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['contacts.map_embed' => 'https://yandex.ru/map-widget/v1/?um=constructor%3Aabc'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('contacts.map_embed'))->toBe('https://yandex.ru/map-widget/v1/?um=constructor%3Aabc');
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['contacts.map_embed' => ''])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('contacts.map_embed'))->toBeNull();
+});
+
 it('keeps the services advantages a list of objects', function () {
     // Формат значения — то, от чего зависит шаблон страницы автосервиса
     // (веха 4.4), и ломается он молча: репитер, дегидрированный в другую
