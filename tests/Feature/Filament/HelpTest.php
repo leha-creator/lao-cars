@@ -65,8 +65,16 @@ it('registers exactly the planned number of articles per section', function () {
     // 8 → 9 вехой 4.15: в «Сценарии работы» добавлена «Обновить контакты
     // компании». Число правится вместе с реестром намеренно — оно и есть
     // тот сторож, который замечает статью, молча выпавшую из реестра.
-    expect(HelpLibrary::inSection(HelpSection::Scenarios))->toHaveCount(9)
-        ->and(HelpLibrary::inSection(HelpSection::Settings))->toHaveCount(7);
+    //
+    // 9 → 11 и 7 → 11 вехой 4.16 по итогам обхода панели против реестра.
+    // В «Сценарии работы» добавлены «Автомобиль продан» и «Собрать
+    // страницу „О компании“», в «Настройку параметров» — «Марки
+    // автомобилей», «Категории услуг», «Тексты страницы „О компании“»
+    // и «Свой профиль и пароль». Шесть экранов панели не были описаны
+    // ни одной статьёй; самый заметный пропуск — седьмая вкладка
+    // настроек сайта, единственная без своей статьи.
+    expect(HelpLibrary::inSection(HelpSection::Scenarios))->toHaveCount(11)
+        ->and(HelpLibrary::inSection(HelpSection::Settings))->toHaveCount(11);
 });
 
 it('hides closed articles from a manager in the section list', function () {
@@ -122,6 +130,16 @@ it('forbids a manager from opening a closed article by its direct address', func
     'reviews-moderation',
     'team-page',
     'media-library',
+    // Веха 4.16. `about-page-update` — второй после `contacts-update`
+    // случай, когда статья живёт в «Сценариях работы», а ключ доступа
+    // у неё от настроек сайта: раздел выбирается по вопросу читателя,
+    // ключ — по разделу панели, который статья описывает.
+    'about-page-update',
+    'about-page-texts',
+    // Справочник категорий услуг закрыт менеджеру не как настройка,
+    // а как контент сайта — так же, как позиции прайса
+    // (`ServiceCategoryPolicy` наследует `AdminOnlyPolicy`).
+    'service-categories',
 ]);
 
 it('opens articles a manager is allowed to read', function (string $slug) {
@@ -135,6 +153,14 @@ it('opens articles a manager is allowed to read', function (string $slug) {
     'car-publishing',
     'car-photos',
     'car-attributes',
+    // Веха 4.16. Марки открыты менеджеру вместе с остальным каталогом:
+    // без права завести марку он не добавит автомобиль, которого нет
+    // в сидах (`BrandPolicy` наследует `StaffPolicy`).
+    'car-brands',
+    'car-sold',
+    // Ключа доступа у статьи про профиль нет: свой профиль правит любой
+    // вошедший сотрудник.
+    'profile-and-password',
 ]);
 
 it('404s an unknown article slug', function () {

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Support\Help;
 
 use App\Filament\Pages\ManageSiteSettings;
+use App\Filament\Resources\Brands\BrandResource;
 use App\Filament\Resources\CarAttributes\CarAttributeResource;
 use App\Filament\Resources\Cars\CarResource;
 use App\Filament\Resources\Employees\EmployeeResource;
 use App\Filament\Resources\Leads\LeadResource;
 use App\Filament\Resources\Media\MediaResource;
 use App\Filament\Resources\Reviews\ReviewResource;
+use App\Filament\Resources\ServiceCategories\ServiceCategoryResource;
 use App\Filament\Resources\Services\ServiceResource;
 use App\Filament\Resources\Users\UserResource;
 
@@ -22,7 +24,7 @@ use App\Filament\Resources\Users\UserResource;
  * авторизации, ни запросов. Текст статьи читает `App\Services\HelpContent`,
  * он же спрашивает у ключа доступа, показывать ли статью.
  *
- * # Что обязан знать тот, кто добавляет шестнадцатую статью
+ * # Что обязан знать тот, кто добавляет двадцать третью статью
  *
  * **1. В тексте статьи нет технических подробностей — это правило,
  * а не пожелание.** Запрещены: artisan-команды, переменные окружения,
@@ -63,8 +65,23 @@ use App\Filament\Resources\Users\UserResource;
  * с телефонами клиентов. Регламент целиком — в `docs/help-center.md`
  * и в скилле `.claude/skills/laocars-help/`.
  *
+ * **6. Снимки есть у КАЖДОЙ статьи, а не у двух (веха 4.16).** Кадров
+ * пятьдесят два, и покрыт ими практически каждый экран панели — то есть
+ * правка любой формы почти наверняка попадает в чей-то снимок. Правя
+ * панель, откройте таблицу актуальных снимков в `docs/help-center.md`
+ * и посмотрите, попал ли этот экран в кадр. Опасность здесь выше, чем
+ * у устаревшего абзаца: текст читают, а картинку узнают, и человек,
+ * не нашедший на экране кнопку со снимка, решает, что сломался он.
+ *
+ * Тот самый экран «Заявки» из пункта 5 вехой 4.16 сняли — и сняли
+ * на демонстрационных данных из `LeadSeeder`, заведённого ровно для
+ * этого. Настоящих телефонов в кадре нет и быть не должно: файл уезжает
+ * в историю репозитория навсегда.
+ *
  * Порядок статей в списке — порядок объявления, и он содержателен:
- * «С чего начать» стоит первой.
+ * «С чего начать» стоит первой, справочники каталога идут подряд,
+ * вкладки настроек — в порядке самих вкладок, личные настройки
+ * («Свой профиль и пароль») — последними.
  */
 final class HelpLibrary
 {
@@ -109,7 +126,7 @@ final class HelpLibrary
                 title: 'С чего начать',
                 summary: 'Вход в панель, из чего состоит меню, чем администратор отличается от менеджера.',
                 section: HelpSection::Scenarios,
-                related: ['lead-processing', 'notifications-setup'],
+                related: ['lead-processing', 'notifications-setup', 'profile-and-password'],
             ),
 
             new HelpArticle(
@@ -127,7 +144,7 @@ final class HelpLibrary
                 summary: 'Откуда приходят заявки, как менять статус и оставлять комментарии.',
                 section: HelpSection::Scenarios,
                 gate: LeadResource::class,
-                related: ['notifications-setup', 'price-list'],
+                related: ['notifications-setup', 'price-list', 'car-sold'],
             ),
 
             new HelpArticle(
@@ -136,7 +153,7 @@ final class HelpLibrary
                 summary: 'Марка, обязательные поля карточки, статусы и показ на главной.',
                 section: HelpSection::Scenarios,
                 gate: CarResource::class,
-                related: ['car-photos', 'car-attributes'],
+                related: ['car-photos', 'car-attributes', 'car-brands', 'car-sold'],
             ),
 
             new HelpArticle(
@@ -148,13 +165,26 @@ final class HelpLibrary
                 related: ['car-publishing', 'media-library'],
             ),
 
+            // Веха 4.16. Отдельная статья, а не раздел в «Добавить
+            // автомобиль»: продажа — это сценарий, к которому приходят
+            // со своим вопросом, и искать его внутри статьи про
+            // заведение карточки никто не станет.
+            new HelpArticle(
+                slug: 'car-sold',
+                title: 'Автомобиль продан',
+                summary: 'Что сделать со статусом, что станет с главной и с уже пришедшими заявками.',
+                section: HelpSection::Scenarios,
+                gate: CarResource::class,
+                related: ['car-publishing', 'lead-processing'],
+            ),
+
             new HelpArticle(
                 slug: 'price-list',
                 title: 'Прайс автосервиса и запчастей',
                 summary: 'Позиции, цены и «по запросу», порядок вывода и связь с формой записи.',
                 section: HelpSection::Scenarios,
                 gate: ServiceResource::class,
-                related: ['service-pages-texts', 'lead-processing'],
+                related: ['service-pages-texts', 'lead-processing', 'service-categories'],
             ),
 
             new HelpArticle(
@@ -163,7 +193,7 @@ final class HelpLibrary
                 summary: 'Откуда берутся отзывы, как публиковать и где они показываются.',
                 section: HelpSection::Scenarios,
                 gate: ReviewResource::class,
-                related: ['media-library', 'team-page'],
+                related: ['media-library', 'team-page', 'about-page-update'],
             ),
 
             new HelpArticle(
@@ -172,7 +202,21 @@ final class HelpLibrary
                 summary: 'Карточки сотрудников: имя, должность, фотография, порядок.',
                 section: HelpSection::Scenarios,
                 gate: EmployeeResource::class,
-                related: ['media-library', 'reviews-moderation'],
+                related: ['media-library', 'reviews-moderation', 'about-page-update'],
+            ),
+
+            // Веха 4.16. Единственный сценарий, проходящий три раздела
+            // панели сразу. Ключ доступа — от настроек сайта, хотя
+            // статья живёт в «Сценариях работы»: раздел выбирается по
+            // вопросу читателя, ключ — по разделу, который статья
+            // описывает. Тот же случай, что и `contacts-update`.
+            new HelpArticle(
+                slug: 'about-page-update',
+                title: 'Собрать страницу «О компании»',
+                summary: 'Тексты, команда и отзывы: что обойти, чтобы страница выглядела целиком.',
+                section: HelpSection::Scenarios,
+                gate: ManageSiteSettings::class,
+                related: ['about-page-texts', 'team-page', 'reviews-moderation'],
             ),
 
             new HelpArticle(
@@ -189,7 +233,7 @@ final class HelpLibrary
                 title: 'Уведомления о новых заявках',
                 summary: 'Три канала уведомлений, как включить каждый и что делать, если не приходят.',
                 section: HelpSection::Settings,
-                related: ['lead-processing', 'first-steps'],
+                related: ['lead-processing', 'first-steps', 'profile-and-password'],
             ),
 
             new HelpArticle(
@@ -198,7 +242,20 @@ final class HelpLibrary
                 summary: 'Справочник характеристик, типы значений, показ в карточке и в фильтре.',
                 section: HelpSection::Settings,
                 gate: CarAttributeResource::class,
-                related: ['car-publishing'],
+                related: ['car-publishing', 'car-brands'],
+            ),
+
+            // Веха 4.16. До неё про марки было одно предложение внутри
+            // статьи про заведение автомобиля — то есть человек с
+            // вопросом «как завести марку» искал статью про марки
+            // и не находил её.
+            new HelpArticle(
+                slug: 'car-brands',
+                title: 'Марки автомобилей',
+                summary: 'Справочник марок: зачем он, как добавить марку и что будет при переименовании.',
+                section: HelpSection::Settings,
+                gate: BrandResource::class,
+                related: ['car-publishing', 'car-attributes'],
             ),
 
             new HelpArticle(
@@ -207,16 +264,40 @@ final class HelpLibrary
                 summary: 'Бегущая строка, промо-баннер, преимущества, этапы покупки, состав цены и вопросы.',
                 section: HelpSection::Settings,
                 gate: ManageSiteSettings::class,
-                related: ['media-library', 'seo-defaults'],
+                related: ['media-library', 'seo-defaults', 'about-page-texts'],
             ),
 
             new HelpArticle(
                 slug: 'service-pages-texts',
                 title: 'Тексты автосервиса и запчастей',
-                summary: 'Вступления, описания категорий прайса, оговорка о ценах и условия поставки.',
+                summary: 'Вступления, оговорка о ценах, условия поставки и блок «почему сюда».',
                 section: HelpSection::Settings,
                 gate: ManageSiteSettings::class,
-                related: ['price-list'],
+                related: ['price-list', 'service-categories'],
+            ),
+
+            // Веха 4.16. Справочник вехи 4.13 разбирался внутри статьи
+            // про прайс — то есть в «Сценариях работы», куда за
+            // описанием полей не ходят.
+            new HelpArticle(
+                slug: 'service-categories',
+                title: 'Категории услуг',
+                summary: 'Блоки прайса: название, страница, описание, порядок и что будет при удалении.',
+                section: HelpSection::Settings,
+                gate: ServiceCategoryResource::class,
+                related: ['price-list', 'service-pages-texts'],
+            ),
+
+            // Веха 4.16. Седьмая вкладка настроек сайта — единственная,
+            // про которую не было ни строки, при том что в ней лежит
+            // самое неочевидное поле всех настроек: история по годам.
+            new HelpArticle(
+                slug: 'about-page-texts',
+                title: 'Тексты страницы «О компании»',
+                summary: 'Заголовок, вступление, миссия и история по годам.',
+                section: HelpSection::Settings,
+                gate: ManageSiteSettings::class,
+                related: ['about-page-update', 'home-blocks'],
             ),
 
             new HelpArticle(
@@ -243,7 +324,23 @@ final class HelpLibrary
                 summary: 'Как завести сотрудника, что видит менеджер и почему свою роль изменить нельзя.',
                 section: HelpSection::Settings,
                 gate: UserResource::class,
-                related: ['first-steps', 'notifications-setup'],
+                related: ['first-steps', 'notifications-setup', 'profile-and-password'],
+            ),
+
+            // Веха 4.16. Ключа доступа нет намеренно: свой профиль
+            // правит любой вошедший сотрудник — `Page::canAccess()`
+            // штатной страницы Filament пускает всех аутентифицированных,
+            // и второй матрицы прав здесь не заводится.
+            //
+            // Последней в разделе: настройки сайта общие, а эта —
+            // личная, и от соседства с ними отличается сильнее, чем
+            // они друг от друга.
+            new HelpArticle(
+                slug: 'profile-and-password',
+                title: 'Свой профиль и пароль',
+                summary: 'Имя и почта, смена пароля и устройства, на которые приходят уведомления.',
+                section: HelpSection::Settings,
+                related: ['notifications-setup', 'first-steps', 'staff-and-roles'],
             ),
         ];
     }
