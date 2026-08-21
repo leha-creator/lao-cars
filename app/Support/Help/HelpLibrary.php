@@ -53,6 +53,16 @@ use App\Filament\Resources\Users\UserResource;
  * и быть не может. Инструкция, отставшая на две вехи, вреднее её
  * отсутствия, потому что ей верят. Подробности — в `docs/help-center.md`.
  *
+ * **5. Снимки экрана разрешены с вехи 4.15 — по регламенту, а не
+ * свободно.** До неё их не было намеренно, и то основание («снимок
+ * устаревает, а переснимать не будет никто») не опровергнуто, а
+ * замещено: сторожами, которые сверяют текст и папку в обе стороны,
+ * съёмкой фрагмента вместо экрана целиком и таблицей актуальных снимков
+ * с датами. Файлы лежат в `resources/help/screenshots/` — ВНЕ веб-корня,
+ * потому что следующий экран, который попросят снять, это «Заявки»
+ * с телефонами клиентов. Регламент целиком — в `docs/help-center.md`
+ * и в скилле `.claude/skills/laocars-help/`.
+ *
  * Порядок статей в списке — порядок объявления, и он содержателен:
  * «С чего начать» стоит первой.
  */
@@ -100,6 +110,15 @@ final class HelpLibrary
                 summary: 'Вход в панель, из чего состоит меню, чем администратор отличается от менеджера.',
                 section: HelpSection::Scenarios,
                 related: ['lead-processing', 'notifications-setup'],
+            ),
+
+            new HelpArticle(
+                slug: 'contacts-update',
+                title: 'Обновить контакты компании',
+                summary: 'Переехали, сменился телефон или график — что обойти, чтобы сайт обновился целиком.',
+                section: HelpSection::Scenarios,
+                gate: ManageSiteSettings::class,
+                related: ['contacts-and-footer', 'first-steps'],
             ),
 
             new HelpArticle(
@@ -206,7 +225,7 @@ final class HelpLibrary
                 summary: 'Где показываются телефон, адрес и ссылки на мессенджеры.',
                 section: HelpSection::Settings,
                 gate: ManageSiteSettings::class,
-                related: ['home-blocks'],
+                related: ['contacts-update', 'home-blocks'],
             ),
 
             new HelpArticle(
