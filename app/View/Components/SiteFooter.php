@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\View\Components;
 
 use App\Models\Setting;
+use App\Support\PhoneLink;
 use App\Support\SiteMenu;
 use App\Support\SocialLinks;
 use App\Support\WorkSchedule;
@@ -91,12 +92,14 @@ final class SiteFooter extends Component
 
     /**
      * Адрес для ссылки `tel:` — без пробелов, скобок и дефисов.
+     *
+     * Само преобразование переехало в `PhoneLink` (веха 4.5): третьим
+     * потребителем стала страница контактов. Метод остался — его зовёт
+     * шаблон подвала.
      */
     public function phoneHref(): ?string
     {
-        $phone = $this->contact('phone');
-
-        return $phone === null ? null : preg_replace('/[^\d+]/', '', $phone);
+        return PhoneLink::href($this->contact('phone'));
     }
 
     public function render(): View

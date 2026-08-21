@@ -9,6 +9,7 @@ use App\Filament\Actions\HelpAction;
 use App\Filament\Forms\Components\MediaPicker;
 use App\Filament\NavigationGroup;
 use App\Models\Setting;
+use App\Support\MapEmbed;
 use App\Support\WorkSchedule;
 use BackedEnum;
 use Closure;
@@ -89,6 +90,12 @@ final class ManageSiteSettings extends Page
             // целиком, и семь ключей дали бы семь шансов разойтись.
             // Прецедент формы значения — `home.promo`.
             'contacts.schedule',
+            // Адрес виджета Яндекс.Карт (веха 4.5). Скаляр, а не объект:
+            // поле одно, и заворачивать его в объект «на вырост» значит
+            // усложнить и форму, и сид ради поля, которого нет.
+            // Пустое значение — рабочий сценарий: карта тогда собирается
+            // из адреса компании (`App\Support\MapEmbed`).
+            'contacts.map_embed',
         ],
         'socials' => [
             'socials.telegram',
@@ -150,6 +157,18 @@ final class ManageSiteSettings extends Page
             // формы значения — `home.promo` и `footer.guarantee`.
             'about_page.mission',
             'about_page.history',
+        ],
+        // Тексты страницы контактов (веха 4.5) — СВОЯ группа реестра,
+        // хотя поля стоят на вкладке «Контакты» рядом с телефоном.
+        // Группа реестра и вкладка формы — разные вещи: группа задаёт
+        // колонку `settings.group` (часть ключа до точки), по которой
+        // `Setting::group('contacts')` собирает данные для подвала и шапки.
+        // Положи `contacts_page.*` в группу `contacts` — и в подвал
+        // приехал бы заголовок страницы контактов.
+        'contacts_page' => [
+            'contacts_page.intro_title',
+            'contacts_page.intro_text',
+            'contacts_page.route_text',
         ],
         'seo' => [
             'seo.default_title',
@@ -352,10 +371,77 @@ final class ManageSiteSettings extends Page
                 ->email(),
 
             TextInput::make('contacts.address')
-                ->label('Адрес'),
+                ->label('Адрес')
+                ->helperText('Он же попадает в микроразметку организации и в карту на странице контактов.'),
 
             self::scheduleSection(),
+            self::mapSection(),
+            self::contactsPageTextsSection(),
         ]);
+    }
+
+    /**
+     * Карта на странице контактов (веха 4.5).
+     *
+     * Поле необязательное, и это главное про него: пустое значение даёт
+     * рабочую карту, собранную из адреса компании. Заказчику не приходится
+     * идти в конструктор Яндекс.Карт, чтобы страница перестала выглядеть
+     * недоделанной, — он идёт туда, только если хочет свою карту с меткой.
+     */
+    private static function mapSection(): Section
+    {
+        return Section::make('Карта')
+            ->description('Карта на странице контактов. Пустое поле — карта собирается по адресу выше.')
+            ->schema([
+                TextInput::make('contacts.map_embed')
+                    ->label('Адрес карты Яндекс.Карт')
+                    ->url()
+                    ->helperText('Ссылка из конструктора Яндекс.Карт («Поделиться» → «Ссылка на карту»). Чужие адреса не принимаются: содержимое поля показывается внутри страницы сайта.')
+                    // Проверка тем же методом, что и на выводе
+                    // (`MapEmbed::isAllowed()`), а не своим похожим
+                    // условием: два правила про один и тот же список
+                    // хостов разошлись бы — и разошлись бы в сторону
+                    // «форма приняла, страница отклонила», то есть
+                    // в молчаливую пустую секцию.
+                    ->rule(static fn (): Closure => static function (string $attribute, mixed $value, Closure $fail): void {
+                        // Пустое значение — рабочий сценарий, а не ошибка:
+                        // строго, а не через `empty()` (правило `RULES.md`).
+                        if ($value === null || $value === '') {
+                            return;
+                        }
+
+                        if (! MapEmbed::isAllowed(is_string($value) ? $value : null)) {
+                            $fail('Адрес должен вести на Яндекс.Карты и начинаться с https://.');
+                        }
+                    }),
+            ]);
+    }
+
+    /**
+     * Тексты страницы контактов (веха 4.5).
+     *
+     * Стоят на вкладке «Контакты», а не на «Автосервис и запчасти»: та
+     * названа по своим страницам, и ключи контактов заказчик там не найдёт.
+     * То же основание, по которому веха 4.5 завела седьмую вкладку под
+     * страницу «О компании» вместо того, чтобы дописать её ключи в чужую.
+     */
+    private static function contactsPageTextsSection(): Section
+    {
+        return Section::make('Тексты страницы')
+            ->description('Заголовок и вступление страницы «Контакты».')
+            ->schema([
+                TextInput::make('contacts_page.intro_title')
+                    ->label('Заголовок'),
+
+                Textarea::make('contacts_page.intro_text')
+                    ->label('Вступление')
+                    ->rows(3),
+
+                Textarea::make('contacts_page.route_text')
+                    ->label('Как добраться')
+                    ->helperText('Ориентиры, парковка, вход. Выводится рядом с картой. Пустое значение убирает блок.')
+                    ->rows(3),
+            ]);
     }
 
     /**

@@ -60,11 +60,20 @@ it('takes the parts heading, intro and delivery terms from site settings', funct
 
 it('shows contacts from site settings on the contacts page', function () {
     Setting::set('contacts.address', 'Москва, Тестовая, 2');
+    Setting::set('contacts.phone', '+7 999 000-11-22');
+    Setting::set('contacts.email', 'test@laocars.ru');
     Setting::set('socials.whatsapp', 'https://wa.me/70000000000');
 
+    // Ссылки, а не только подписи (веха 4.5). До неё номер и почта
+    // на канонической странице контактов выводились текстом — при том
+    // что в шапке и подвале были ссылками, — и нажатие с телефона,
+    // главный сценарий этой страницы, не работало. Проверка на подписи
+    // прошла бы и после отката к тексту.
     $this->get('/contacts')
         ->assertOk()
         ->assertSee('Москва, Тестовая, 2')
+        ->assertSee('href="tel:+79990001122"', escape: false)
+        ->assertSee('href="mailto:test@laocars.ru"', escape: false)
         ->assertSee('WhatsApp');
 });
 
@@ -133,9 +142,17 @@ it('runs section page intros through typography', function () {
     Setting::set('services_page.intro_text', 'Свой сервис, а не партнёрская сеть');
     Setting::set('parts_page.intro_text', 'Подберём деталь по VIN и привезём');
     Setting::set('about_page.intro_text', 'Возим автомобили из Китая и Европы');
+    // Веха 4.5: вступление `/contacts` переехало из шаблона в настройку
+    // и с этого момента проходит ту же типографику, что и остальные три.
+    Setting::set('contacts_page.intro_text', 'Приезжайте в шоу-рум или напишите');
     Setting::flushCache();
 
-    foreach (['/services' => 'а'.Typography::NBSP.'не', '/parts' => 'и'.Typography::NBSP.'привезём', '/about' => 'и'.Typography::NBSP.'Европы'] as $url => $expected) {
+    foreach ([
+        '/services' => 'а'.Typography::NBSP.'не',
+        '/parts' => 'и'.Typography::NBSP.'привезём',
+        '/about' => 'и'.Typography::NBSP.'Европы',
+        '/contacts' => 'или'.Typography::NBSP.'напишите',
+    ] as $url => $expected) {
         expect($this->get($url)->assertOk()->getContent())->toContain($expected);
     }
 });
@@ -146,10 +163,16 @@ it('keeps the intro paragraph marked text-pretty on every section page', functio
     //
     // Вступления задаются явно: пустая настройка убирает абзац целиком
     // (рабочий сценарий «блок выключен»), и без них сторож проверял бы
-    // отсутствующий тег. У `/contacts` вступление живёт в шаблоне.
+    // отсутствующий тег.
+    //
+    // `/contacts` в этом перечне с вехи 4.5. До неё вступление там жило
+    // в шаблоне константой и попадало в проверку само; теперь оно —
+    // такая же настройка, как у трёх соседей, и без строки ниже сторож
+    // на четвёртой странице искал бы абзац, которого нет.
     Setting::set('services_page.intro_text', 'Проверочное вступление автосервиса.');
     Setting::set('parts_page.intro_text', 'Проверочное вступление запчастей.');
     Setting::set('about_page.intro_text', 'Проверочное вступление компании.');
+    Setting::set('contacts_page.intro_text', 'Проверочное вступление контактов.');
     Setting::flushCache();
 
     foreach (['/services', '/parts', '/about', '/contacts'] as $url) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\View\Components;
 
 use App\Models\Setting;
+use App\Support\PhoneLink;
 use App\Support\SiteMenu;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
@@ -70,10 +71,15 @@ final class SiteHeader extends Component
 
     /**
      * Адрес для ссылки `tel:` — без пробелов, скобок и дефисов.
+     *
+     * Само преобразование переехало в `PhoneLink` (веха 4.5): третьим
+     * потребителем стала страница контактов. Метод остался — его зовёт
+     * шаблон, и убрать его значило бы править вёрстку ради переезда
+     * одной строки.
      */
     public function phoneHref(): ?string
     {
-        return $this->phone === null ? null : preg_replace('/[^\d+]/', '', $this->phone);
+        return PhoneLink::href($this->phone);
     }
 
     public function render(): View
