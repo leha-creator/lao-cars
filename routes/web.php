@@ -7,6 +7,7 @@ use App\Http\Controllers\HelpScreenshotController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PartsController;
+use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ServiceController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,20 @@ Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.ind
 // молча выбрасывает пункты без зарегистрированного роута. Порядок строк
 // повторяет порядок пунктов меню, а не дату появления страницы.
 Route::get('/about', [AboutController::class, 'index'])->name('about.index');
+
+/*
+ * Политика обработки персональных данных (веха 4.17).
+ *
+ * Отдельным блоком, а не строкой в группе разделов выше: это юридический
+ * документ, а не шестой раздел сайта. В `SiteMenu` его нет и быть не
+ * должно — ссылка живёт в нижней строке подвала рядом с копирайтом,
+ * разбор в докблоке `SiteMenu::FOOTER`.
+ *
+ * Имя роута `privacy.index` зашито в трёх местах: подвал, чекбокс согласия
+ * в форме заявки и подсказка на вкладке настроек. Переименование роняет
+ * все три, и первые два — на каждой странице сайта.
+ */
+Route::get('/privacy', PrivacyController::class)->name('privacy.index');
 
 // Приём заявок со всех форм сайта (веха 3.7). Лимитер `leads` объявлен
 // в `AppServiceProvider::configureRateLimiting()`.

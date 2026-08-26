@@ -464,6 +464,94 @@
     }
 
     /*
+     * Разметка юридического документа (веха 4.17).
+     *
+     * Единственное место на сайте, где HTML приходит из редактора панели,
+     * а не из шаблона: заголовки, абзацы и списки внутри текста политики
+     * классов не несут и не могут их нести. Поэтому оформление задаётся
+     * потомкам обёртки, а не утилитами в разметке.
+     *
+     * Плагин `@tailwindcss/typography` ради одной страницы не подключается:
+     * он приносит собственную шкалу цветов и отступов, которую пришлось бы
+     * переопределять под токены проекта целиком — дороже, чем двадцать
+     * строк здесь.
+     *
+     * Живёт в `@layer base` вместе с `.theme-light` по той же причине:
+     * утилиты Tailwind лежат слоем выше, и класс с места вызова (например
+     * `max-w-3xl` на самой обёртке) продолжает перебивать здешние правила.
+     */
+    .prose-legal :where(h2) {
+        font-family: var(--font-display, 'Unbounded'), sans-serif;
+        font-size: 1.25rem;
+        font-weight: 600;
+        line-height: 1.35;
+        margin-block: 2.25rem 0.875rem;
+    }
+
+    /* Первый заголовок в документе — без верхнего отступа: над ним
+       граница карточки, и лишние 36px читаются как сбитая вёрстка. */
+    .prose-legal :where(h2:first-child) {
+        margin-block-start: 0;
+    }
+
+    .prose-legal :where(h3) {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-block: 1.5rem 0.5rem;
+    }
+
+    .prose-legal :where(p) {
+        line-height: 1.75;
+        margin-block: 0.875rem;
+        text-wrap: pretty;
+    }
+
+    .prose-legal :where(ul, ol) {
+        margin-block: 0.875rem;
+        padding-inline-start: 1.5rem;
+    }
+
+    .prose-legal :where(ul) {
+        list-style: disc;
+    }
+
+    .prose-legal :where(ol) {
+        list-style: decimal;
+    }
+
+    .prose-legal :where(li) {
+        line-height: 1.75;
+        margin-block: 0.375rem;
+        padding-inline-start: 0.25rem;
+    }
+
+    /*
+     * Абзац ВНУТРИ пункта списка отступов не получает.
+     *
+     * Он там всегда: узел списка в TipTap содержит блок, и редактор
+     * оборачивает содержимое `<li>` в `<p>` сам — то есть разметка
+     * `<li><p>текст</p></li>` приходит из панели, а не пишется руками.
+     * Без этой строки каждый пункт получает 14px сверху и снизу от правила
+     * для `p` выше, и список расползается вдвое против абзацного текста.
+     */
+    .prose-legal :where(li > p) {
+        margin-block: 0;
+    }
+
+    .prose-legal :where(a) {
+        color: var(--color-accent);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+
+    .prose-legal :where(blockquote) {
+        border-inline-start: 2px solid var(--color-line-strong);
+        color: var(--color-ink-muted);
+        margin-block: 1.25rem;
+        padding-inline-start: 1.25rem;
+    }
+
+    /*
      * Motion-принципы макета (UI Kit §08) — подъём при наведении, fade-up
      * хиро и бесконечная бегущая строка. Последняя приходит вехой 4.2, и
      * именно она способна навредить: непрерывно ползущий через весь экран
