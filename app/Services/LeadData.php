@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\ContactMethod;
 use App\Enums\PreferredTime;
+use Carbon\CarbonImmutable;
 
 /**
  * Заявка, приведённая к типам, — то, что осталось от формы после
@@ -28,6 +29,12 @@ final readonly class LeadData
      *                               в `leads.source_type`
      * @param  ?string  $pageUrl  адрес страницы, с которой пришла форма;
      *                            определяется сервером, а не формой
+     * @param  ?CarbonImmutable  $consentedAt  момент согласия на обработку
+     *                                         персональных данных; `null` —
+     *                                         согласие через форму сайта
+     *                                         не давалось (консоль, импорт)
+     * @param  ?string  $consentPolicyVersion  редакция политики, действовавшая
+     *                                         в момент согласия
      */
     public function __construct(
         public string $name,
@@ -42,6 +49,8 @@ final readonly class LeadData
         public ?string $sourceType = null,
         public ?int $sourceId = null,
         public ?string $pageUrl = null,
+        public ?CarbonImmutable $consentedAt = null,
+        public ?string $consentPolicyVersion = null,
     ) {}
 
     /**
@@ -70,6 +79,8 @@ final readonly class LeadData
             'source_type' => $this->sourceType,
             'source_id' => $this->sourceId,
             'page_url' => $this->pageUrl,
+            'consented_at' => $this->consentedAt,
+            'consent_policy_version' => $this->consentPolicyVersion,
         ];
     }
 }

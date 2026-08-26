@@ -205,3 +205,31 @@ it('does not grow its query count with the list', function () {
     expect($small)->toBeGreaterThan(0)
         ->and($large)->toBe($small);
 });
+
+it('shows the recorded consent and its policy version', function () {
+    // Согласие существует ради одного вопроса — «чем подтвердите?», —
+    // и ответ на него должен лежать в карточке заявки, а не в базе.
+    $lead = Lead::factory()->create([
+        'consented_at' => now(),
+        'consent_policy_version' => '2.4',
+    ]);
+
+    livewire(ViewLead::class, ['record' => $lead->getRouteKey()])
+        ->assertOk()
+        ->assertSee('Согласие на обработку ПДн')
+        ->assertSee('2.4');
+});
+
+it('says so plainly when consent was never recorded', function () {
+    // Пустое место читается как поломка вёрстки, а прочерк — как
+    // «не заполнено». Заявка до вехи 4.17 или заведённая из консоли —
+    // это третий случай, и он обязан называться своими словами.
+    $lead = Lead::factory()->create([
+        'consented_at' => null,
+        'consent_policy_version' => null,
+    ]);
+
+    livewire(ViewLead::class, ['record' => $lead->getRouteKey()])
+        ->assertOk()
+        ->assertSee('не зафиксировано');
+});

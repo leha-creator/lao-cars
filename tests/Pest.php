@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Setting;
+use App\Support\Legal\LeadIntake;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
@@ -99,6 +100,25 @@ function resetRateLimiters(): void
 function warmSettingsCache(): void
 {
     Setting::group('contacts');
+}
+
+/**
+ * Включить приём заявок через сайт.
+ *
+ * Умолчание в коде — «выключено» (`LeadIntake::enabled()`): уведомление
+ * об обработке персональных данных подаётся в Роскомнадзор ДО начала
+ * обработки, и до его подачи формы обязаны молчать. Значит в тестах
+ * рабочее состояние надо включать явно, иначе форма не рендерится вовсе,
+ * а `POST /leads` отвечает 403.
+ *
+ * Вызывать в `beforeEach` каждого файла, который отправляет форму заявки
+ * или проверяет её разметку. Глобально не ставится намеренно: тогда
+ * состояние «приём выключен» стало бы недостижимым в тестах — а это
+ * ровно то состояние, ради которого выключатель и написан.
+ */
+function enableLeadForms(): void
+{
+    Setting::set(LeadIntake::SETTING_KEY, true);
 }
 
 /**

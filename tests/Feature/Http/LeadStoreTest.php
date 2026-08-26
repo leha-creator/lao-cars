@@ -5,6 +5,10 @@ use App\Jobs\NotifyManagerAboutLead;
 use App\Models\Car;
 use App\Models\Lead;
 use App\Models\Service;
+use App\Models\Setting;
+use App\Support\Legal\LeadIntake;
+use App\Support\Legal\PrivacyPolicy;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 
 /*
@@ -22,6 +26,7 @@ use Illuminate\Support\Facades\Queue;
  */
 beforeEach(function (): void {
     resetRateLimiters();
+    enableLeadForms();
 });
 
 /**
@@ -33,6 +38,11 @@ function leadPayload(array $overrides = []): array
     return array_merge([
         'name' => 'Иван',
         'phone' => '+7 999 123-45-67',
+        // Согласие на обработку персональных данных (веха 4.17) — часть
+        // минимальной валидной заявки, а не дополнительное поле: без него
+        // форма не принимается вовсе. Тесты самого согласия передают
+        // `consent` через `$overrides`.
+        'consent' => '1',
     ], $overrides);
 }
 
@@ -264,4 +274,129 @@ it('stops accepting leads from one address past the configured limit', function 
         ->assertSessionHasErrors('phone');
 
     expect(Lead::query()->count())->toBe($limit);
+});
+
+/*
+ * Согласие на обработку персональных данных (веха 4.17).
+ *
+ * Заявка без согласия — это персональные данные, собранные без основания.
+ * Записанное согласие без времени и редакции документа — доказательство,
+ * которое нечем предъявить.
+ */
+
+it('refuses a lead without consent', function () {
+    Queue::fake();
+
+    $this->post(route('leads.store'), leadPayload(['consent' => null]))
+        ->assertRedirect()
+        ->assertSessionHasErrors('consent');
+
+    expect(Lead::query()->count())->toBe(0);
+});
+
+it('refuses a lead when the consent field is absent entirely', function () {
+    Queue::fake();
+
+    // Именно так приходит форма с неотмеченным чекбоксом: браузер
+    // не кладёт его в запрос вовсе, и `new FormData(form)` в `lead-form.js`
+    // ведёт себя так же. Правило `accepted` обязано ловить оба случая.
+    $payload = leadPayload();
+    unset($payload['consent']);
+
+    $this->post(route('leads.store'), $payload)
+        ->assertRedirect()
+        ->assertSessionHasErrors('consent');
+
+    expect(Lead::query()->count())->toBe(0);
+});
+
+it('stamps the moment of consent and the policy version', function () {
+    Queue::fake();
+
+    Setting::set(PrivacyPolicy::SETTING_KEY, [
+        'body' => '<p>Текст.</p>',
+        'version' => '2.4',
+        'effective_on' => '01.09.2026',
+    ]);
+
+    $this->post(route('leads.store'), leadPayload())->assertRedirect();
+
+    $lead = Lead::query()->sole();
+
+    expect($lead->consented_at)->not->toBeNull()
+        ->and($lead->consent_policy_version)->toBe('2.4');
+});
+
+it('still accepts the lead when the policy version was cleared', function () {
+    Queue::fake();
+
+    // Отказать человеку из-за пустого поля в админке — худшее из решений:
+    // доказательством согласия остаётся `consented_at`, а пустую редакцию
+    // видно и в карточке заявки, и в записи канала `leads`.
+    Setting::set(PrivacyPolicy::SETTING_KEY, [
+        'body' => '<p>Текст.</p>',
+        'version' => '',
+        'effective_on' => '01.09.2026',
+    ]);
+
+    $this->post(route('leads.store'), leadPayload())->assertRedirect();
+
+    $lead = Lead::query()->sole();
+
+    expect($lead->consented_at)->not->toBeNull()
+        ->and($lead->consent_policy_version)->toBeNull();
+});
+
+/*
+ * Выключатель приёма заявок (веха 4.17).
+ *
+ * Уведомление об обработке персональных данных подаётся в Роскомнадзор
+ * ДО начала обработки, а обработка начинается с первой принятой заявки.
+ */
+
+it('refuses to accept a lead while intake is switched off', function () {
+    Queue::fake();
+
+    Setting::set(LeadIntake::SETTING_KEY, false);
+
+    // Проверяется ОТСУТСТВИЕ СТРОКИ, а не только код ответа: спрятать форму
+    // в разметке недостаточно — роут остаётся публичным, и заявка придёт
+    // с закешированной страницы, из вчерашней вкладки или из curl.
+    $this->post(route('leads.store'), leadPayload())->assertForbidden();
+
+    expect(Lead::query()->count())->toBe(0);
+});
+
+it('refuses to accept a lead when the intake setting does not exist at all', function () {
+    Queue::fake();
+
+    // Умолчание в коде — «выключено». На проде до
+    // `laocars:install-legal-settings` строки настройки не будет вовсе,
+    // и именно это состояние обязано означать «приём закрыт», а не «можно».
+    Setting::query()->where('key', LeadIntake::SETTING_KEY)->delete();
+    Setting::flushCache();
+
+    $this->post(route('leads.store'), leadPayload())->assertForbidden();
+
+    expect(Lead::query()->count())->toBe(0);
+});
+
+it('writes the refusal to the log without personal data', function () {
+    Queue::fake();
+
+    Setting::set(LeadIntake::SETTING_KEY, false);
+
+    // Прогрев до мока: промах кеша настроек пишет собственный DEBUG.
+    warmSettingsCache();
+
+    Log::spy();
+
+    $this->post(route('leads.store'), leadPayload())->assertForbidden();
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'приём заявок выключен')
+            // Ни имени, ни телефона: записи ровно столько, чтобы отличить
+            // «никто не пишет» от «пишут, но мы отказываем».
+            && array_keys($context) === ['ip', 'referer'])
+        ->atLeast()->once();
 });

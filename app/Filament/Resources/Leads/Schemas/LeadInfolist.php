@@ -47,6 +47,21 @@ final class LeadInfolist
                         ->placeholder('—')
                         ->url(fn (Lead $record): ?string => $record->page_url)
                         ->openUrlInNewTab(),
+
+                    // Согласие на обработку персональных данных (веха 4.17).
+                    // Пустое значение выводится подписью, а не прочерком:
+                    // «—» здесь читалось бы как «не заполнено», тогда как
+                    // на деле это заявка, заведённая до вехи или из консоли,
+                    // и различие имеет значение ровно тогда, когда согласие
+                    // просят предъявить.
+                    TextEntry::make('consented_at')
+                        ->label('Согласие на обработку ПДн')
+                        ->dateTime('d.m.Y H:i')
+                        ->placeholder('не зафиксировано'),
+
+                    TextEntry::make('consent_policy_version')
+                        ->label('Редакция политики')
+                        ->placeholder('не зафиксирована'),
                 ])
                 ->columns(2),
 

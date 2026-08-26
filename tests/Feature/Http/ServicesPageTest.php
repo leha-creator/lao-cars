@@ -40,6 +40,7 @@ use Illuminate\Support\Facades\Queue;
  */
 beforeEach(function (): void {
     resetRateLimiters();
+    enableLeadForms();
 });
 
 /**
@@ -280,6 +281,7 @@ it('captures a lead with the service chosen in the select', function () {
         ->post(route('leads.store'), [
             'name' => 'Иван',
             'phone' => '+7 999 123-45-67',
+            'consent' => '1',
             'source_type' => 'service',
             'source_id' => (string) $service->getKey(),
         ])
@@ -306,6 +308,7 @@ it('captures a general lead when the visitor needs a consultation', function () 
         ->post(route('leads.store'), [
             'name' => 'Иван',
             'phone' => '+7 999 123-45-67',
+            'consent' => '1',
             'source_type' => 'service',
             'source_id' => '',
         ])
@@ -342,7 +345,10 @@ it('keeps the chosen service selected after a validation error', function () {
         ->followingRedirects()
         ->post(route('leads.store'), [
             'name' => 'Иван',
-            // Телефон не заполнен — форма вернётся с ошибкой.
+            // Телефон не заполнен — форма вернётся с ошибкой. Согласие
+            // при этом отмечено: проверяется сохранение выбранной услуги
+            // после ОДНОЙ ошибки, а не набор ошибок формы.
+            'consent' => '1',
             'source_type' => 'service',
             'source_id' => (string) $service->getKey(),
         ])
@@ -366,6 +372,7 @@ it('shows the source error next to the select, not only above the button', funct
         ->post(route('leads.store'), [
             'name' => 'Иван',
             'phone' => '+7 999 123-45-67',
+            'consent' => '1',
             'source_type' => 'service',
             'source_id' => (string) $service->getKey(),
         ])
@@ -398,6 +405,7 @@ it('rejects a lead for a position taken off the site while the form was open', f
         ->post(route('leads.store'), [
             'name' => 'Иван',
             'phone' => '+7 999 123-45-67',
+            'consent' => '1',
             'source_type' => 'service',
             'source_id' => (string) $service->getKey(),
         ])

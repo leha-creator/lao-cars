@@ -36,6 +36,11 @@ final class LeadService
             'source_type' => $lead->source_type,
             'source_id' => $lead->source_id,
             'page_url' => $lead->page_url,
+            // Редакция политики — не персональные данные, запрету шапки
+            // канала не противоречит и отвечает на вопрос «с чем именно
+            // согласился клиент». `consented_at` сюда НЕ пишется: он равен
+            // времени самой записи и дублировал бы её.
+            'consent_policy_version' => $lead->consent_policy_version,
         ]);
 
         // `afterCommit()` на задачах внутри — страховка, а не

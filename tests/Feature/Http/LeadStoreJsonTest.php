@@ -3,6 +3,8 @@
 use App\Jobs\NotifyManagerAboutLead;
 use App\Models\Car;
 use App\Models\Lead;
+use App\Models\Setting;
+use App\Support\Legal\LeadIntake;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 
@@ -28,6 +30,7 @@ use Illuminate\Support\Facades\Queue;
  */
 beforeEach(function (): void {
     resetRateLimiters();
+    enableLeadForms();
 });
 
 /**
@@ -45,6 +48,11 @@ function jsonLeadPayload(array $overrides = []): array
     return array_merge([
         'name' => 'Иван',
         'phone' => '+7 999 123-45-67',
+        // Согласие на обработку персональных данных (веха 4.17) — часть
+        // минимальной валидной заявки. Путь `fetch` от пути без JavaScript
+        // здесь ничем не отличается: неотмеченный чекбокс `FormData`
+        // не включает, и сервер видит отсутствующее поле.
+        'consent' => '1',
     ], $overrides);
 }
 
@@ -79,6 +87,14 @@ it('answers a filled honeypot with the same json a human gets', function () {
 
 it('writes the honeypot rejection to the leads channel on the json path too', function () {
     Queue::fake();
+
+    // Прогрев ДО установки мока, и это не косметика. С вехи 4.17
+    // `StoreLeadRequest::authorize()` спрашивает у настроек, включён ли
+    // приём заявок, а промах кеша `Setting` пишет собственный DEBUG.
+    // Строгий мок ниже разрешает ровно одну запись — про honeypot, — и
+    // посторонняя валит тест сообщением про Mockery, в котором про кеш
+    // настроек не сказано ни слова.
+    warmSettingsCache();
 
     // Единственный след отброшенной заявки — запись в канале `leads`.
     // Без неё спам через `fetch` перестаёт быть диагностируемым: лида нет,
@@ -151,4 +167,34 @@ it('still takes the page address from the server on the json path', function () 
         ->assertOk();
 
     expect(Lead::query()->sole()->page_url)->toBe($previous);
+});
+
+it('answers a missing consent with 422 and a field error', function () {
+    Queue::fake();
+
+    // Путь `fetch` отдельного клиентского кода под согласие не потребовал:
+    // неотмеченный чекбокс `new FormData(form)` не включает, сервер видит
+    // отсутствующее поле, и разбор ошибок в `lead-form.js` раскладывает
+    // `consent` по контейнерам сам. Сторож на это и стоит.
+    $payload = jsonLeadPayload();
+    unset($payload['consent']);
+
+    $this->postJson(route('leads.store'), $payload)
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('consent');
+});
+
+it('answers with 403 while intake is switched off', function () {
+    Queue::fake();
+
+    Setting::set(LeadIntake::SETTING_KEY, false);
+
+    // 403 попадает в общую ветку разбора `lead-form.js` и показывает
+    // запасное сообщение. Формально неточно, фактически безвредно: при
+    // выключенном приёме формы на странице нет вовсе, и этот ответ видит
+    // только тот, у кого открыта устаревшая вкладка.
+    $this->postJson(route('leads.store'), jsonLeadPayload())
+        ->assertForbidden();
+
+    expect(Lead::query()->count())->toBe(0);
 });

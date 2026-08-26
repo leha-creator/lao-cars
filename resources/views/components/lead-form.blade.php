@@ -59,6 +59,39 @@
     </p>
 @endif
 
+{{-- Приём заявок выключен (веха 4.17): вместо формы — телефон.
+
+     Секция при этом остаётся на странице целиком, вместе с якорем
+     `#lead-form` на обёртке. Это не аккуратность, а условие: кнопка
+     «Оставить заявку» в шапке ведёт на этот якорь на КАЖДОЙ странице
+     сайта, туда же ведут строки прайса, карточка «Поддержка» на главной
+     и умолчание промо-блока. Уберёшь форму со страницы — получишь мёртвую
+     кнопку в шапке и три мёртвые ссылки разом, причём на страницах,
+     которых правка не касалась.
+
+     Телефон здесь обязателен по смыслу: сайт существует ради заявок,
+     и выключенная форма без второго способа связи — это закрытая дверь
+     без таблички. Пустая настройка телефона блок не рендерит вовсе —
+     правило подвала. --}}
+@if (! $accepting())
+    <div class="rounded-field border border-line-strong bg-page/50 px-5 py-6 text-center">
+        <div class="mb-2 font-semibold">Приём заявок через сайт временно приостановлен</div>
+
+        @if ($fallbackPhone() !== null)
+            <p class="text-sm leading-relaxed text-ink-muted">
+                Позвоните нам —
+                <a href="tel:{{ $fallbackPhone()['href'] }}" class="font-semibold text-accent">{{ $fallbackPhone()['text'] }}</a>,
+                мы ответим на вопросы и запишем вас без формы.
+            </p>
+        @else
+            <p class="text-sm leading-relaxed text-ink-muted">
+                Свяжитесь с нами по контактам из шапки сайта.
+            </p>
+        @endif
+    </div>
+
+@else
+
 <form
     method="POST"
     action="{{ route('leads.store') }}"
@@ -315,6 +348,55 @@
         <span x-cloak x-show="errors.source_id" x-text="errors.source_id" class="text-sm text-danger"></span>
     @endif
 
+    {{-- Согласие на обработку персональных данных (веха 4.17).
+
+         Идентификатор генерируется НА КАЖДЫЙ РЕНДЕР, а не пишется
+         константой, и это не перестраховка: форм на странице может быть
+         две — карточка автомобиля несёт свою, `x-lead-section` свою.
+         Два элемента с одинаковым `id` дали бы клик по подписи второй
+         формы, переключающий чекбокс первой: разметка валидна на вид,
+         тесты зелёные, ошибок в консоли нет.
+
+         Пара `id` + `for`, а НЕ обёртка `<label>` вокруг чекбокса, как
+         у всех остальных полей формы. Внутри подписи стоит ссылка на
+         политику, и клик по ней внутри `<label>` переключил бы чекбокс —
+         то есть человек, пошедший читать документ, молча дал бы или
+         отозвал согласие.
+
+         Галочка НЕ предустановлена: предустановленное согласие согласием
+         не является. `old()` — как у всех полей без исключения: после
+         ошибки валидации её не переставляют заново. --}}
+    @php($consentId = 'consent-'.\Illuminate\Support\Str::random(8))
+
+    <div class="mt-1.5 flex gap-3">
+        <input
+            type="checkbox"
+            name="consent"
+            id="{{ $consentId }}"
+            value="1"
+            required
+            @checked(old('consent'))
+            class="mt-0.5 size-4.5 shrink-0 rounded-[5px] border border-line-strong bg-page accent-accent-solid"
+        >
+
+        <div class="flex flex-col gap-1.5">
+            <label for="{{ $consentId }}" class="text-sm leading-relaxed text-ink-muted">
+                Я согласен на обработку персональных данных и принимаю
+                <a
+                    href="{{ route('privacy.index') }}"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-accent underline underline-offset-2"
+                >Политику обработки персональных данных</a>.
+            </label>
+
+            @error('consent')
+                <span data-server-error class="text-sm text-danger">{{ $message }}</span>
+            @enderror
+            <span x-cloak x-show="errors.consent" x-text="errors.consent" class="text-sm text-danger"></span>
+        </div>
+    </div>
+
     {{-- Отказ, которому не на какое поле указать: оборванная сеть,
          протухшая сессия, неразбираемый ответ. Стоит над кнопкой, потому
          что человек в этот момент смотрит именно на неё — форма для него
@@ -336,3 +418,5 @@
         class="mt-1.5 rounded-full bg-accent-solid py-4.5 text-[15px] font-semibold tracking-[0.02em] text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover disabled:pointer-events-none disabled:opacity-60"
     >{{ $submit }}</button>
 </form>
+
+@endif

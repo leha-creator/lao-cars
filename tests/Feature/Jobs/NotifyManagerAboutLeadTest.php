@@ -44,6 +44,7 @@ const CHAT_ID = '100500';
  */
 beforeEach(function (): void {
     resetRateLimiters();
+    enableLeadForms();
 });
 
 it('keeps the lead and answers with a redirect while the notification only gets queued', function () {
@@ -52,6 +53,7 @@ it('keeps the lead and answers with a redirect while the notification only gets 
     $this->post(route('leads.store'), [
         'name' => 'Иван',
         'phone' => '+7 999 123-45-67',
+    'consent' => '1',
     ])
         ->assertRedirect()
         ->assertSessionHasNoErrors();

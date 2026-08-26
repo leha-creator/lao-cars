@@ -32,6 +32,11 @@ use Illuminate\Support\ViewErrorBag;
  */
 beforeEach(function (): void {
     View::share('errors', new ViewErrorBag);
+
+    // Умолчание приёма заявок — «выключено» (веха 4.17), а этот файл
+    // проверяет разметку САМОЙ формы. Без включения `x-lead-form` отдаёт
+    // блок «приём приостановлен», и все сторожа ниже проверяли бы его.
+    enableLeadForms();
 });
 
 it('keeps the form a plain post form that works without javascript', function () {
@@ -80,4 +85,56 @@ it('keeps server and client error containers separate', function () {
         ->toContain('x-text="errors.phone"')
         ->and($html)
         ->toContain('x-cloak');
+});
+
+it('asks for consent with an unchecked checkbox', function () {
+    // Предустановленная галочка согласием не является: согласие обязано
+    // быть конкретным, информированным и однозначным действием человека.
+    $html = Blade::render('<x-lead-form />');
+
+    // Регулярное выражение по САМОМУ тегу, а не поиск слова «checked»
+    // по всей разметке: подстрока встречается в чужих атрибутах, и такой
+    // сторож прошёл бы на предустановленной галочке.
+    expect($html)
+        ->toMatch('/<input[^>]*type="checkbox"[^>]*name="consent"[^>]*>/')
+        ->toMatch('/<input[^>]*name="consent"[^>]*value="1"[^>]*>/')
+        // `required` держит проверку в браузере, `accepted` в
+        // `StoreLeadRequest` — на сервере. Первое без второго обходится
+        // в devtools, второе без первого заставляет ждать ответа сервера.
+        ->toMatch('/<input[^>]*name="consent"[^>]*\srequired[^>]*>/')
+        ->not->toMatch('/<input[^>]*name="consent"[^>]*\schecked[^>]*>/');
+});
+
+it('links the policy from the consent label without wrapping the checkbox', function () {
+    // Ловушка, ради которой этот сторож и написан. Все остальные поля формы
+    // обёрнуты в `<label>` целиком; для чекбокса так нельзя — внутри подписи
+    // стоит ссылка на политику, и клик по ней ВНУТРИ `<label>` переключил бы
+    // чекбокс. То есть человек, пошедший читать документ, молча дал бы или
+    // отозвал согласие.
+    $html = Blade::render('<x-lead-form />');
+
+    expect($html)
+        // Подпись связана с чекбоксом через `for`, а не через вложение.
+        ->toMatch('/<label for="consent-[A-Za-z0-9]+"/')
+        ->toContain(route('privacy.index'))
+        // И главное: чекбокса нет НИ В ОДНОМ `<label>`. Выражение ищет
+        // `name="consent"` между открывающим и ближайшим закрывающим
+        // тегом подписи.
+        ->not->toMatch('/<label\b(?:(?!<\/label>).)*name="consent"/s');
+});
+
+it('gives every form on the page its own consent checkbox id', function () {
+    // Форм на странице может быть две: карточка автомобиля несёт свою,
+    // `x-lead-section` — свою. Одинаковый `id` дал бы клик по подписи
+    // второй формы, переключающий чекбокс первой: разметка валидна на вид,
+    // ошибок в консоли нет, тесты зелёные.
+    $first = Blade::render('<x-lead-form />');
+    $second = Blade::render('<x-lead-form />');
+
+    preg_match('/id="(consent-[A-Za-z0-9]+)"/', $first, $firstId);
+    preg_match('/id="(consent-[A-Za-z0-9]+)"/', $second, $secondId);
+
+    expect($firstId[1] ?? null)->not->toBeNull()
+        ->and($secondId[1] ?? null)->not->toBeNull()
+        ->and($firstId[1])->not->toBe($secondId[1]);
 });

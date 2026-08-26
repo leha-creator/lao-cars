@@ -39,6 +39,11 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
     'source_id',
     'status',
     'page_url',
+    // Согласие на обработку персональных данных (веха 4.17). `null`
+    // в обеих колонках означает «согласие через форму сайта не давалось»:
+    // так выглядят заявки до вехи и всё, что заведено из консоли.
+    'consented_at',
+    'consent_policy_version',
 ])]
 final class Lead extends Model
 {
@@ -104,6 +109,7 @@ final class Lead extends Model
             'status' => LeadStatus::class,
             'contact_method' => ContactMethod::class,
             'preferred_time' => PreferredTime::class,
+            'consented_at' => 'immutable_datetime',
         ];
     }
 }

@@ -39,6 +39,7 @@ use Illuminate\Support\Facades\Log;
  */
 beforeEach(function (): void {
     resetRateLimiters();
+    enableLeadForms();
 });
 
 /**

@@ -2,6 +2,7 @@
 
 use App\Models\Lead;
 use App\Models\Setting;
+use App\Support\Legal\LeadIntake;
 use App\Support\Typography;
 use Illuminate\Support\Facades\Queue;
 
@@ -30,6 +31,7 @@ use Illuminate\Support\Facades\Queue;
  */
 beforeEach(function (): void {
     resetRateLimiters();
+    enableLeadForms();
 });
 
 it('serves every section page', function (string $uri) {
@@ -99,6 +101,7 @@ it('captures a lead from every section page', function (string $uri) {
         ->post(route('leads.store'), [
             'name' => 'Иван',
             'phone' => '+7 999 123-45-67',
+        'consent' => '1',
         ])
         ->assertRedirect($uri)
         ->assertSessionHasNoErrors();
@@ -115,6 +118,7 @@ it('captures part details from the parts page form', function () {
         ->post(route('leads.store'), [
             'name' => 'Иван',
             'phone' => '+7 999 123-45-67',
+            'consent' => '1',
             'part_brand' => 'Zeekr',
             'part_model' => '001',
             'part_vin' => 'XW8ZZZ61ZJG000001',
@@ -183,4 +187,50 @@ it('keeps the intro paragraph marked text-pretty on every section page', functio
         expect($intro)->not->toBeEmpty()
             ->and($intro[0])->toContain('text-pretty');
     }
+});
+
+/*
+ * Выключенный приём заявок (веха 4.17).
+ *
+ * Уведомление в Роскомнадзор подаётся до начала обработки, а обработка
+ * начинается с первой принятой заявки. До подачи формы обязаны молчать —
+ * но страницы обязаны остаться целыми.
+ */
+
+it('replaces the form with a phone number while intake is switched off', function (string $uri) {
+    Setting::set(LeadIntake::SETTING_KEY, false);
+    Setting::set('contacts.phone', '+7 495 000-11-22');
+
+    $this->get($uri)
+        ->assertOk()
+        ->assertSee('Приём заявок через сайт временно приостановлен')
+        ->assertSee('+7 495 000-11-22')
+        ->assertDontSee('action="'.route('leads.store').'"', escape: false);
+})->with(['/', '/services', '/parts', '/about', '/contacts']);
+
+it('keeps the lead-form anchor alive while intake is switched off', function (string $uri) {
+    // САМОЕ ВАЖНОЕ в этом блоке. Кнопка «Оставить заявку» в шапке ведёт
+    // на `#lead-form` на КАЖДОЙ странице сайта; туда же ведут строки прайса,
+    // карточка «Поддержка» на главной и умолчание `home.promo.link_url`.
+    // Убрать секцию заявки вместе с формой — значит сделать мёртвыми кнопку
+    // в шапке и три ссылки разом, причём на страницах, которых правка
+    // не касалась. Поэтому меняется содержимое карточки, а не наличие секции.
+    Setting::set(LeadIntake::SETTING_KEY, false);
+
+    $this->get($uri)
+        ->assertOk()
+        ->assertSee('id="lead-form"', escape: false)
+        ->assertSee('href="#lead-form"', escape: false);
+})->with(['/', '/services', '/parts', '/about', '/contacts']);
+
+it('omits the phone line instead of offering an empty tel link', function () {
+    // Правило подвала, применённое здесь же: ссылка `tel:` на пустой номер
+    // выглядит рабочей и открывает звонилку с пустым полем.
+    Setting::set(LeadIntake::SETTING_KEY, false);
+    Setting::set('contacts.phone', '');
+
+    $this->get('/contacts')
+        ->assertOk()
+        ->assertSee('Приём заявок через сайт временно приостановлен')
+        ->assertSee('Свяжитесь с нами по контактам из шапки сайта');
 });
