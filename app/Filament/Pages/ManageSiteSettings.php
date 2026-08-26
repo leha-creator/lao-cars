@@ -9,6 +9,8 @@ use App\Filament\Actions\HelpAction;
 use App\Filament\Forms\Components\MediaPicker;
 use App\Filament\NavigationGroup;
 use App\Models\Setting;
+use App\Support\Legal\LeadIntake;
+use App\Support\Legal\PrivacyPolicy;
 use App\Support\MapEmbed;
 use App\Support\WorkSchedule;
 use BackedEnum;
@@ -16,6 +18,7 @@ use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
@@ -174,6 +177,24 @@ final class ManageSiteSettings extends Page
             'seo.default_title',
             'seo.default_description',
         ],
+        // Юридический блок (веха 4.17). Группа своя, а не дописанная
+        // в `pages`: колонка `settings.group` — это часть ключа до точки,
+        // и по ней `Setting::group()` собирает данные для публичной части.
+        // Положи политику в группу `contacts` — и её текст приехал бы
+        // в подвал целиком.
+        'legal' => [
+            // Документ — ОДИН ключ с объектом внутри (`body`, `version`,
+            // `effective_on`), а не три ключа. Реестр сверяется с сидом
+            // по ключу целиком, и три ключа дали бы три шанса разойтись
+            // вместо одного. Прецедент формы значения — `home.promo`.
+            'legal.privacy',
+
+            // Приём заявок — ОТДЕЛЬНЫЙ ключ, а не поле внутри `legal.privacy`.
+            // Это не часть документа: текст политики и приём заявок
+            // включаются по разным причинам и в разное время. Скаляр,
+            // а не объект: поле одно, прецедент — `contacts.map_embed`.
+            'legal.forms_enabled',
+        ],
     ];
 
     /** @var array<string, mixed>|null */
@@ -234,6 +255,16 @@ final class ManageSiteSettings extends Page
     {
         $state = $this->form->getState();
 
+        // Снимок юридического блока ДО записи. Именно до: первый же
+        // `Setting::set()` в цикле ниже сбрасывает кеш настроек
+        // (`Setting::booted()`), и после него `Setting::get()` вернёт уже
+        // новое значение — сравнивать было бы не с чем, а сторожа ниже
+        // молча перестали бы срабатывать.
+        $legalBefore = [
+            PrivacyPolicy::SETTING_KEY => Setting::get(PrivacyPolicy::SETTING_KEY),
+            LeadIntake::SETTING_KEY => Setting::get(LeadIntake::SETTING_KEY),
+        ];
+
         $changed = [];
 
         foreach (self::settingKeys() as $key) {
@@ -259,10 +290,59 @@ final class ManageSiteSettings extends Page
             'changed' => $changed,
         ]);
 
+        self::logLegalChanges($state, $legalBefore);
+
         Notification::make()
             ->title('Настройки сохранены')
             ->success()
             ->send();
+    }
+
+    /**
+     * Сторожа юридического блока (веха 4.17).
+     *
+     * Две записи, и обе на уровне WARNING в общем стеке — не INFO и не
+     * в канал `leads`. INFO в общем стеке тонет, а канал заявок держит
+     * закрытый список того, что в него пишется (см. его докблок
+     * в `config/logging.php`): посторонние записи ломают разбор инцидента
+     * с потерянным лидом, ради которого канал и заведён.
+     *
+     * @param  array<string, mixed>  $state
+     * @param  array<string, mixed>  $before
+     */
+    private static function logLegalChanges(array $state, array $before): void
+    {
+        $bodyBefore = data_get($before[PrivacyPolicy::SETTING_KEY], 'body');
+        $bodyAfter = data_get($state, PrivacyPolicy::SETTING_KEY.'.body');
+
+        $versionBefore = data_get($before[PrivacyPolicy::SETTING_KEY], 'version');
+        $versionAfter = data_get($state, PrivacyPolicy::SETTING_KEY.'.version');
+
+        // Текст правили, а редакцию не подняли. Поймать это можно только
+        // здесь: дальше согласия новых заявок начнут ссылаться на номер
+        // редакции, под которым лежит уже другой текст, — и разойдётся это
+        // молча, а обнаружится в тот момент, когда согласие потребуют
+        // предъявить.
+        if ($bodyBefore !== $bodyAfter && $versionBefore === $versionAfter) {
+            Log::warning('[Политика] текст изменён, версия не поднята', [
+                'actor_id' => auth()->id(),
+                'version' => $versionAfter,
+            ]);
+        }
+
+        $intakeBefore = $before[LeadIntake::SETTING_KEY] ?? null;
+        $intakeAfter = data_get($state, LeadIntake::SETTING_KEY);
+
+        // Включение и выключение приёма персональных данных — событие,
+        // которое обязано оставлять след: им начинается и заканчивается
+        // обработка. Пишутся обе стороны, потому что вопрос при разборе
+        // будет не «включали ли», а «с какого момента».
+        if ($intakeBefore !== $intakeAfter) {
+            Log::warning('[Заявки] приём заявок переключён', [
+                'actor_id' => auth()->id(),
+                'enabled' => $intakeAfter === true,
+            ]);
+        }
     }
 
     /**
@@ -318,6 +398,7 @@ final class ManageSiteSettings extends Page
                 self::pagesTab(),
                 self::aboutTab(),
                 self::seoTab(),
+                self::privacyTab(),
             ]),
         ]);
     }
@@ -963,6 +1044,68 @@ final class ManageSiteSettings extends Page
                 ->label('Описание по умолчанию')
                 ->helperText('До 160 символов — иначе поисковик обрежет сниппет.')
                 ->rows(3),
+        ]);
+    }
+
+    /**
+     * Персональные данные: выключатель приёма заявок и текст политики
+     * (веха 4.17).
+     *
+     * Тумблер стоит ПЕРВЫМ полем, а не рядом с прочими флагами: это
+     * переключатель состояния всего сайта, а не деталь документа. И стоит
+     * он именно здесь, а не на вкладке «Контакты», потому что причина
+     * его включить — соседнее поле: уведомление подают по этому тексту.
+     */
+    private static function privacyTab(): Tab
+    {
+        return Tab::make('Персональные данные')->schema([
+            Toggle::make(LeadIntake::SETTING_KEY)
+                ->label('Приём заявок')
+                ->helperText('Включайте только после того, как уведомление об обработке персональных данных подано в Роскомнадзор. Пока выключено, формы на сайте не показываются и заявки не принимаются — посетителю предлагается позвонить.'),
+
+            RichEditor::make(PrivacyPolicy::SETTING_KEY.'.body')
+                ->label('Текст политики')
+                ->helperText('Незаполненные реквизиты помечены двойными квадратными скобками — их обязан подставить оператор.')
+                // Набор инструментов задан явно, и это не косметика:
+                // содержимое поля печатается на публичной странице через
+                // `{!! !!}`, то есть в HTML без экранирования Blade. Чем
+                // меньше редактор умеет положить в поле, тем меньше туда
+                // попадёт неожиданного. Из умолчания сняты таблицы
+                // и загрузка файлов; `h1` не добавлен — заголовок страницы
+                // на `/privacy` печатает шаблон, и второй H1 в тексте
+                // сломал бы структуру документа для поисковика и скринридера.
+                ->toolbarButtons([
+                    ['bold', 'italic', 'link'],
+                    ['h2', 'h3'],
+                    ['blockquote', 'bulletList', 'orderedList'],
+                    ['undo', 'redo'],
+                ])
+                // `->json()` НЕ вызывается намеренно: без него значение
+                // хранится готовым HTML, а с ним — деревом TipTap, которое
+                // пришлось бы разворачивать перед выводом. В jsonb строка
+                // к тому же дешевле дерева.
+                ->columnSpanFull(),
+
+            Grid::make(2)->schema([
+                // 16 символов — не вкус, а длина колонки
+                // `leads.consent_policy_version`: значение копируется туда
+                // при каждой заявке. Ограничение мягче колонки означало бы
+                // ошибку драйвера PostgreSQL на приёме заявки, то есть
+                // потерянный лид из-за поля в настройках.
+                TextInput::make(PrivacyPolicy::SETTING_KEY.'.version')
+                    ->label('Версия документа')
+                    ->maxLength(16)
+                    ->helperText('Записывается в каждую заявку как доказательство того, с какой редакцией согласился клиент. Поднимайте её при смысловой правке текста.'),
+
+                TextInput::make(PrivacyPolicy::SETTING_KEY.'.effective_on')
+                    ->label('Действует с')
+                    ->maxLength(32)
+                    ->helperText('Как показывать на странице — например, 26.08.2026.'),
+            ]),
+
+            Placeholder::make('legal.privacy.preview')
+                ->label('Страница на сайте')
+                ->content(fn (): string => route('privacy.index')),
         ]);
     }
 }
