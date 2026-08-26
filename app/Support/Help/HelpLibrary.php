@@ -144,7 +144,12 @@ final class HelpLibrary
                 summary: 'Откуда приходят заявки, как менять статус и оставлять комментарии.',
                 section: HelpSection::Scenarios,
                 gate: LeadResource::class,
-                related: ['notifications-setup', 'price-list', 'car-sold'],
+                // `privacy-and-lead-intake` закрыта для менеджера, и в блоке
+                // «См. также» он её не увидит: список видимого фильтруется
+                // по тому же ключу доступа. Администратору связь нужна —
+                // «согласие не зафиксировано» в карточке заявки объясняется
+                // именно там.
+                related: ['notifications-setup', 'price-list', 'car-sold', 'privacy-and-lead-intake'],
             ),
 
             new HelpArticle(
@@ -306,7 +311,7 @@ final class HelpLibrary
                 summary: 'Где показываются телефон, адрес и ссылки на мессенджеры.',
                 section: HelpSection::Settings,
                 gate: ManageSiteSettings::class,
-                related: ['contacts-update', 'home-blocks'],
+                related: ['contacts-update', 'home-blocks', 'privacy-and-lead-intake'],
             ),
 
             new HelpArticle(
@@ -316,6 +321,18 @@ final class HelpLibrary
                 section: HelpSection::Settings,
                 gate: ManageSiteSettings::class,
                 related: ['car-publishing', 'home-blocks'],
+            ),
+
+            // Веха 4.17. Ключ доступа — страница настроек сайта: вкладка
+            // «Персональные данные» живёт там же, где остальные семь,
+            // и менеджеру недоступна.
+            new HelpArticle(
+                slug: 'privacy-and-lead-intake',
+                title: 'Персональные данные и приём заявок',
+                summary: 'Когда включать приём заявок, где правится политика и какие данные компании надо подставить.',
+                section: HelpSection::Settings,
+                gate: ManageSiteSettings::class,
+                related: ['lead-processing', 'contacts-and-footer'],
             ),
 
             new HelpArticle(

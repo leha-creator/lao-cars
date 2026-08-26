@@ -73,8 +73,11 @@ it('registers exactly the planned number of articles per section', function () {
     // и «Свой профиль и пароль». Шесть экранов панели не были описаны
     // ни одной статьёй; самый заметный пропуск — седьмая вкладка
     // настроек сайта, единственная без своей статьи.
+    // 11 → 12 в «Настройке параметров» вехой 4.17: добавлена «Персональные
+    // данные и приём заявок» — восьмая вкладка настроек сайта и переключатель,
+    // без которого формы на сайте не работают вовсе.
     expect(HelpLibrary::inSection(HelpSection::Scenarios))->toHaveCount(11)
-        ->and(HelpLibrary::inSection(HelpSection::Settings))->toHaveCount(11);
+        ->and(HelpLibrary::inSection(HelpSection::Settings))->toHaveCount(12);
 });
 
 it('hides closed articles from a manager in the section list', function () {
