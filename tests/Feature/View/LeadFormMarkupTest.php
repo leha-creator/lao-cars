@@ -128,13 +128,20 @@ it('gives every form on the page its own consent checkbox id', function () {
     // `x-lead-section` — свою. Одинаковый `id` дал бы клик по подписи
     // второй формы, переключающий чекбокс первой: разметка валидна на вид,
     // ошибок в консоли нет, тесты зелёные.
-    $first = Blade::render('<x-lead-form />');
-    $second = Blade::render('<x-lead-form />');
+    // Идентификатор вытаскивается из САМОГО чекбокса, а не по ожидаемому
+    // префиксу: сторож должен краснеть на константном `id`, а не на смене
+    // способа его собрать.
+    $consentId = static function (string $html): ?string {
+        preg_match('/<input[^>]*name="consent"[^>]*>/', $html, $input);
+        preg_match('/\sid="([^"]+)"/', $input[0] ?? '', $id);
 
-    preg_match('/id="(consent-[A-Za-z0-9]+)"/', $first, $firstId);
-    preg_match('/id="(consent-[A-Za-z0-9]+)"/', $second, $secondId);
+        return $id[1] ?? null;
+    };
 
-    expect($firstId[1] ?? null)->not->toBeNull()
-        ->and($secondId[1] ?? null)->not->toBeNull()
-        ->and($firstId[1])->not->toBe($secondId[1]);
+    $first = $consentId(Blade::render('<x-lead-form />'));
+    $second = $consentId(Blade::render('<x-lead-form />'));
+
+    expect($first)->not->toBeNull()
+        ->and($second)->not->toBeNull()
+        ->and($first)->not->toBe($second);
 });

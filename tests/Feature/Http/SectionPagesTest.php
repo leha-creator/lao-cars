@@ -101,7 +101,7 @@ it('captures a lead from every section page', function (string $uri) {
         ->post(route('leads.store'), [
             'name' => 'Иван',
             'phone' => '+7 999 123-45-67',
-        'consent' => '1',
+            'consent' => '1',
         ])
         ->assertRedirect($uri)
         ->assertSessionHasNoErrors();

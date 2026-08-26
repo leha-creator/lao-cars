@@ -53,7 +53,7 @@ it('keeps the lead and answers with a redirect while the notification only gets 
     $this->post(route('leads.store'), [
         'name' => 'Иван',
         'phone' => '+7 999 123-45-67',
-    'consent' => '1',
+        'consent' => '1',
     ])
         ->assertRedirect()
         ->assertSessionHasNoErrors();
