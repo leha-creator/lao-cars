@@ -330,6 +330,17 @@ final class ManageSiteSettings extends Page
             ]);
         }
 
+        // Редакцию очистили. Каждое следующее согласие запишется без неё,
+        // то есть перестанет отвечать на вопрос «с каким текстом согласился
+        // клиент». Сторож стоит ЗДЕСЬ, а не на приёме заявки: это состояние
+        // настроек, и запись на каждую заявку дала бы поток одинаковых
+        // предупреждений, который перестают читать через час.
+        if (($versionAfter === null || $versionAfter === '') && $bodyAfter !== null && $bodyAfter !== '') {
+            Log::warning('[Политика] редакция документа пуста — согласия будут записываться без неё', [
+                'actor_id' => auth()->id(),
+            ]);
+        }
+
         $intakeBefore = $before[LeadIntake::SETTING_KEY] ?? null;
         $intakeAfter = data_get($state, LeadIntake::SETTING_KEY);
 

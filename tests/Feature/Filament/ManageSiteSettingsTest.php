@@ -13,6 +13,7 @@ use App\Filament\Pages\ManageSiteSettings;
 use App\Models\Media;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\Legal\PrivacyPolicy;
 use App\Support\MediaSettingKeys;
 use App\Support\WorkSchedule;
 use Database\Seeders\SiteSettingSeeder;
@@ -439,4 +440,91 @@ it('previews the emptied schedule as a warning, not as silence', function () {
     livewire(ManageSiteSettings::class)
         ->fillForm($state)
         ->assertSee('Ни одного рабочего дня');
+});
+
+/*
+ * Юридический блок (веха 4.17).
+ *
+ * Три состояния, в которых ошибка не видна ни на сайте, ни в панели,
+ * и обнаруживается ровно тогда, когда согласие просят предъявить.
+ */
+
+it('warns when the policy text is edited without bumping the version', function () {
+    // Согласия новых заявок начнут ссылаться на номер редакции, под которым
+    // лежит уже другой текст. Разойдётся это молча.
+    Log::spy();
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['legal.privacy.body' => '<p>Переписанный текст политики.</p>'])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => str_contains($message, 'текст изменён, версия не поднята'))
+        ->atLeast()->once();
+});
+
+it('does not warn when the text and the version change together', function () {
+    Log::spy();
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm([
+            'legal.privacy.body' => '<p>Переписанный текст политики.</p>',
+            'legal.privacy.version' => '2.0',
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    Log::shouldNotHaveReceived('warning');
+});
+
+it('warns when the policy version is cleared', function () {
+    // Сторож стоит здесь, а не на приёме заявки: это состояние настроек,
+    // и запись на каждую заявку дала бы поток одинаковых предупреждений,
+    // который перестают читать через час.
+    Log::spy();
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['legal.privacy.version' => ''])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => str_contains($message, 'редакция документа пуста'))
+        ->atLeast()->once();
+});
+
+it('warns whenever lead intake is switched', function () {
+    // Включение и выключение приёма персональных данных — событие, которым
+    // обработка начинается и заканчивается. Вопрос при разборе будет
+    // не «включали ли», а «с какого момента».
+    Log::spy();
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['legal.forms_enabled' => true])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'приём заявок переключён')
+            && $context['enabled'] === true)
+        ->atLeast()->once();
+});
+
+it('keeps the policy untouched when the form is saved without edits', function () {
+    // Сторож канонической формы текста. `RichEditor` пересобирает разметку
+    // через TipTap на сервере при заполнении формы, поэтому умолчание
+    // в `PrivacyPolicy` записано уже в том виде, в каком редактор его
+    // возвращает. Разойдётся канонизация после обновления Filament —
+    // покраснеет этот тест и соседний `reports nothing as changed`,
+    // а не молча появится ложная правка при каждом сохранении.
+    $before = Setting::get(PrivacyPolicy::SETTING_KEY);
+
+    livewire(ManageSiteSettings::class)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    Setting::flushCache();
+
+    expect(Setting::get(PrivacyPolicy::SETTING_KEY))->toBe($before);
 });
