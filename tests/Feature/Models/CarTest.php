@@ -59,6 +59,14 @@ it('casts status, engine type and drive to enums', function () {
         ->and($car->show_on_homepage)->toBeTrue();
 });
 
+it('treats gas as a fuel with displacement, unlike electric', function () {
+    // «Газа» в перечне ТЗ нет — кейс добавлен по просьбе заказчика после
+    // вехи 3.2, и сторож нужен именно поэтому: подпись и объём здесь
+    // не выводятся ниоткуда, их держит `match` в самом enum-е.
+    expect(EngineType::Gas->label())->toBe('Газ')
+        ->and(EngineType::Gas->hasVolume())->toBeTrue();
+});
+
 it('generates a slug from brand, model and year', function () {
     $brand = Brand::factory()->create(['name' => 'Voyah']);
 
