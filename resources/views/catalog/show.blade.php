@@ -268,10 +268,23 @@
                             class="absolute top-1/2 right-4 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-line-strong bg-page/70 text-lg backdrop-blur-sm transition hover:border-accent/50 hover:text-accent"
                         >›</button>
 
+                        {{-- Счётчик — в ПРАВОМ ВЕРХНЕМ углу, и это не вкусовщина.
+                             Вотермарка вжигается в снимок в `bottom-right`
+                             (`config/images.php`, ключ `watermark.position`),
+                             а кадр с вехи 4.14 вписывается в контейнер целиком —
+                             у типового снимка 3:2 полей не остаётся, и нижний
+                             правый угол контейнера совпадает с нижним правым
+                             углом фотографии. Пилюля со счётчиком садилась
+                             ровно на логотип и закрывала его.
+
+                             Верх свободен: статус-пилюля живёт в правой
+                             колонке, внутри кадра над ним ничего нет.
+                             Если вотермарку когда-нибудь переставят наверх —
+                             счётчик надо будет увести вниз тем же движением. --}}
                         <div
                             x-cloak
                             x-text="(active + 1) + ' / ' + total"
-                            class="absolute right-4 bottom-4 rounded-full border border-line-strong bg-page/70 px-3 py-1 text-xs text-ink-muted backdrop-blur-sm"
+                            class="absolute top-4 right-4 rounded-full border border-line-strong bg-page/70 px-3 py-1 text-xs text-ink-muted backdrop-blur-sm"
                         ></div>
                     @endif
                 </div>
@@ -393,9 +406,16 @@
                         class="absolute top-1/2 right-4 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-line-strong bg-page/70 text-xl backdrop-blur-sm transition hover:border-accent/50 hover:text-accent"
                     >›</button>
 
+                    {{-- Та же вотермарка в `bottom-right`, что и в галерее
+                         выше, и та же причина уйти от неё наверх. Но угол
+                         здесь ЛЕВЫЙ: справа вверху стоит крестик «Закрыть»,
+                         и счётчик сел бы на него. Разъезд с галереей
+                         осознанный — двигать крестик ради симметрии значило
+                         бы переучивать закрытие лайтбокса, которое человек
+                         уже знает по любому другому просмотрщику. --}}
                     <div
                         x-text="(index + 1) + ' / ' + total"
-                        class="absolute right-4 bottom-4 rounded-full border border-line-strong bg-page/70 px-3 py-1 text-xs text-ink-muted backdrop-blur-sm"
+                        class="absolute top-4 left-4 rounded-full border border-line-strong bg-page/70 px-3 py-1 text-xs text-ink-muted backdrop-blur-sm"
                     ></div>
                 @endif
             </div>
