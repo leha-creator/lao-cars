@@ -37,6 +37,8 @@ class CarFactory extends Factory
             'drive' => fake()->randomElement(DriveType::cases()),
             'mileage' => fake()->numberBetween(0, 150_000),
             'price' => fake()->numberBetween(15, 90) * 100_000,
+            'price_max' => null,
+            'price_note' => null,
             'status' => CarStatus::InStock,
             'show_on_homepage' => false,
             // text(), а не realText(): в локали ru_RU realText строит
@@ -109,6 +111,20 @@ class CarFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'price' => null,
+            'price_max' => null,
+            'price_note' => null,
+        ]);
+    }
+
+    /**
+     * Диапазон «от <цена> до $max». Нижняя граница — цена фабрики
+     * или переданная явно; `$max` обязан быть больше неё, иначе модель
+     * снимет диапазон при записи.
+     */
+    public function withPriceRange(int $max): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'price_max' => $max,
         ]);
     }
 }

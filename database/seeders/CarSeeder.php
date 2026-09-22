@@ -52,6 +52,22 @@ class CarSeeder extends Seeder
         ['Geely', 'Monjaro', 2024, EngineType::Petrol, DriveType::Full, 3_780_000, CarStatus::Sold, false],
     ];
 
+    /**
+     * Цена «от» и диапазон: «марка модель» => [цена до, уточнение].
+     *
+     * Отдельным словарём, а не девятым элементом кортежа: вариант нужен
+     * двум автомобилям из двенадцати. Оба стоят на главной — иначе новый
+     * вид цены не увидит никто, кто разворачивает проект с нуля, и дефект
+     * в нём доживёт до прода (тот же довод, что у флага «акцентная»
+     * в `ServiceSeeder`).
+     *
+     * @var array<string, array{0: int|null, 1: string|null}>
+     */
+    private const PRICE_VARIANTS = [
+        'Zeekr 001' => [null, 'от'],
+        'Voyah Free' => [5_600_000, null],
+    ];
+
     public function run(): void
     {
         $brands = Brand::query()->pluck('id', 'name');
@@ -98,6 +114,8 @@ class CarSeeder extends Seeder
                     ? null
                     : fake()->numberBetween(5_000, 90_000),
                 'price' => $price,
+                'price_max' => self::PRICE_VARIANTS["{$brandName} {$model}"][0] ?? null,
+                'price_note' => self::PRICE_VARIANTS["{$brandName} {$model}"][1] ?? null,
                 'status' => $status,
                 'show_on_homepage' => $onHomepage,
                 'sort_order' => $index,

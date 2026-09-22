@@ -153,18 +153,38 @@ final class CarStructuredData
      * его прочитает агрегатор. «Цена по запросу» — это отсутствие
      * предложения в терминах schema.org, а не предложение с нулевой ценой.
      *
+     * `Offer` с `price` отдаётся только ТОЧНОЙ сумме. «от 3 500 000 ₽»,
+     * «до …» и диапазон — это `AggregateOffer` с границами: `Offer.price`
+     * у «от» пообещал бы поисковику фиксированную сумму, которой на
+     * странице нет, — то же основание, по которому у прайса автосервиса
+     * микроразметки нет вовсе. Приписка после суммы («с НДС») границ
+     * не меняет и тип не трогает.
+     *
      * @return ?array<string, mixed>
      */
     private function offers(Car $car): ?array
     {
-        if ($car->price === null) {
+        if (! $car->hasPrice()) {
             return null;
         }
 
+        $bounds = match (true) {
+            $car->hasPriceRange() => ['lowPrice' => $car->price, 'highPrice' => $car->price_max],
+            $car->pricePrefix() === 'от' => ['lowPrice' => $car->price],
+            $car->pricePrefix() === 'до' => ['highPrice' => $car->price],
+            default => null,
+        };
+
+        // Суммы — строками, как было у `price`: целое без экспоненты
+        // и без локальных разделителей.
+        $amounts = $bounds === null
+            ? ['price' => (string) $car->price]
+            : array_map(static fn (int $value): string => (string) $value, $bounds);
+
         return [
-            '@type' => 'Offer',
+            '@type' => $bounds === null ? 'Offer' : 'AggregateOffer',
             'url' => route('catalog.show', $car),
-            'price' => (string) (int) $car->price,
+            ...$amounts,
             'priceCurrency' => 'RUB',
             'availability' => match ($car->status) {
                 CarStatus::InStock => 'https://schema.org/InStock',

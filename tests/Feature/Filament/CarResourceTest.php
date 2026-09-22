@@ -69,6 +69,66 @@ it('creates a car and leaves empty price and mileage null rather than zero', fun
         ->and($car->slug)->not->toBeEmpty();
 });
 
+it('shows the price note and the upper bound on creation before any price is typed', function () {
+    // «от» у автомобиля задаётся тем же уточнением, что у позиции прайса,
+    // и поле обязано быть видно сразу: у услуг оно пряталось до ввода
+    // цены, и заказчик видел его только на редактировании.
+    livewire(CreateCar::class)
+        ->assertFormFieldIsVisible('price_note')
+        ->assertFormFieldIsVisible('price_max');
+});
+
+it('saves a price note and a price range', function () {
+    $brand = Brand::factory()->create();
+
+    livewire(CreateCar::class)
+        ->fillForm(carFormData($brand, ['price' => 3_500_000, 'price_max' => 4_200_000, 'price_note' => 'с НДС']))
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $car = Car::query()->where('model', 'X5')->sole();
+
+    expect($car->price_max)->toBe(4_200_000)
+        ->and($car->price_note)->toBe('с НДС')
+        ->and($car->priceLabel())->toBe("от\u{a0}3\u{a0}500\u{a0}000 до\u{a0}4\u{a0}200\u{a0}000\u{a0}₽ с НДС");
+});
+
+it('requires a price when a price note or an upper bound is filled', function () {
+    $brand = Brand::factory()->create();
+
+    livewire(CreateCar::class)
+        ->fillForm(carFormData($brand, ['price' => null, 'price_note' => 'от']))
+        ->call('create')
+        ->assertHasFormErrors(['price' => 'required_with']);
+
+    livewire(CreateCar::class)
+        ->fillForm(carFormData($brand, ['price' => null, 'price_max' => 4_200_000]))
+        ->call('create')
+        ->assertHasFormErrors(['price' => 'required_with']);
+
+    expect(Car::query()->where('model', 'X5')->exists())->toBeFalse();
+});
+
+it('rejects an upper bound that is not greater than the price', function () {
+    $brand = Brand::factory()->create();
+
+    livewire(CreateCar::class)
+        ->fillForm(carFormData($brand, ['price' => 3_500_000, 'price_max' => 3_000_000]))
+        ->call('create')
+        ->assertHasFormErrors(['price_max' => 'gt']);
+});
+
+it('shows the same price line in the table as on the site', function () {
+    // `->money()` показывал голую нижнюю границу: таблица расходилась
+    // бы с карточкой ровно у тех автомобилей, где цена «от» или диапазон.
+    $from = Car::factory()->create(['price' => 3_500_000, 'price_note' => 'от']);
+    $range = Car::factory()->withPriceRange(4_200_000)->create(['price' => 3_500_000]);
+
+    livewire(ListCars::class)
+        ->assertTableColumnFormattedStateSet('price', "от\u{a0}3\u{a0}500\u{a0}000\u{a0}₽", $from)
+        ->assertTableColumnFormattedStateSet('price', "от\u{a0}3\u{a0}500\u{a0}000 до\u{a0}4\u{a0}200\u{a0}000\u{a0}₽", $range);
+});
+
 it('rejects a duplicate slug with a validation error instead of a database failure', function () {
     $brand = Brand::factory()->create();
     Car::factory()->create(['slug' => 'bmw-x5-2024']);

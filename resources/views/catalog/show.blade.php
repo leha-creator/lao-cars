@@ -439,13 +439,7 @@
 
                 <h1 class="mb-4 font-display text-[28px] font-semibold lg:text-[36px]">{{ $name }}</h1>
 
-                <div class="mb-8 font-display text-2xl font-semibold text-accent lg:text-[32px]">
-                    @if ($car->price !== null)
-                        {{ number_format((int) $car->price, 0, ',', ' ') }} ₽
-                    @else
-                        Цена по запросу
-                    @endif
-                </div>
+                <div class="mb-8 font-display text-2xl font-semibold text-accent lg:text-[32px]">{{ $car->priceLabel() }}</div>
 
                 {{--
                     Сетка одна на фиксированные и динамические характеристики,

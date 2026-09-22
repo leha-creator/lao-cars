@@ -98,6 +98,7 @@ it('shows a price only when it is filled and never falls back to «по запр
     $category = partsCategory();
 
     Service::factory()->inCategory($category)->create(['title' => 'Категория с ценой', 'price' => 4500, 'price_note' => 'от']);
+    Service::factory()->inCategory($category)->withPriceRange(9000)->create(['title' => 'Категория с диапазоном', 'price' => 6000]);
     Service::factory()->inCategory($category)->withoutPrice()->create(['title' => 'Категория без цены']);
 
     // Сторож решения: у всех засеянных позиций цена пустая, и пять
@@ -107,7 +108,8 @@ it('shows a price only when it is filled and never falls back to «по запр
     $this->get('/parts')
         ->assertOk()
         ->assertSee('Категория с ценой')
-        ->assertSee('от 4 500 ₽')
+        ->assertSee("от\u{a0}4\u{a0}500\u{a0}₽")
+        ->assertSee("от\u{a0}6\u{a0}000 до\u{a0}9\u{a0}000\u{a0}₽")
         ->assertSee('Категория без цены')
         ->assertDontSee('по запросу');
 });

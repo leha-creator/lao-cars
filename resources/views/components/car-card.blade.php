@@ -112,12 +112,6 @@
             <div class="mb-4 text-sm text-ink-muted">{{ implode(' · ', $specs) }}</div>
         @endif
 
-        <div class="font-display text-xl font-semibold text-accent lg:text-[22px]">
-            @if ($car->price !== null)
-                {{ number_format((int) $car->price, 0, ',', ' ') }} ₽
-            @else
-                Цена по запросу
-            @endif
-        </div>
+        <div class="font-display text-xl font-semibold text-accent lg:text-[22px]">{{ $car->priceLabel() }}</div>
     </div>
 </a>

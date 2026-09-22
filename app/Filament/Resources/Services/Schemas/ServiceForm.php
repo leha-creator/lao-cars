@@ -11,7 +11,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 /**
@@ -93,33 +92,51 @@ final class ServiceForm
             ]);
     }
 
+    /**
+     * Цена, верхняя граница диапазона и уточнение — все три видны всегда.
+     *
+     * Раньше уточнение скрывалось при пустой цене, и это давало два
+     * дефекта. При создании поля не было видно вовсе, пока фокус не уйдёт
+     * с цены (форма перерисовывалась по `live(onBlur)`), — администратор
+     * видел его только на редактировании. А на редактировании скрытое поле
+     * Filament не дегидрирует: очистка цены оставляла уточнение в базе,
+     * и оно воскресало при следующем вводе цены.
+     *
+     * «от» без суммы — по-прежнему мусор в вёрстке прайса, но теперь это
+     * ошибка формы на цене (`requiredWith`), а не молчаливая потеря
+     * введённого.
+     */
     private static function priceSection(): Section
     {
         return Section::make('Цена')
             ->columns(2)
             ->components([
-                // `live(onBlur: true)` — ради видимости уточнения ниже.
-                // Без него поле «Уточнение» не появится, пока форма не
-                // будет сохранена и открыта заново.
                 TextInput::make('price')
                     ->label('Цена')
                     ->helperText('Пусто — «цена по запросу». Ноль означал бы «бесплатно».')
                     ->numeric()
                     ->prefix('₽')
-                    ->live(onBlur: true),
+                    ->requiredWith(['price_note', 'price_max'])
+                    ->validationMessages([
+                        'required_with' => 'Укажите цену: уточнение и «Цена до» без неё на сайт не выводятся.',
+                    ]),
 
-                // «от» без суммы — не уточнение, а мусор в вёрстке прайса,
-                // поэтому поле показывается только при заполненной цене.
-                // Скрытый компонент не дегидрируется, значит очистка цены
-                // заодно снимает и уточнение — ровно то, что нужно.
-                //
+                TextInput::make('price_max')
+                    ->label('Цена до')
+                    ->helperText('Для диапазона: на сайте будет «от 6 500 до 9 000 ₽». Пусто — одна цена.')
+                    ->numeric()
+                    ->prefix('₽')
+                    ->gt('price')
+                    ->validationMessages([
+                        'gt' => 'Верхняя граница должна быть больше цены.',
+                    ]),
+
                 // Список подсказок собирается из фактических значений БД,
                 // а не хардкодится: свободное поле развело бы «от» и «От»
                 // как два разных уточнения.
                 TextInput::make('price_note')
                     ->label('Уточнение к цене')
-                    ->helperText('Например «от» или «за колесо».')
-                    ->visible(fn (Get $get): bool => filled($get('price')))
+                    ->helperText('Например «от» или «за колесо». «От» и «до» встают перед суммой, остальное — после.')
                     ->datalist(self::priceNoteSuggestions())
                     ->maxLength(255),
             ]);

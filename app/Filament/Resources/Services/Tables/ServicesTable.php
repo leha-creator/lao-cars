@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Services\Tables;
 
 use App\Filament\Resources\Services\Pages\ListServices;
+use App\Models\Service;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
@@ -42,15 +43,20 @@ final class ServicesTable
                     ->label('Акцент')
                     ->boolean(),
 
+                // Строка та же, что в прайсе на сайте, — с уточнением
+                // и диапазоном, поэтому отдельной колонки «Уточнение» нет:
+                // она дублировала бы приписку. Без цены
+                // `formatStateUsing()` не вызывается — остаётся плейсхолдер.
+                //
+                // `wrap()` — ради диапазона с припиской: пробелы внутри
+                // суммы неразрывные, и одной строкой колонка раздвигала
+                // бы таблицу. Переносится строка по «до» и перед припиской.
                 TextColumn::make('price')
                     ->label('Цена')
-                    ->money('RUB')
+                    ->formatStateUsing(fn (mixed $state, Service $record): string => $record->priceLabel())
+                    ->wrap()
                     ->placeholder('по запросу')
                     ->sortable(),
-
-                TextColumn::make('price_note')
-                    ->label('Уточнение')
-                    ->placeholder('—'),
 
                 // Инлайн-колонка обходит политики (это задокументировано
                 // в Filament: HasAuthorization, строки 14–22), но здесь это

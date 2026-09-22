@@ -36,6 +36,7 @@ class ServiceFactory extends Factory
             // Цены автосервиса кратны сотне — дробные рубли в прайсе
             // не встречаются.
             'price' => fake()->numberBetween(5, 400) * 100,
+            'price_max' => null,
             'price_note' => null,
             'is_featured' => false,
             'is_published' => true,
@@ -77,7 +78,20 @@ class ServiceFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'price' => null,
+            'price_max' => null,
             'price_note' => null,
+        ]);
+    }
+
+    /**
+     * Диапазон «от <цена> до $max». Нижняя граница — цена фабрики
+     * или переданная явно; `$max` обязан быть больше неё, иначе модель
+     * снимет диапазон при записи.
+     */
+    public function withPriceRange(int $max): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'price_max' => $max,
         ]);
     }
 

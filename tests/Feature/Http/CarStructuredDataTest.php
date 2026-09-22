@@ -132,6 +132,39 @@ it('maps the status to schema.org availability', function (CarStatus $status, st
     [CarStatus::Sold, 'https://schema.org/SoldOut'],
 ]);
 
+it('offers an exact price only as a fixed Offer', function (?string $note) {
+    // Приписка после суммы («с НДС») границ не меняет, и тип остаётся
+    // `Offer` с `price`.
+    $car = Car::factory()->create(['price' => 3_500_000, 'price_note' => $note]);
+
+    $offers = jsonLdFrom($this->get('/catalog/'.$car->slug)->assertOk()->getContent())[0]['offers'];
+
+    expect($offers['@type'])->toBe('Offer')
+        ->and($offers['price'])->toBe('3500000');
+})->with([
+    'без уточнения' => [null],
+    'с суффиксом' => ['с НДС'],
+]);
+
+it('offers «от», «до» and a range as an AggregateOffer without a fixed price', function (array $attributes, array $bounds) {
+    // `Offer.price` у «от 3 500 000 ₽» пообещал бы поисковику фиксированную
+    // сумму, которой на странице нет. Проверяется и то, что границы есть,
+    // и то, что `price` нет: иначе сниппет покажет голую нижнюю границу.
+    $car = Car::factory()->create(['price' => 3_500_000, ...$attributes]);
+
+    $offers = jsonLdFrom($this->get('/catalog/'.$car->slug)->assertOk()->getContent())[0]['offers'];
+
+    expect($offers['@type'])->toBe('AggregateOffer')
+        ->and($offers)->not->toHaveKey('price')
+        ->and(array_intersect_key($offers, ['lowPrice' => true, 'highPrice' => true]))->toBe($bounds)
+        ->and($offers['priceCurrency'])->toBe('RUB')
+        ->and($offers['availability'])->toBe('https://schema.org/InStock');
+})->with([
+    'от' => [['price_note' => 'от'], ['lowPrice' => '3500000']],
+    'до' => [['price_note' => 'до'], ['highPrice' => '3500000']],
+    'диапазон' => [['price_max' => 4_200_000], ['lowPrice' => '3500000', 'highPrice' => '4200000']],
+]);
+
 it('covers every status in the availability map', function () {
     // Сторож на полноту набора данных выше: `match` без `default` уронит
     // страницу на пропущенном статусе, но только если тест до этого

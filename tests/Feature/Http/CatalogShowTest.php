@@ -93,6 +93,16 @@ it('serves a car without a price', function () {
         ->assertSee('Цена по запросу');
 });
 
+it('shows a price with «от» and a price range on the car page', function () {
+    // Сумма собиралась прямо в шаблоне через `number_format`, и «от»
+    // с диапазоном на странице автомобиля не выводились вовсе.
+    $from = Car::factory()->create(['price' => 3_500_000, 'price_note' => 'от']);
+    $range = Car::factory()->withPriceRange(4_200_000)->create(['price' => 3_500_000]);
+
+    $this->get('/catalog/'.$from->slug)->assertOk()->assertSee("от\u{a0}3\u{a0}500\u{a0}000\u{a0}₽");
+    $this->get('/catalog/'.$range->slug)->assertOk()->assertSee("от\u{a0}3\u{a0}500\u{a0}000 до\u{a0}4\u{a0}200\u{a0}000\u{a0}₽");
+});
+
 /*
  * Вёрстка вехи 4.3. Галерея — главный кандидат на «упрощение»: свести её
  * к одному <img :src> и списку путей в x-data короче ровно настолько,

@@ -189,13 +189,18 @@ it('formats the price by the position of the note', function () {
     pricePosition($first, 'Плановое ТО', 6500, 'от');
     pricePosition($second, 'Шиномонтаж колеса', 1200, 'за колесо');
     pricePosition($third, 'Ремонт по запросу', null);
+    pricePosition($third, 'Химчистка салона', 9000)->update(['price_max' => 15000]);
+    pricePosition($second, 'Сезонное хранение шин', 4500, 'за сезон')->update(['price_max' => 6000]);
 
     $this->get('/services')
         ->assertOk()
         // Данные не различают префикс и суффикс: «от» стоит перед суммой,
-        // «за колесо» — после, а колонка одна и заполняется свободным текстом.
-        ->assertSee('от 6 500 ₽')
-        ->assertSee('1 200 ₽ за колесо')
+        // «за колесо» — после, а колонка одна и заполняется свободным
+        // текстом. У диапазона предлоги свои, суффикс идёт после него.
+        ->assertSee("от\u{a0}6\u{a0}500\u{a0}₽")
+        ->assertSee("1\u{a0}200\u{a0}₽ за колесо")
+        ->assertSee("от\u{a0}9\u{a0}000 до\u{a0}15\u{a0}000\u{a0}₽")
+        ->assertSee("от\u{a0}4\u{a0}500 до\u{a0}6\u{a0}000\u{a0}₽ за сезон")
         ->assertSee('по запросу');
 });
 

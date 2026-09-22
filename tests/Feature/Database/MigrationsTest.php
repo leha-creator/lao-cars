@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Service;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -78,4 +79,30 @@ it('removes the category notes setting the descriptions moved out of', function 
     // Ключами объекта были значения енама, и с редактируемым справочником
     // такой объект превращается в мусор при первом же удалении категории.
     expect(DB::table('site_settings')->where('key', 'services_page.notes')->exists())->toBeFalse();
+});
+
+/*
+ * Диапазон цен и уточнение к цене у автомобиля.
+ */
+
+it('adds the upper price bound to cars and services and the price note to cars', function () {
+    expect(Schema::hasColumns('cars', ['price_max', 'price_note']))->toBeTrue()
+        ->and(Schema::hasColumn('services', 'price_max'))->toBeTrue();
+});
+
+it('clears price notes left on positions without a price', function () {
+    // На пустой тестовой базе миграции чистить нечего, поэтому очистка
+    // вызывается на своих строках. Такие уточнения оставляло скрытое поле
+    // формы: на редактировании оно не сохранялось, и очищенная цена
+    // оставляла «от» в базе. Без очистки первая же правка позиции упёрлась
+    // бы в новую валидацию цены по полю, которого никто не трогал.
+    $orphan = Service::factory()->withoutPrice()->create();
+    DB::table('services')->where('id', $orphan->id)->update(['price_note' => 'от']);
+    $priced = Service::factory()->create(['price' => 1200, 'price_note' => 'за колесо']);
+
+    $migration = require database_path('migrations/2026_09_22_120000_add_price_range_to_cars_and_services_tables.php');
+
+    expect($migration->clearOrphanNotes())->toBe(1)
+        ->and(DB::table('services')->where('id', $orphan->id)->value('price_note'))->toBeNull()
+        ->and(DB::table('services')->where('id', $priced->id)->value('price_note'))->toBe('за колесо');
 });

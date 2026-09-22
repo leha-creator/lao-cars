@@ -113,7 +113,9 @@ laocars/
 │   ├── Models/               # Brand, Car, CarPhoto, CarAttribute, Media,
 │   │   └── Concerns/         # CarAttributeValue, Service, ServiceCategory,
 │   │                         # Lead, LeadComment, Employee, Review,
-│   │                         # Setting, User + HasSlug
+│   │                         # Setting, User + HasSlug, HasPriceRange —
+│   │                         # формат цены авто и прайса: «от», диапазон,
+│   │                         # неразрывные пробелы внутри суммы
 │   ├── Policies/             # AdminOnlyPolicy и StaffPolicy — вся матрица прав
 │   │                         # в двух файлах; конкретная политика = одна строка
 │   ├── Providers/            # AppServiceProvider: morph map + ImageManager (GD)

@@ -136,6 +136,20 @@ it('seeds a catalog that exercises every card state', function () {
         ->and(Car::onHomepage()->where('status', CarStatus::InTransit)->count())->toBeGreaterThan(0);
 });
 
+it('seeds a price with «от» and price ranges so the new price line is visible from scratch', function () {
+    // Довод тот же, что у флага «акцентная»: без демо-данных вид «от …»
+    // и «от … до …» не увидит никто, кто разворачивает проект с нуля.
+    // Автомобили — именно на главной, где их видно первыми.
+    $this->seed();
+
+    expect(Car::onHomepage()->where('price_note', 'от')->count())->toBeGreaterThan(0)
+        ->and(Car::onHomepage()->whereNotNull('price_max')->count())->toBeGreaterThan(0)
+        ->and(Service::query()->whereNotNull('price_max')->count())->toBeGreaterThan(0)
+        // Диапазон с припиской после суммы — сочетание, которое правило
+        // «предлог только к точной сумме» обязано не сломать.
+        ->and(Service::query()->whereNotNull('price_max')->whereNotNull('price_note')->count())->toBeGreaterThan(0);
+});
+
 it('keeps the homepage selection non-empty after the status change', function () {
     // `HomeContent::cars()` пересекает `onHomepage()` с `available()`.
     // Перевод отмеченного автомобиля в «В пути» её не ломает, а перевод

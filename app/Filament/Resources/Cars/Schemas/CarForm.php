@@ -176,6 +176,12 @@ final class CarForm
             ]);
     }
 
+    /**
+     * Цена, верхняя граница и уточнение видны всегда, как у позиции прайса,
+     * — скрытое поле Filament на редактировании не сохраняет, и зависимость
+     * «уточнение только при цене» держится валидацией, а не видимостью.
+     * Правило вывода общее с прайсом — `HasPriceRange::formattedPrice()`.
+     */
     private static function priceSection(): Section
     {
         return Section::make('Цена и статус')
@@ -185,7 +191,31 @@ final class CarForm
                     ->label('Цена')
                     ->helperText('Пусто — «цена по запросу». Ноль означал бы «бесплатно».')
                     ->numeric()
-                    ->prefix('₽'),
+                    ->prefix('₽')
+                    ->requiredWith(['price_note', 'price_max'])
+                    ->validationMessages([
+                        'required_with' => 'Укажите цену: уточнение и «Цена до» без неё на сайт не выводятся.',
+                    ]),
+
+                TextInput::make('price_max')
+                    ->label('Цена до')
+                    ->helperText('Для диапазона: на сайте будет «от 3 500 000 до 4 200 000 ₽». Пусто — одна цена.')
+                    ->numeric()
+                    ->prefix('₽')
+                    ->gt('price')
+                    ->validationMessages([
+                        'gt' => 'Верхняя граница должна быть больше цены.',
+                    ]),
+
+                // Подсказки — тем же приёмом, что у позиции прайса:
+                // фактические значения плюс базовый набор, чтобы «от»
+                // и «От» не разошлись как два разных уточнения.
+                TextInput::make('price_note')
+                    ->label('Уточнение к цене')
+                    ->helperText('Например «от» — на сайте будет «от 3 500 000 ₽». «От» и «до» встают перед суммой, остальное — после.')
+                    ->datalist(self::priceNoteSuggestions())
+                    ->maxLength(255)
+                    ->columnSpanFull(),
 
                 Select::make('status')
                     ->label('Статус')
@@ -317,6 +347,26 @@ final class CarForm
                     ->label('Описание')
                     ->rows(6),
             ]);
+    }
+
+    /**
+     * Уже использованные уточнения плюс базовый набор.
+     *
+     * @return array<int, string>
+     */
+    private static function priceNoteSuggestions(): array
+    {
+        $existing = Car::query()
+            ->whereNotNull('price_note')
+            ->distinct()
+            ->pluck('price_note')
+            ->all();
+
+        return array_values(array_unique([
+            'от',
+            'до',
+            ...$existing,
+        ]));
     }
 
     private static function seoSection(): Section

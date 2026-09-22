@@ -182,6 +182,19 @@ it('allows a null price meaning "on request"', function () {
     expect($car->price)->toBeNull();
 });
 
+it('formats the price line for the card', function (?int $price, ?int $max, ?string $note, string $label) {
+    // До `priceLabel()` сумма собиралась прямо в двух шаблонах. Формат
+    // общий с прайсом услуг, фолбэк свой — «Цена по запросу».
+    $car = Car::factory()->create(['price' => $price, 'price_max' => $max, 'price_note' => $note]);
+
+    expect($car->priceLabel())->toBe($label);
+})->with([
+    'точная' => [3_500_000, null, null, "3\u{a0}500\u{a0}000\u{a0}₽"],
+    'от' => [3_500_000, null, 'от', "от\u{a0}3\u{a0}500\u{a0}000\u{a0}₽"],
+    'диапазон' => [3_500_000, 4_200_000, null, "от\u{a0}3\u{a0}500\u{a0}000 до\u{a0}4\u{a0}200\u{a0}000\u{a0}₽"],
+    'без цены' => [null, null, null, 'Цена по запросу'],
+]);
+
 it('collects leads submitted from its card', function () {
     $car = Car::factory()->create();
 

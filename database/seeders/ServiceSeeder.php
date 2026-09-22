@@ -98,7 +98,7 @@ class ServiceSeeder extends Seeder
             ['Комплексная мойка', 2500, 'от', false],
             ['Полировка кузова', 12000, 'от', false],
             ['Защитное керамическое покрытие', 35000, 'от', true],
-            ['Химчистка салона', 9000, 'от', false],
+            ['Химчистка салона', 9000, null, false],
         ],
         'extra' => [
             ['Русификация мультимедиа', 8000, 'от', false],
@@ -112,6 +112,23 @@ class ServiceSeeder extends Seeder
             ['Кузовные детали', null, null, false],
             ['Электрика и электроника', null, null, false],
         ],
+    ];
+
+    /**
+     * Верхняя граница диапазона: название => цена до.
+     *
+     * Отдельным словарём по тому же доводу, что `CarSeeder::PRICE_VARIANTS`:
+     * диапазон нужен двум позициям из двадцати одной. Вторая — с припиской
+     * после суммы, чтобы сочетание «диапазон + суффикс» было видно на
+     * странице («от 4 500 до 6 000 ₽ за сезон»). У «Химчистки салона»
+     * уточнения «от» нет намеренно: у диапазона свои предлоги, и приписка
+     * «от» к нему всё равно не выводится.
+     *
+     * @var array<string, int>
+     */
+    private const array PRICE_RANGES = [
+        'Химчистка салона' => 15000,
+        'Сезонное хранение шин' => 6000,
     ];
 
     public function run(): void
@@ -131,6 +148,7 @@ class ServiceSeeder extends Seeder
                         'description' => null,
                         'details' => null,
                         'price' => $price,
+                        'price_max' => self::PRICE_RANGES[$title] ?? null,
                         'price_note' => $priceNote,
                         'is_featured' => $isFeatured,
                         'is_published' => true,

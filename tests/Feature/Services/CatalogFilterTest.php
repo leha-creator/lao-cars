@@ -153,6 +153,23 @@ it('excludes a car without a price from a price range but not from the catalog',
         ->and(catalogFilter()->pluck('id')->all())->toContain($onRequest->id);
 });
 
+it('matches a price range that overlaps the budget', function () {
+    // «Цена от» сравнивается с верхней границей диапазона, «цена до» —
+    // с нижней. Автомобиль «от 3 до 4 млн» подходит под «от 3,5 млн»:
+    // комплектации в этом бюджете у него есть. Сравнение с `price`
+    // выбросило бы его молча — выдача просто стала бы короче.
+    $range = Car::factory()->withPriceRange(4_000_000)->create(['price' => 3_000_000]);
+    $exact = Car::factory()->create(['price' => 3_000_000]);
+
+    expect(catalogFilter(['price_from' => 3_500_000])->pluck('id')->all())->toBe([$range->id])
+        // Верхняя граница выше потолка бюджета — не причина выбрасывать:
+        // нижняя в него укладывается.
+        ->and(catalogFilter(['price_to' => 3_200_000])->pluck('id')->sort()->values()->all())
+        ->toBe(collect([$range->id, $exact->id])->sort()->values()->all())
+        // Весь диапазон выше потолка — не подходит.
+        ->and(catalogFilter(['price_to' => 2_500_000])->count())->toBe(0);
+});
+
 it('puts price on request last in both sort directions', function () {
     $brand = Brand::factory()->create();
     Car::factory()->for($brand)->create(['price' => 1_000_000]);

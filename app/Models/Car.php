@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\CarStatus;
 use App\Enums\DriveType;
 use App\Enums\EngineType;
+use App\Models\Concerns\HasPriceRange;
 use App\Models\Concerns\HasSlug;
 use App\Support\ThumbnailPath;
 use Database\Factories\CarFactory;
@@ -49,6 +50,8 @@ use Illuminate\Support\Facades\Storage;
     'drive',
     'mileage',
     'price',
+    'price_max',
+    'price_note',
     'status',
     'show_on_homepage',
     'history',
@@ -63,6 +66,7 @@ final class Car extends Model
     /** @use HasFactory<CarFactory> */
     use HasFactory;
 
+    use HasPriceRange;
     use HasSlug;
 
     public function brand(): BelongsTo
@@ -93,6 +97,19 @@ final class Car extends Model
     public function attributeValues(): HasMany
     {
         return $this->hasMany(CarAttributeValue::class);
+    }
+
+    /**
+     * Цена на карточке строкой: «3 500 000 ₽», «от 3 500 000 ₽»,
+     * «от 3 500 000 до 4 200 000 ₽», «Цена по запросу».
+     *
+     * Формат общий с прайсом услуг — `HasPriceRange::formattedPrice()`.
+     * До этого метода сумма собиралась прямо в двух шаблонах, и «от»
+     * с диапазоном пришлось бы дописывать в оба.
+     */
+    public function priceLabel(): string
+    {
+        return $this->formattedPrice() ?? 'Цена по запросу';
     }
 
     /**
@@ -388,7 +405,6 @@ final class Car extends Model
             'engine_power' => 'integer',
             'drive' => DriveType::class,
             'mileage' => 'integer',
-            'price' => 'integer',
             'status' => CarStatus::class,
             'show_on_homepage' => 'boolean',
             'sort_order' => 'integer',

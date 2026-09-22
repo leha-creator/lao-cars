@@ -29,6 +29,20 @@ it('serves the catalog and hides sold cars', function () {
         ->assertDontSee('Monjaro');
 });
 
+it('shows a price with «от», a price range and «Цена по запросу» on the cards', function () {
+    // Карточка списка собирала сумму сама — тот же `number_format`,
+    // что на странице автомобиля, — и «от» с диапазоном не выводила.
+    Car::factory()->create(['price' => 3_500_000, 'price_note' => 'от']);
+    Car::factory()->withPriceRange(4_200_000)->create(['price' => 3_600_000]);
+    Car::factory()->withoutPrice()->create();
+
+    $this->get('/catalog')
+        ->assertOk()
+        ->assertSee("от\u{a0}3\u{a0}500\u{a0}000\u{a0}₽")
+        ->assertSee("от\u{a0}3\u{a0}600\u{a0}000 до\u{a0}4\u{a0}200\u{a0}000\u{a0}₽")
+        ->assertSee('Цена по запросу');
+});
+
 it('applies a filter from the query string', function () {
     $zeekr = Brand::factory()->create(['name' => 'Zeekr']);
     $voyah = Brand::factory()->create(['name' => 'Voyah']);

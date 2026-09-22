@@ -107,7 +107,11 @@ final class CatalogFilterOptions
     {
         $bounds = Car::query()
             ->available()
-            ->selectRaw('min(year) as year_min, max(year) as year_max, min(price) as price_min, max(price) as price_max')
+            // Алиас верхней границы — `price_top`, а не `price_max`: так
+            // называется колонка диапазона, и под её имя агрегат получил бы
+            // её каст из `HasPriceRange`. Вреда в этом нет, но совпадение
+            // пришлось бы объяснять каждому читателю.
+            ->selectRaw('min(year) as year_min, max(year) as year_max, min(price) as price_min, max(price) as price_top')
             ->first();
 
         return [
@@ -117,7 +121,7 @@ final class CatalogFilterOptions
             ],
             'prices' => [
                 'min' => $this->integer($bounds?->getAttribute('price_min')),
-                'max' => $this->integer($bounds?->getAttribute('price_max')),
+                'max' => $this->integer($bounds?->getAttribute('price_top')),
             ],
         ];
     }

@@ -375,9 +375,27 @@
                                                      сравнению вывода
                                                      со строкой «по запросу»,
                                                      — иначе формулировка жила
-                                                     бы в двух местах. --}}
+                                                     бы в двух местах.
+
+                                                     Кегль вдвое крупнее
+                                                     остального текста — по
+                                                     просьбе заказчика, вместе
+                                                     со строкой прайса
+                                                     и карточкой. Перенос —
+                                                     только ниже `sm`: диапазон
+                                                     в 30px шире экрана 390px,
+                                                     и `whitespace-nowrap`
+                                                     вытолкнул бы плашку за
+                                                     карточку. `max-w-full`
+                                                     при `shrink-0` и даёт
+                                                     переносу случиться.
+                                                     Скругление задано числом,
+                                                     а не `rounded-full`: на
+                                                     одной строке это та же
+                                                     капсула, а на двух —
+                                                     не вытянутый овал. --}}
                                                 <span @class([
-                                                    'shrink-0 rounded-full px-5 py-2.5 font-display text-[15px] font-semibold whitespace-nowrap',
+                                                    'max-w-full shrink-0 rounded-[2rem] px-8 py-4 font-display text-[30px] leading-[1.15] font-semibold text-balance sm:whitespace-nowrap',
                                                     // Заливка акцента и её чернила — пара, которая
                                                     // с темой не переключается: она одинаково
                                                     // читается и на кадре, и на фоне страницы,
@@ -437,9 +455,9 @@
                                         <a
                                             href="#lead-form"
                                             x-on:click="pick({{ $service->getKey() }})"
-                                            class="group flex items-baseline justify-between gap-4 border-t border-line py-3.5 first:border-t-0 md:[&:nth-child(2)]:border-t-0"
+                                            class="group flex flex-col gap-1 border-t border-line py-3.5 first:border-t-0 md:[&:nth-child(2)]:border-t-0 xl:flex-row xl:items-baseline xl:justify-between xl:gap-6"
                                         >
-                                            <span class="text-[15px] leading-[1.4] transition-colors group-hover:text-accent">{{ $service->title }}</span>
+                                            <span class="text-[15px] leading-[1.4] transition-colors group-hover:text-accent xl:min-w-0 xl:flex-1">{{ $service->title }}</span>
 
                                             {{-- «По запросу» — не цена,
                                                  и набирать её акцентом наравне
@@ -449,10 +467,24 @@
                                                  по сравнению вывода со строкой
                                                  «по запросу»: иначе
                                                  формулировка жила бы
-                                                 в двух местах. --}}
+                                                 в двух местах.
+
+                                                 Цена вдвое крупнее названия
+                                                 (просьба заказчика), и строка
+                                                 из-за этого ветвится: ниже
+                                                 `xl` цена стоит ПОД названием.
+                                                 Колонка прайса на `lg` —
+                                                 около 460px, и диапазон
+                                                 в 28px рядом с названием
+                                                 сжал бы его в столбик. С `xl`
+                                                 они в строку, но переносу
+                                                 цены место оставлено:
+                                                 `whitespace-nowrap` на
+                                                 диапазоне с припиской
+                                                 выталкивал бы название. --}}
                                             <span
                                                 @class([
-                                                    'shrink-0 whitespace-nowrap text-sm',
+                                                    'text-[28px] leading-[1.15] text-balance xl:max-w-[60%] xl:text-right',
                                                     'font-display font-semibold text-accent' => $service->hasPrice(),
                                                     'font-medium text-ink-muted' => ! $service->hasPrice(),
                                                 ])

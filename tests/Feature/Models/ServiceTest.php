@@ -5,6 +5,7 @@ use App\Models\Lead;
 use App\Models\Media;
 use App\Models\Service;
 use App\Models\ServiceCategory;
+use Illuminate\Support\Facades\Log;
 
 it('belongs to a category from the directory', function () {
     // До вехи 4.13 категория была кейсом енама в колонке `category`,
@@ -73,6 +74,48 @@ it('allows a null price meaning "on request"', function () {
     expect($service->price)->toBeNull()
         ->and($service->price_note)->toBeNull();
 });
+
+it('formats the price line with the note on the side it belongs to', function (?int $price, ?int $max, ?string $note, string $label) {
+    // Формат общий с карточкой автомобиля (`HasPriceRange`). Предлог
+    // встаёт перед суммой, остальное — после; у диапазона предлоги свои,
+    // и «от» из уточнения к нему не приписывается — иначе «от от …».
+    //
+    // Пробелы внутри суммы, перед «₽» и после предлога — неразрывные:
+    // на «Сервисе» цена вдвое крупнее текста и переносится, и обычный
+    // пробел разорвал бы «35 000» на две строки. Обычных пробелов два —
+    // перед «до» и перед припиской; ровно там переносу и место.
+    $service = Service::factory()->create(['price' => $price, 'price_max' => $max, 'price_note' => $note]);
+
+    expect($service->priceLabel())->toBe($label);
+})->with([
+    'точная' => [3200, null, null, "3\u{a0}200\u{a0}₽"],
+    'от' => [6500, null, 'от', "от\u{a0}6\u{a0}500\u{a0}₽"],
+    'От с заглавной' => [6500, null, 'От', "От\u{a0}6\u{a0}500\u{a0}₽"],
+    'суффикс' => [1200, null, 'за колесо', "1\u{a0}200\u{a0}₽ за колесо"],
+    'диапазон' => [9000, 15000, null, "от\u{a0}9\u{a0}000 до\u{a0}15\u{a0}000\u{a0}₽"],
+    'диапазон с суффиксом' => [4500, 6000, 'за сезон', "от\u{a0}4\u{a0}500 до\u{a0}6\u{a0}000\u{a0}₽ за сезон"],
+    'диапазон и «от»' => [9000, 15000, 'от', "от\u{a0}9\u{a0}000 до\u{a0}15\u{a0}000\u{a0}₽"],
+    'диапазон и «до»' => [9000, 15000, 'до', "от\u{a0}9\u{a0}000 до\u{a0}15\u{a0}000\u{a0}₽"],
+    'без цены' => [null, null, null, 'по запросу'],
+]);
+
+it('drops an upper bound that is not above the price and warns about it', function (?int $price, int $max) {
+    // Форма такого не пропустит, а сид, импорт или tinker — могут.
+    Log::spy();
+
+    $service = Service::factory()->create(['price' => $price, 'price_max' => $max]);
+
+    expect($service->refresh()->price_max)->toBeNull();
+
+    Log::shouldHaveReceived('warning')
+        ->once()
+        ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'диапазон снят')
+            && $context['price_max'] === $max);
+})->with([
+    'равна цене' => [9000, 9000],
+    'меньше цены' => [9000, 5000],
+    'без цены' => [null, 9000],
+]);
 
 it('exposes the photo url and null without a photo', function () {
     // Аксессор отдаёт `url`, а не `thumb_url`: превью заведомо мельче
