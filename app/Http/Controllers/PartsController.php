@@ -8,6 +8,7 @@ use App\Enums\ServicePage;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Setting;
+use App\Services\PartsHeroContent;
 use App\Support\Typography;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
@@ -44,11 +45,25 @@ use Illuminate\Support\Facades\Log;
  * на него стоит отдельный тест. Источник заявки форма НЕ проставляет:
  * заявку на подбор отличают поля автомобиля, а категория без артикула
  * менеджеру не добавляет ничего — он всё равно идёт к поставщику по VIN.
+ *
+ * Первый экран с фотографией и кнопкой в каталог автозапчастей собирает
+ * `PartsHeroContent`, и это НЕ отмена сказанного выше про отсутствие
+ * сервиса. Сервис заведён под блок, а не под страницу: блоку нужна
+ * нормализация объекта настройки, разрешение фона в URL и проверка адреса
+ * кнопки, и показывают его две страницы — эта и главная. Остальным данным
+ * страницы приводить по-прежнему нечего.
+ *
+ * Заполненный блок ЗАМЕНЯЕТ заголовок страницы: его заголовок становится
+ * единственным H1, а `parts_page.intro_title` и `.intro_text` остаются
+ * запасными — на случай, когда блок не заполнен. Второго H1 на странице
+ * быть не должно.
  */
 final class PartsController extends Controller
 {
-    public function index(): View
+    public function index(PartsHeroContent $heroContent): View
     {
+        $hero = $heroContent->build();
+
         $categories = ServiceCategory::query()
             ->onPage(ServicePage::Parts)
             ->ordered()
@@ -85,7 +100,17 @@ final class PartsController extends Controller
             ]);
         }
 
+        // По этой записи видно, почему страница выглядит иначе, чем вчера:
+        // первый экран включается и выключается одним полем в настройках.
+        Log::debug('[Запчасти] страница собрана', [
+            'items' => $items->count(),
+            'heading' => $hero === null ? 'обычный заголовок' : 'первый экран',
+        ]);
+
         return view('parts.index', [
+            // `null` — блок не заполнен, страница остаётся с заголовком
+            // и вступлением из настроек ниже.
+            'hero' => $hero,
             // Фолбэк через второй аргумент `Setting::get()` срабатывает только
             // на отсутствующий ключ, а форма настроек пишет пустое значение
             // как есть — «очистить блок» там рабочий сценарий. Без проверки

@@ -68,12 +68,15 @@ final class HomeContent
     /**
      * `CatalogFilterOptions` внедряется через конструктор, а не создаётся
      * `new` внутри: правило `ARCHITECTURE.md` — иначе его не подменить
-     * в тесте. Границы бюджета и список двигателей быстрого подбора
+     * в тесте. По тому же правилу приходит `PartsHeroContent`. Границы бюджета и список двигателей быстрого подбора
      * берутся оттуда же, откуда их берёт форма фильтра каталога: второй
      * источник тех же данных разошёлся бы с первым, и слайдер начал бы
      * обещать автомобили, которых каталог не покажет.
      */
-    public function __construct(private readonly CatalogFilterOptions $filterOptions) {}
+    public function __construct(
+        private readonly CatalogFilterOptions $filterOptions,
+        private readonly PartsHeroContent $partsHero,
+    ) {}
 
     /**
      * @return array{
@@ -89,6 +92,7 @@ final class HomeContent
      *     serviceGroups: list<array{category: ServiceCategory, note: ?string, items: EloquentCollection<int, Service>}>,
      *     services: EloquentCollection<int, Service>,
      *     ecosystemLinks: array<string, string>,
+     *     partsHero: ?array{title: string, text: ?string, button: ?array{text: string, url: string, external: bool}, image_url: ?string, show_on_home: bool},
      *     selector: array{cars: list<array{price: ?int, engine: ?string, status: string}>, engines: list<array{value: string, label: string}>, price_min: ?int, price_max: ?int, total: int},
      *     contacts: array{phone: ?string, email: ?string, address: ?string},
      *     seo: array{title: ?string, description: ?string},
@@ -102,6 +106,7 @@ final class HomeContent
         $faq = $this->faq();
         $reviews = $this->reviews();
         $price = $this->servicePrice();
+        $partsHero = $this->partsHero();
 
         // Одно сообщение на всю сборку, а не по одному на блок: по нему
         // видно, КАКОЙ блок исчез со страницы, — а именно этот вопрос
@@ -119,6 +124,7 @@ final class HomeContent
             'faq' => count($faq),
             'reviews' => $reviews->count(),
             'service_groups' => count($price['groups']),
+            'parts_hero' => $partsHero !== null,
         ]);
 
         return [
@@ -134,6 +140,7 @@ final class HomeContent
             'serviceGroups' => $price['groups'],
             'services' => $price['services'],
             'ecosystemLinks' => $this->ecosystemLinks($price['categories']),
+            'partsHero' => $partsHero,
             'selector' => $this->selector(),
             'contacts' => $this->contacts(),
             'seo' => $this->seo(),
@@ -661,6 +668,28 @@ final class HomeContent
         }
 
         return $links;
+    }
+
+    /**
+     * Блок каталога автозапчастей — первый экран страницы запчастей,
+     * показанный на главной.
+     *
+     * Собирает его `PartsHeroContent`, а не этот сервис: блок общий для
+     * двух страниц, и вторая сборка тех же данных разошлась бы с первой.
+     * Здесь решается только одно — показывать ли его: переключатель
+     * «Показывать на главной» лежит в той же настройке, что и тексты.
+     *
+     * Своих записей в лог метод не пишет намеренно. Про включённый показ
+     * блока без заголовка и про пропавший фон предупреждает сам
+     * `PartsHeroContent` — одна запись на причину, а не по одной на слой.
+     *
+     * @return ?array{title: string, text: ?string, button: ?array{text: string, url: string, external: bool}, image_url: ?string, show_on_home: bool}
+     */
+    private function partsHero(): ?array
+    {
+        $hero = $this->partsHero->build();
+
+        return $hero !== null && $hero['show_on_home'] ? $hero : null;
     }
 
     /**
