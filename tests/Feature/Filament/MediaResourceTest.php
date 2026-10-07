@@ -198,6 +198,36 @@ it('leaves a record free when repeater steps reference other images', function (
     expect($media->usages())->toBe([]);
 });
 
+it('reports a record used as the parts hero background', function () {
+    // Без строки в реестре `MediaSettingKeys` фон первого экрана страницы
+    // запчастей числился бы свободным файлом: он удалялся бы по кнопке,
+    // а блок молча оставался бы на тёмной заливке. Внешнего ключа у ссылки
+    // внутри jsonb нет, и восстановить связь было бы нечем.
+    $media = Media::factory()->create();
+    $other = Media::factory()->create();
+
+    Setting::set('parts_page.hero', ['title' => 'Каталог', 'image_id' => $media->getKey()]);
+
+    expect($media->usages())->toBe(['Настройки: первый экран страницы запчастей'])
+        ->and($other->usages())->toBe([]);
+});
+
+it('cancels deletion of a record used as the parts hero background', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('media/parts-hero.webp', 'original');
+
+    $media = Media::factory()->create(['path' => 'media/parts-hero.webp']);
+
+    Setting::set('parts_page.hero', ['title' => 'Каталог', 'image_id' => $media->getKey()]);
+
+    livewire(EditMedia::class, ['record' => $media->getRouteKey()])
+        ->callAction(DeleteAction::class);
+
+    expect(Media::query()->whereKey($media->id)->exists())->toBeTrue();
+
+    Storage::disk('public')->assertExists('media/parts-hero.webp');
+});
+
 it('cancels deletion of a record used only inside a settings repeater', function () {
     // Главный сторож задачи: без починки разбора пути этот файл удалялся
     // бы молча, оставляя в jsonb висячий id без внешнего ключа —

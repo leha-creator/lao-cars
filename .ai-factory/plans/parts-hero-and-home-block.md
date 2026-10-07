@@ -121,7 +121,7 @@
 
 ### Фаза 2 — Публичная часть
 
-- [ ] **Задача 4: компонент блока** (зависит от 1)
+- [x] **Задача 4: компонент блока** (зависит от 1)
 
   Файл: `resources/views/components/parts/hero.blade.php` (новый; анонимный компонент `x-parts.hero`, папка-пространство по образцу `components/services/`).
 
@@ -147,7 +147,7 @@
 
   ЛОГИРОВАНИЕ: в шаблоне не логировать, всё сделано в сервисе.
 
-- [ ] **Задача 5: первый экран на странице `/parts`** (зависит от 4)
+- [x] **Задача 5: первый экран на странице `/parts`** (зависит от 4)
 
   Файлы: `app/Http/Controllers/PartsController.php`, `resources/views/parts/index.blade.php`.
 
@@ -160,7 +160,7 @@
 
   ЛОГИРОВАНИЕ: `DEBUG [Запчасти] страница собрана` с числом позиций и признаком «первый экран или обычный заголовок» — по нему видно, почему страница выглядит иначе, чем вчера. Существующие два WARN не трогать.
 
-- [ ] **Задача 6: блок на главной** (зависит от 4)
+- [x] **Задача 6: блок на главной** (зависит от 4)
 
   Файлы: `app/Services/HomeContent.php`, `resources/views/home/index.blade.php`.
 
@@ -172,7 +172,7 @@
 
 ### Фаза 3 — Тесты
 
-- [ ] **Задача 7: сторожа** (зависит от 3, 5, 6)
+- [x] **Задача 7: сторожа** (зависит от 3, 5, 6)
 
   Файлы: `tests/Feature/Http/PartsHeroTest.php` (новый), `tests/Feature/Http/HomePageTest.php`, `tests/Feature/Filament/ManageSiteSettingsTest.php`, `tests/Feature/Filament/MediaResourceTest.php`, `tests/Feature/Support/OutboundLinkTest.php` (новый).
 

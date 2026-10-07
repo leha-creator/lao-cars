@@ -528,3 +528,66 @@ it('keeps the policy untouched when the form is saved without edits', function (
 
     expect(Setting::get(PrivacyPolicy::SETTING_KEY))->toBe($before);
 });
+
+it('stores the parts hero as one object with the switch and the background', function () {
+    // Первый экран страницы запчастей — одна настройка-объект. Сторож
+    // на форму значения: переключатель обязан доехать БУЛЕВЫМ (сервис
+    // сравнивает его строго с `true`), а фон — идентификатором записи.
+    $media = Media::factory()->create();
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm([
+            'parts_page.hero.title' => 'Каталог запчастей',
+            'parts_page.hero.text' => 'Описание блока.',
+            'parts_page.hero.button_text' => 'В каталог',
+            'parts_page.hero.button_url' => 'https://parts.example.com/catalog',
+            'parts_page.hero.image_id' => $media->getKey(),
+            'parts_page.hero.show_on_home' => true,
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('parts_page.hero'))->toEqualCanonicalizing([
+        'title' => 'Каталог запчастей',
+        'text' => 'Описание блока.',
+        'button_text' => 'В каталог',
+        'button_url' => 'https://parts.example.com/catalog',
+        'image_id' => $media->getKey(),
+        'show_on_home' => true,
+    ])
+        ->and(Setting::get('parts_page.hero')['show_on_home'])->toBeTrue();
+});
+
+it('refuses a parts hero button address that is not an http link', function (string $url) {
+    // Первый из двух рубежей — второй стоит на выводе (`PartsHeroTest`).
+    // Значение поля едет в `href`, а экранирование Blade схему не трогает.
+    // Штатного `->url()` у поля нет намеренно: форма и вывод обязаны
+    // спрашивать ОДИН метод, иначе они разойдутся.
+    $before = Setting::get('parts_page.hero');
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['parts_page.hero.button_url' => $url])
+        ->call('save')
+        ->assertHasErrors('data.parts_page.hero.button_url');
+
+    Setting::flushCache();
+
+    expect(Setting::get('parts_page.hero'))->toBe($before);
+})->with([
+    'javascript' => ['javascript:alert(1)'],
+    'якорь' => ['#lead-form'],
+    'относительный путь' => ['/catalog'],
+    'без схемы' => ['parts.example.com'],
+]);
+
+it('accepts an emptied parts hero button address', function () {
+    // Пустое поле — рабочий сценарий «кнопки нет». Правило, отклоняющее
+    // пустоту, сделало бы форму настроек несохраняемой у всех, кто адрес
+    // каталога ещё не получил, — а в сиде он пуст.
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['parts_page.hero.button_url' => ''])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('parts_page.hero')['button_url'])->toBeIn([null, '']);
+});
