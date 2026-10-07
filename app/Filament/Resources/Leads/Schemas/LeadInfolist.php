@@ -42,6 +42,20 @@ final class LeadInfolist
                         ->url(fn (Lead $record): ?string => self::sourceUrl($record))
                         ->openUrlInNewTab(),
 
+                    // Видна только у обезличенной заявки: объясняет, почему
+                    // в секции «Контакт» ниже заглушка вместо имени и пусто
+                    // вместо телефона.
+                    TextEntry::make('anonymized_at')
+                        ->label('Обезличена')
+                        ->dateTime('d.m.Y H:i')
+                        ->helperText('Срок хранения истёк: имя, телефон, почта, текст обращения и VIN стёрты.')
+                        ->visible(fn (Lead $record): bool => $record->isAnonymized()),
+
+                    TextEntry::make('closed_at')
+                        ->label('Закрыта')
+                        ->dateTime('d.m.Y H:i')
+                        ->visible(fn (Lead $record): bool => $record->closed_at !== null),
+
                     TextEntry::make('page_url')
                         ->label('Страница отправки')
                         ->placeholder('—')

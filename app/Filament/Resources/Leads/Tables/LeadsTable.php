@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Leads\Tables;
 
 use App\Enums\LeadStatus;
+use App\Filament\Resources\Leads\Actions\AnonymizeLeadsBulkAction;
 use App\Filament\Resources\Leads\Actions\ChangeLeadStatusAction;
 use App\Models\Lead;
 use Filament\Actions\DeleteAction;
@@ -30,7 +31,12 @@ final class LeadsTable
 
                 TextColumn::make('name')
                     ->label('Имя')
-                    ->searchable(),
+                    ->searchable()
+                    // У обезличенной заявки в колонке стоит заглушка, и без
+                    // пояснения она читается как странное имя клиента.
+                    ->description(fn (Lead $record): ?string => $record->isAnonymized()
+                        ? 'Данные клиента стёрты '.$record->anonymized_at->format('d.m.Y')
+                        : null),
 
                 TextColumn::make('phone')
                     ->label('Телефон')
@@ -100,6 +106,13 @@ final class LeadsTable
                 ViewAction::make(),
                 DeleteAction::make()
                     ->requiresConfirmation(),
+            ])
+            // Массового УДАЛЕНИЯ у заявок нет намеренно, массовое
+            // обезличивание — есть: оно выполняется раз в год над вкладкой
+            // «Срок хранения истёк» (`ListLeads::getTabs()`), и по одной
+            // заявке это не делается.
+            ->toolbarActions([
+                AnonymizeLeadsBulkAction::make(),
             ]);
     }
 }

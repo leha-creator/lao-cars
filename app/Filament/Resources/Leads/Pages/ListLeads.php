@@ -35,7 +35,7 @@ final class ListLeads extends ListRecords
      */
     public function getTabs(): array
     {
-        return [
+        $tabs = [
             'new' => Tab::make('Новые')
                 ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('status', LeadStatus::New))
                 ->badge(Lead::new()->count()),
@@ -47,5 +47,24 @@ final class ListLeads extends ListRecords
             'all' => Tab::make('Все')
                 ->badge(Lead::query()->count()),
         ];
+
+        // Отбор для ежегодного обезличивания — вкладкой, а не фильтром
+        // таблицы. Фильтр складывался бы с открытой вкладкой, а раздел
+        // открывается на «Новых»: закрытых заявок там нет, и отбор молча
+        // показывал бы пустой список тому, кто пришёл его чистить.
+        //
+        // Условие живёт в модели (`Lead::retentionExpired()`), и то же
+        // самое заново проверяет действие: вкладка показывает, что будет
+        // затронуто, но не решает этого. Видна только тому, кому доступно
+        // действие, — менеджеру она ничего не даёт. Счётчик стоит и при
+        // нуле: «0» здесь ответ на вопрос «пора ли», а не шум.
+        if (auth()->user()?->can('anonymize', Lead::class) === true) {
+            $tabs['retention_expired'] = Tab::make('Срок хранения истёк')
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query->retentionExpired())
+                ->badge(Lead::query()->retentionExpired()->count())
+                ->badgeColor('danger');
+        }
+
+        return $tabs;
     }
 }

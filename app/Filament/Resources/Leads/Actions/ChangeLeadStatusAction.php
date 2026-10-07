@@ -35,7 +35,7 @@ final class ChangeLeadStatusAction
             ->label('В работу')
             ->icon(Heroicon::OutlinedPlay)
             ->color('info')
-            ->visible(fn (Lead $record): bool => $record->status === LeadStatus::New)
+            ->visible(fn (Lead $record): bool => $record->status === LeadStatus::New && ! $record->isAnonymized())
             ->action(fn (Lead $record) => self::apply($record, LeadStatus::InProgress, 'Заявка взята в работу'));
     }
 
@@ -45,7 +45,7 @@ final class ChangeLeadStatusAction
             ->label('Закрыть')
             ->icon(Heroicon::OutlinedCheckCircle)
             ->color('success')
-            ->visible(fn (Lead $record): bool => $record->status !== LeadStatus::Closed)
+            ->visible(fn (Lead $record): bool => $record->status !== LeadStatus::Closed && ! $record->isAnonymized())
             ->action(fn (Lead $record) => self::apply($record, LeadStatus::Closed, 'Заявка закрыта'));
     }
 
@@ -55,7 +55,9 @@ final class ChangeLeadStatusAction
             ->label('Вернуть в работу')
             ->icon(Heroicon::OutlinedArrowUturnLeft)
             ->color('warning')
-            ->visible(fn (Lead $record): bool => $record->status === LeadStatus::Closed)
+            // Обезличенную заявку в работу не возвращают: связаться по ней
+            // уже не с кем, а возврат сбросил бы дату закрытия.
+            ->visible(fn (Lead $record): bool => $record->status === LeadStatus::Closed && ! $record->isAnonymized())
             ->action(fn (Lead $record) => self::apply($record, LeadStatus::InProgress, 'Заявка возвращена в работу'));
     }
 

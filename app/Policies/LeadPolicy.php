@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Models\User;
+
 /**
  * Заявки — вторая половина работы менеджера.
  *
@@ -13,4 +15,18 @@ namespace App\Policies;
  *
  * @see StaffPolicy — матрица прав живёт в базовом классе
  */
-final class LeadPolicy extends StaffPolicy {}
+final class LeadPolicy extends StaffPolicy
+{
+    /**
+     * Обезличивание заявок с истёкшим сроком хранения — только администратор.
+     *
+     * Единственное место раздела, где права ролей расходятся. Действие
+     * необратимо и выполняется раз в год по регламенту, а не в ходе
+     * ежедневной работы с заявками; менеджеру оно не нужно, и случайный
+     * клик в массовом действии стоил бы данных, которые уже не вернуть.
+     */
+    public function anonymize(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+}
