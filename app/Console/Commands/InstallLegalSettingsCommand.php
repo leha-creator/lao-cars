@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\Setting;
+use App\Support\Legal\ConsentText;
 use App\Support\Legal\LeadIntake;
 use App\Support\Legal\PrivacyPolicy;
 use Illuminate\Console\Command;
@@ -40,7 +41,7 @@ final class InstallLegalSettingsCommand extends Command
 {
     protected $signature = 'laocars:install-legal-settings';
 
-    protected $description = 'Создать недостающие настройки политики обработки персональных данных (существующие не трогает)';
+    protected $description = 'Создать недостающие настройки политики и согласия на обработку персональных данных (существующие не трогает)';
 
     public function handle(): int
     {
@@ -75,7 +76,7 @@ final class InstallLegalSettingsCommand extends Command
 
         $this->newLine();
         $this->warn('Приём заявок остаётся ВЫКЛЮЧЕННЫМ. Включите его в панели («Настройки сайта → Персональные данные») после того, как уведомление об обработке персональных данных подано в Роскомнадзор.');
-        $this->warn('До этого проверьте текст политики: реквизиты оператора помечены двойными квадратными скобками и должны быть заменены.');
+        $this->warn('До этого проверьте тексты политики и согласия в панели: на сайте действует то, что лежит в настройках, а не то, что записано в коде.');
 
         return self::SUCCESS;
     }
@@ -89,6 +90,12 @@ final class InstallLegalSettingsCommand extends Command
     {
         return [
             PrivacyPolicy::SETTING_KEY => PrivacyPolicy::defaultSetting(),
+
+            // Текст согласия — отдельный документ. На проде, где политика
+            // уже лежит в базе, эта строка — единственное, что команда
+            // создаст при повторном запуске: ключа согласия там ещё нет,
+            // а существующую политику она не тронет.
+            ConsentText::SETTING_KEY => ConsentText::defaultSetting(),
 
             // Явное `false`, хотя умолчание в коде тоже «выключено».
             // Строка в базе нужна затем, чтобы тумблер в панели имел что

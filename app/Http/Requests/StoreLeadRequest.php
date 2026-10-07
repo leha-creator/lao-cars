@@ -9,6 +9,7 @@ use App\Enums\PreferredTime;
 use App\Models\Car;
 use App\Models\Service;
 use App\Services\LeadData;
+use App\Support\Legal\ConsentText;
 use App\Support\Legal\LeadIntake;
 use App\Support\Legal\PrivacyPolicy;
 use Carbon\CarbonImmutable;
@@ -227,6 +228,13 @@ final class StoreLeadRequest extends FormRequest
             // что импортированная заявка получает согласие фактом импорта.
             consentedAt: CarbonImmutable::now(),
             consentPolicyVersion: $this->policyVersion(),
+            // Редакция текста СОГЛАСИЯ — отдельно от редакции политики:
+            // это два документа со своей нумерацией, и одна колонка на оба
+            // хранила бы «1.0», про которую нельзя сказать, чья она.
+            // Пустое значение заявку не отклоняет по той же причине, что
+            // и у политики (см. `policyVersion()`), и сторож стоит там же —
+            // на сохранении настроек.
+            consentTextVersion: ConsentText::currentVersion(),
         );
     }
 

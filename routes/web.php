@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\ConsentController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HelpScreenshotController;
 use App\Http\Controllers\HomeController;
@@ -47,6 +48,17 @@ Route::get('/about', [AboutController::class, 'index'])->name('about.index');
  * все три, и первые два — на каждой странице сайта.
  */
 Route::get('/privacy', PrivacyController::class)->name('privacy.index');
+
+/*
+ * Согласие на обработку персональных данных — отдельный документ,
+ * а не раздел политики: закон требует оформлять согласие отдельно от
+ * иных документов, которые подтверждает субъект (ч. 1 ст. 9 152-ФЗ).
+ *
+ * Имя роута `consent.index` зашито в подписи чекбокса формы заявки,
+ * в нижней строке подвала и в подсказке на вкладке настроек —
+ * те же три места, что у `privacy.index`, и с тем же следствием.
+ */
+Route::get('/consent', ConsentController::class)->name('consent.index');
 
 // Приём заявок со всех форм сайта (веха 3.7). Лимитер `leads` объявлен
 // в `AppServiceProvider::configureRateLimiting()`.

@@ -10,6 +10,7 @@ use App\Filament\Forms\Components\MediaPicker;
 use App\Filament\NavigationGroup;
 use App\Models\Setting;
 use App\Services\PartsHeroContent;
+use App\Support\Legal\ConsentText;
 use App\Support\Legal\LeadIntake;
 use App\Support\Legal\PrivacyPolicy;
 use App\Support\MapEmbed;
@@ -199,6 +200,12 @@ final class ManageSiteSettings extends Page
             // вместо одного. Прецедент формы значения — `home.promo`.
             'legal.privacy',
 
+            // Согласие на обработку персональных данных — второй документ
+            // той же формы. Отдельным ключом, а не полем внутри политики:
+            // закон требует оформлять согласие отдельно, и редакции у них
+            // свои — правка политики не означает нового текста согласия.
+            'legal.consent',
+
             // Приём заявок — ОТДЕЛЬНЫЙ ключ, а не поле внутри `legal.privacy`.
             // Это не часть документа: текст политики и приём заявок
             // включаются по разным причинам и в разное время. Скаляр,
@@ -272,6 +279,7 @@ final class ManageSiteSettings extends Page
         // молча перестали бы срабатывать.
         $legalBefore = [
             PrivacyPolicy::SETTING_KEY => Setting::get(PrivacyPolicy::SETTING_KEY),
+            ConsentText::SETTING_KEY => Setting::get(ConsentText::SETTING_KEY),
             LeadIntake::SETTING_KEY => Setting::get(LeadIntake::SETTING_KEY),
         ];
 
@@ -322,33 +330,47 @@ final class ManageSiteSettings extends Page
      */
     private static function logLegalChanges(array $state, array $before): void
     {
-        $bodyBefore = data_get($before[PrivacyPolicy::SETTING_KEY], 'body');
-        $bodyAfter = data_get($state, PrivacyPolicy::SETTING_KEY.'.body');
+        // Документов два, и сторожа у них одни и те же: правка текста без
+        // новой редакции и очищенная редакция одинаково портят
+        // доказательство согласия, под каким бы из двух текстов оно ни
+        // стояло. Префикс записи называет документ — по нему её и ищут.
+        $documents = [
+            PrivacyPolicy::SETTING_KEY => 'Политика',
+            ConsentText::SETTING_KEY => 'Согласие',
+        ];
 
-        $versionBefore = data_get($before[PrivacyPolicy::SETTING_KEY], 'version');
-        $versionAfter = data_get($state, PrivacyPolicy::SETTING_KEY.'.version');
+        foreach ($documents as $key => $label) {
+            $bodyBefore = data_get($before[$key] ?? null, 'body');
+            $bodyAfter = data_get($state, $key.'.body');
 
-        // Текст правили, а редакцию не подняли. Поймать это можно только
-        // здесь: дальше согласия новых заявок начнут ссылаться на номер
-        // редакции, под которым лежит уже другой текст, — и разойдётся это
-        // молча, а обнаружится в тот момент, когда согласие потребуют
-        // предъявить.
-        if ($bodyBefore !== $bodyAfter && $versionBefore === $versionAfter) {
-            Log::warning('[Политика] текст изменён, версия не поднята', [
-                'actor_id' => auth()->id(),
-                'version' => $versionAfter,
-            ]);
-        }
+            $versionBefore = data_get($before[$key] ?? null, 'version');
+            $versionAfter = data_get($state, $key.'.version');
 
-        // Редакцию очистили. Каждое следующее согласие запишется без неё,
-        // то есть перестанет отвечать на вопрос «с каким текстом согласился
-        // клиент». Сторож стоит ЗДЕСЬ, а не на приёме заявки: это состояние
-        // настроек, и запись на каждую заявку дала бы поток одинаковых
-        // предупреждений, который перестают читать через час.
-        if (($versionAfter === null || $versionAfter === '') && $bodyAfter !== null && $bodyAfter !== '') {
-            Log::warning('[Политика] редакция документа пуста — согласия будут записываться без неё', [
-                'actor_id' => auth()->id(),
-            ]);
+            // Текст правили, а редакцию не подняли. Поймать это можно только
+            // здесь: дальше согласия новых заявок начнут ссылаться на номер
+            // редакции, под которым лежит уже другой текст, — и разойдётся
+            // это молча, а обнаружится в тот момент, когда согласие
+            // потребуют предъявить.
+            if ($bodyBefore !== $bodyAfter && $versionBefore === $versionAfter) {
+                Log::warning("[{$label}] текст изменён, версия не поднята", [
+                    'actor_id' => auth()->id(),
+                    'setting' => $key,
+                    'version' => $versionAfter,
+                ]);
+            }
+
+            // Редакцию очистили. Каждое следующее согласие запишется без
+            // неё, то есть перестанет отвечать на вопрос «с каким текстом
+            // согласился клиент». Сторож стоит ЗДЕСЬ, а не на приёме заявки:
+            // это состояние настроек, и запись на каждую заявку дала бы
+            // поток одинаковых предупреждений, который перестают читать
+            // через час.
+            if (($versionAfter === null || $versionAfter === '') && $bodyAfter !== null && $bodyAfter !== '') {
+                Log::warning("[{$label}] редакция документа пуста — согласия будут записываться без неё", [
+                    'actor_id' => auth()->id(),
+                    'setting' => $key,
+                ]);
+            }
         }
 
         $intakeBefore = $before[LeadIntake::SETTING_KEY] ?? null;
@@ -1159,7 +1181,6 @@ final class ManageSiteSettings extends Page
 
             RichEditor::make(PrivacyPolicy::SETTING_KEY.'.body')
                 ->label('Текст политики')
-                ->helperText('Незаполненные реквизиты помечены двойными квадратными скобками — их обязан подставить оператор.')
                 // Набор инструментов задан явно, и это не косметика:
                 // содержимое поля печатается на публичной странице через
                 // `{!! !!}`, то есть в HTML без экранирования Blade. Чем
@@ -1200,6 +1221,53 @@ final class ManageSiteSettings extends Page
             Placeholder::make('legal.privacy.preview')
                 ->label('Страница на сайте')
                 ->content(fn (): string => route('privacy.index')),
+
+            self::consentSection(),
         ]);
+    }
+
+    /**
+     * Текст согласия на обработку персональных данных.
+     *
+     * Отдельная секция той же вкладки, а не поля вперемешку с политикой:
+     * это второй документ со своей редакцией, и поднимать её нужно при
+     * правке ЭТОГО текста, а не соседнего. Набор инструментов редактора
+     * и отсутствие `->json()` — те же и по тем же причинам, что у политики
+     * выше: текст печатается на публичной странице без экранирования Blade.
+     */
+    private static function consentSection(): Section
+    {
+        return Section::make('Согласие на обработку персональных данных')
+            ->description('Отдельный документ: на него ведёт подпись чекбокса в каждой форме заявки. Закон требует оформлять согласие отдельно от политики, поэтому тексты и редакции у них разные.')
+            ->schema([
+                RichEditor::make(ConsentText::SETTING_KEY.'.body')
+                    ->label('Текст согласия')
+                    ->toolbarButtons([
+                        ['bold', 'italic', 'link'],
+                        ['h2', 'h3'],
+                        ['blockquote', 'bulletList', 'orderedList'],
+                        ['undo', 'redo'],
+                    ])
+                    ->columnSpanFull(),
+
+                Grid::make(2)->schema([
+                    // 16 символов — длина колонки `leads.consent_text_version`:
+                    // значение копируется туда при каждой заявке, и поле
+                    // мягче колонки означало бы потерянный лид.
+                    TextInput::make(ConsentText::SETTING_KEY.'.version')
+                        ->label('Версия документа')
+                        ->maxLength(16)
+                        ->helperText('Записывается в каждую заявку. Поднимайте её при смысловой правке текста согласия.'),
+
+                    TextInput::make(ConsentText::SETTING_KEY.'.effective_on')
+                        ->label('Действует с')
+                        ->maxLength(32)
+                        ->helperText('Как показывать на странице — например, 26.08.2026.'),
+                ]),
+
+                Placeholder::make('legal.consent.preview')
+                    ->label('Страница на сайте')
+                    ->content(fn (): string => route('consent.index')),
+            ]);
     }
 }

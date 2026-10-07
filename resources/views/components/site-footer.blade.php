@@ -117,9 +117,18 @@
                  Пункта нет в `SiteMenu::FOOTER` и быть не должно: он живёт
                  в нижней строке рядом с копирайтом, а не в колонке
                  «Навигация». Разбор — в докблоке самой константы. --}}
-            <a href="{{ route('privacy.index') }}" class="transition-colors hover:text-accent">
-                Политика обработки персональных данных
-            </a>
+            {{-- Согласие стоит рядом с политикой отдельной ссылкой: это
+                 отдельный документ, и найти его текст посетитель должен
+                 без формы заявки перед глазами. --}}
+            <div class="flex flex-col gap-2 sm:flex-row sm:gap-6">
+                <a href="{{ route('consent.index') }}" class="transition-colors hover:text-accent">
+                    Согласие на обработку персональных данных
+                </a>
+
+                <a href="{{ route('privacy.index') }}" class="transition-colors hover:text-accent">
+                    Политика обработки персональных данных
+                </a>
+            </div>
         </div>
     </div>
 </footer>

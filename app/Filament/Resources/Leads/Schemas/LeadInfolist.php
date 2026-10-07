@@ -59,6 +59,10 @@ final class LeadInfolist
                         ->dateTime('d.m.Y H:i')
                         ->placeholder('не зафиксировано'),
 
+                    TextEntry::make('consent_text_version')
+                        ->label('Редакция согласия')
+                        ->placeholder('не зафиксирована'),
+
                     TextEntry::make('consent_policy_version')
                         ->label('Редакция политики')
                         ->placeholder('не зафиксирована'),

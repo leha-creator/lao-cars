@@ -35,6 +35,8 @@ final readonly class LeadData
      *                                         не давалось (консоль, импорт)
      * @param  ?string  $consentPolicyVersion  редакция политики, действовавшая
      *                                         в момент согласия
+     * @param  ?string  $consentTextVersion  редакция текста согласия, под которым
+     *                                       поставлена отметка
      */
     public function __construct(
         public string $name,
@@ -51,6 +53,7 @@ final readonly class LeadData
         public ?string $pageUrl = null,
         public ?CarbonImmutable $consentedAt = null,
         public ?string $consentPolicyVersion = null,
+        public ?string $consentTextVersion = null,
     ) {}
 
     /**
@@ -81,6 +84,7 @@ final readonly class LeadData
             'page_url' => $this->pageUrl,
             'consented_at' => $this->consentedAt,
             'consent_policy_version' => $this->consentPolicyVersion,
+            'consent_text_version' => $this->consentTextVersion,
         ];
     }
 }

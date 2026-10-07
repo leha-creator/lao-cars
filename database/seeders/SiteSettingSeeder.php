@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Models\Setting;
+use App\Support\Legal\ConsentText;
 use App\Support\Legal\PrivacyPolicy;
 use App\Support\WorkSchedule;
 use Illuminate\Database\Seeder;
@@ -352,6 +353,11 @@ class SiteSettingSeeder extends Seeder
             // занимает несколько килобайт разметки и похоронил бы остальные
             // сорок ключей этого файла. Прецедент — `contacts.schedule`.
             'legal.privacy' => PrivacyPolicy::defaultSetting(),
+
+            // Согласие на обработку персональных данных — отдельный
+            // документ со своей редакцией: закон требует оформлять его
+            // отдельно от политики. Устроен так же и по той же причине.
+            'legal.consent' => ConsentText::defaultSetting(),
 
             // Приём заявок ВЫКЛЮЧЕН по умолчанию, и это не заглушка.
             // Уведомление об обработке персональных данных подаётся
