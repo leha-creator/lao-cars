@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\Weekday;
 use App\Models\Setting;
+use App\Support\CompanyRequisites;
 use App\Support\MapEmbed;
 use App\Support\PhoneLink;
 use App\Support\SocialLinks;
@@ -55,6 +56,7 @@ final class ContactsPageContent
      *     phone: ?string,
      *     phoneHref: ?string,
      *     email: ?string,
+     *     requisites: ?string,
      *     scheduleSummary: ?string,
      *     scheduleNote: ?string,
      *     scheduleDays: list<array{day: Weekday, label: string, hours: ?string}>,
@@ -95,6 +97,9 @@ final class ContactsPageContent
             'phone' => $phone,
             'phoneHref' => PhoneLink::href($phone),
             'email' => $this->string($contacts['contacts.email'] ?? null),
+            // Та же строка, что в подвале: собирает её один класс из одной
+            // настройки, и разойтись два места не могут.
+            'requisites' => CompanyRequisites::line(Setting::get(CompanyRequisites::SETTING_KEY)),
             // Собранная строка расписания — та же, что в подвале. Считается
             // ЗДЕСЬ, а не в шаблоне, по двум причинам сразу: Blade не место
             // для вызова, который пишет в лог (`label()` предупреждает

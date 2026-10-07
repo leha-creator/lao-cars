@@ -90,6 +90,11 @@
                         <x-services.card :service="$item" :price-fallback="false" />
                     @endforeach
                 </div>
+
+                {{-- У позиций стоят цены, значит и оговорка «не оферта»
+                     обязана стоять рядом с ними, а не только на странице
+                     автосервиса. --}}
+                <x-price-disclaimer :text="$priceDisclaimer" class="mt-8" />
             </div>
         </section>
     @endif

@@ -499,17 +499,9 @@
 
                     {{-- Оговорка о ценах. Текст юридически значимый и живёт
                          в настройках; пустое значение убирает блок ЦЕЛИКОМ —
-                         вместе с плашкой, потому что плашка без пояснения
-                         ничего не сообщает. --}}
-                    @if ($disclaimer !== null)
-                        <div class="flex flex-wrap items-center gap-4 rounded-card border border-accent/25 bg-accent-solid/6 px-6.5 py-5.5">
-                            <span class="inline-block shrink-0 rounded-full border border-accent/40 px-2.5 py-1 text-[11px] tracking-[0.08em] text-accent uppercase">
-                                Не публичная оферта
-                            </span>
-
-                            <p class="min-w-64 flex-1 text-sm leading-[1.65] text-ink-muted">{{ $disclaimer }}</p>
-                        </div>
-                    @endif
+                         условие стоит внутри компонента, общего с запчастями
+                         и карточкой автомобиля. --}}
+                    <x-price-disclaimer :text="$disclaimer" />
                 </div>
             </div>
         @endif

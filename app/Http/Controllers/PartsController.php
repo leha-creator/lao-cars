@@ -124,6 +124,11 @@ final class PartsController extends Controller
             // и склейка ему не нужна.
             'intro' => Typography::tie(self::text(Setting::get('parts_page.intro_text'))),
             'deliveryTerms' => Setting::get('parts_page.delivery_terms'),
+            // Оговорка о ценах — тот же ключ, что у прайса автосервиса:
+            // запчасти — категория `Service`, вкладка настроек у них общая,
+            // и вторая оговорка с тем же смыслом означала бы два текста,
+            // которые разойдутся. Пустое значение блок не рендерит.
+            'priceDisclaimer' => Typography::tie(self::text(Setting::get('services_page.price_disclaimer'))),
             // Именно `items`, а не `categories`: до вехи 4.13 позиции
             // страницы и были единственной категорией, теперь категория —
             // отдельная сущность, и старое имя переменной стало ложью.

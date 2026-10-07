@@ -188,6 +188,22 @@ final class ManageSiteSettings extends Page
             'seo.default_title',
             'seo.default_description',
         ],
+        // Реквизиты юридического лица — СВОЯ группа, хотя поля стоят на
+        // вкладке «Контакты». Причина та же, что у `contacts_page`: группа
+        // задаёт колонку `settings.group`, а `Setting::group('contacts')`
+        // подвал и шапка читают целиком. Один ключ с объектом внутри —
+        // реестр сверяется с сидом по ключу, а не по полю.
+        'company' => [
+            'company.requisites',
+        ],
+        // Оговорка о цене автомобиля. Отдельно от `services_page.price_disclaimer`:
+        // у прайса цена зависит от объёма работ, у автомобиля — от курса,
+        // доставки и таможенных платежей, и один текст на оба случая был бы
+        // неверен в одном из них. Поле стоит на вкладке «Автосервис
+        // и запчасти» рядом с первой оговоркой — своей вкладки у каталога нет.
+        'catalog' => [
+            'catalog.price_disclaimer',
+        ],
         // Юридический блок (веха 4.17). Группа своя, а не дописанная
         // в `pages`: колонка `settings.group` — это часть ключа до точки,
         // и по ней `Setting::group()` собирает данные для публичной части.
@@ -500,8 +516,39 @@ final class ManageSiteSettings extends Page
 
             self::scheduleSection(),
             self::mapSection(),
+            self::requisitesSection(),
             self::contactsPageTextsSection(),
         ]);
+    }
+
+    /**
+     * Реквизиты юридического лица.
+     *
+     * На сайте работает бренд, а продавец и исполнитель — юридическое лицо,
+     * и назвать его обязывает закон о защите прав потребителей. Строку
+     * собирает `App\Support\CompanyRequisites` — одну на подвал и страницу
+     * контактов.
+     */
+    private static function requisitesSection(): Section
+    {
+        return Section::make('Реквизиты')
+            ->description('Показываются в подвале каждой страницы и на странице контактов. Незаполненная часть не выводится; пусто всё — строки нет.')
+            ->schema([
+                TextInput::make('company.requisites.legal_name')
+                    ->label('Наименование юридического лица')
+                    ->maxLength(120)
+                    ->helperText('Как в учредительных документах — например, ООО «ЛаоКарс».'),
+
+                Grid::make(2)->schema([
+                    TextInput::make('company.requisites.inn')
+                        ->label('ИНН')
+                        ->maxLength(12),
+
+                    TextInput::make('company.requisites.ogrn')
+                        ->label('ОГРН')
+                        ->maxLength(15),
+                ]),
+            ]);
     }
 
     /**
@@ -965,8 +1012,13 @@ final class ManageSiteSettings extends Page
             // означает два места правки одного и того же.
 
             Textarea::make('services_page.price_disclaimer')
-                ->label('Автосервис: оговорка о ценах')
-                ->helperText('Выводится под прайсом вместе с плашкой «Не публичная оферта». Пустое значение убирает блок целиком.')
+                ->label('Автосервис и запчасти: оговорка о ценах')
+                ->helperText('Выводится под прайсом автосервиса и под позициями запчастей вместе с плашкой «Не публичная оферта». Пустое значение убирает блок целиком.')
+                ->rows(3),
+
+            Textarea::make('catalog.price_disclaimer')
+                ->label('Автомобили: оговорка о цене')
+                ->helperText('Выводится в карточке автомобиля под ценой с той же плашкой. У автомобилей с «Ценой по запросу» не показывается. Пустое значение убирает блок целиком.')
                 ->rows(3),
 
             // Формат намеренно повторяет `home.advantages`: у него уже есть

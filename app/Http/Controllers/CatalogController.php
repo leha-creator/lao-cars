@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CatalogFilterRequest;
 use App\Models\Car;
 use App\Models\CarPhoto;
+use App\Models\Setting;
 use App\Services\CarStructuredData;
 use App\Services\CatalogFilter;
 use App\Services\CatalogFilterOptions;
@@ -80,6 +81,10 @@ final class CatalogController extends Controller
             // schema.org в разметке — это словари, которые никто
             // не найдёт при следующей переверстке.
             'structuredData' => $structuredData->for($car),
+            // Оговорка «не публичная оферта» под ценой. Только у автомобиля
+            // с ценой: под «Ценой по запросу» она ничего не сообщает.
+            // Настройку читает контроллер — Blade в базу не ходит.
+            'priceDisclaimer' => $car->hasPrice() ? self::text(Setting::get('catalog.price_disclaimer')) : null,
             // Список для окна просмотра (веха 4.14). Собирается здесь,
             // а не в шаблоне: `photoLightbox` — не разметка, а данные,
             // и ширина ему нужна не для показа, а чтобы решить, есть ли
@@ -108,5 +113,17 @@ final class CatalogController extends Controller
         return $cars->currentPage() > 1
             ? route('catalog.index', ['page' => $cars->currentPage()])
             : route('catalog.index');
+    }
+
+    /**
+     * Настройка со свободным текстом строкой — или `null`.
+     *
+     * Проверка пустоты строгая, а не `empty()` — правило `RULES.md`.
+     */
+    private static function text(mixed $value): ?string
+    {
+        $text = is_scalar($value) ? trim((string) $value) : '';
+
+        return $text === '' ? null : $text;
     }
 }

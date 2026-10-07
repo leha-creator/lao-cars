@@ -219,7 +219,7 @@
 
 ### Фаза 5 — Реквизиты и оговорки о ценах
 
-- [ ] **Задача 10: реквизиты юрлица в подвале и на контактах**
+- [x] **Задача 10: реквизиты юрлица в подвале и на контактах**
 
   Настройка-объект `company.requisites` с полями `legal_name`, `inn`, `ogrn`; поля — на вкладке контактов в `ManageSiteSettings`, ключ — в `KEYS` и сиде (значения — приложение В). `SiteFooter` выводит строку «ООО «ЛаоКарс» · ИНН … · ОГРН …» в нижнем ряду рядом с копирайтом; `ContactsPageContent` отдаёт те же значения карточке на `/contacts`. Каждая часть пропадает отдельно, пустой объект убирает строку целиком. Цвет — токены, литералов нет (`PaletteGuardTest`).
 
@@ -227,7 +227,7 @@
 
   Файлы: `app/Filament/Pages/ManageSiteSettings.php`, `database/seeders/SiteSettingSeeder.php`, `app/View/Components/SiteFooter.php`, `resources/views/components/site-footer.blade.php`, `app/Services/ContactsPageContent.php`, `resources/views/contacts/index.blade.php`.
 
-- [ ] **Задача 11: оговорка о ценах на `/parts` и в карточке автомобиля**
+- [x] **Задача 11: оговорка о ценах на `/parts` и в карточке автомобиля**
 
   Плашку «Не публичная оферта» с текстом вынести из `services/index.blade.php` и `home/index.blade.php` в компонент `resources/views/components/price-disclaimer.blade.php` и подключить в четырёх местах. На `/parts` текст — существующий `services_page.price_disclaimer` (читает `PartsController`). В карточке автомобиля — новый ключ `catalog.price_disclaimer` (поле на вкладке каталога, ключ в `KEYS` и сиде), выводится под ценой и только когда у автомобиля есть цена: под «Цена по запросу» оговорка ничего не сообщает. Пустой текст убирает блок целиком. Тексты в сид — из приложения В.
 

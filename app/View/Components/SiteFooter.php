@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\View\Components;
 
 use App\Models\Setting;
+use App\Support\CompanyRequisites;
 use App\Support\PhoneLink;
 use App\Support\SiteMenu;
 use App\Support\SocialLinks;
@@ -81,6 +82,17 @@ final class SiteFooter extends Component
     public function schedule(): WorkSchedule
     {
         return WorkSchedule::fromSetting($this->contacts['contacts.schedule'] ?? null);
+    }
+
+    /**
+     * Строка реквизитов юридического лица или `null`.
+     *
+     * Читается из закешированных настроек — той же выборки, что контакты
+     * выше, то есть запросов подвалу не добавляет.
+     */
+    public function requisites(): ?string
+    {
+        return CompanyRequisites::line(Setting::get(CompanyRequisites::SETTING_KEY));
     }
 
     public function guaranteeValue(string $key): ?string
