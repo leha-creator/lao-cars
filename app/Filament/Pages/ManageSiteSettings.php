@@ -9,9 +9,11 @@ use App\Filament\Actions\HelpAction;
 use App\Filament\Forms\Components\MediaPicker;
 use App\Filament\NavigationGroup;
 use App\Models\Setting;
+use App\Services\PartsHeroContent;
 use App\Support\Legal\LeadIntake;
 use App\Support\Legal\PrivacyPolicy;
 use App\Support\MapEmbed;
+use App\Support\OutboundLink;
 use App\Support\WorkSchedule;
 use BackedEnum;
 use Closure;
@@ -144,6 +146,14 @@ final class ManageSiteSettings extends Page
             'parts_page.intro_title',
             'parts_page.intro_text',
             'parts_page.delivery_terms',
+            // Первый экран страницы запчастей — ОДИН ключ с объектом
+            // внутри (заголовок, описание, кнопка, фон, показ на главной),
+            // а не шесть ключей: реестр сверяется с сидом по ключу целиком.
+            // Переключатель показа на главной лежит внутри объекта, а не
+            // отдельным ключом, как `legal.forms_enabled`: там тумблер
+            // не был частью документа, здесь он свойство самого блока.
+            // Путь к фону перечислен в `MediaSettingKeys`.
+            'parts_page.hero',
         ],
         // Страница «О компании» (веха 4.5) получает СВОЮ вкладку, а не
         // дописывается в `pages`. Та называется «Автосервис и запчасти»,
@@ -961,17 +971,90 @@ final class ManageSiteSettings extends Page
                 ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
                 ->defaultItems(0),
 
+            self::partsHeroSection(),
+
+            // Подсказки у двух полей ниже — не вежливость. Пока у первого
+            // экрана есть заголовок, эти тексты на сайте не видны, и без
+            // подсказки администратор правит поле, смотрит на сайт
+            // и решает, что сломалось сохранение.
             TextInput::make('parts_page.intro_title')
-                ->label('Запчасти: заголовок'),
+                ->label('Запчасти: заголовок')
+                ->helperText('Показывается, только когда первый экран выше не заполнен.'),
 
             Textarea::make('parts_page.intro_text')
                 ->label('Запчасти: вступление')
+                ->helperText('Показывается, только когда первый экран выше не заполнен.')
                 ->rows(3),
 
             Textarea::make('parts_page.delivery_terms')
                 ->label('Запчасти: условия поставки')
                 ->rows(2),
         ]);
+    }
+
+    /**
+     * Первый экран страницы запчастей и его показ на главной.
+     *
+     * Стоит ПЕРЕД полями «Запчасти: заголовок / вступление»: порядок формы
+     * повторяет порядок страницы, а эти два поля при заполненном блоке
+     * становятся запасными.
+     *
+     * Блок общий для двух страниц и правится здесь, а не на вкладке
+     * «Главная»: это блок страницы запчастей, который главная только
+     * показывает. Поля в двух местах означали бы два места правки одного
+     * и того же.
+     */
+    private static function partsHeroSection(): Section
+    {
+        $key = PartsHeroContent::SETTING_KEY;
+
+        return Section::make('Запчасти: первый экран')
+            ->description('Блок с фотографией вверху страницы запчастей. Ведёт в каталог автозапчастей на другом сайте.')
+            ->schema([
+                TextInput::make($key.'.title')
+                    ->label('Заголовок')
+                    ->helperText('Без заголовка блок не показывается — страница остаётся с обычным заголовком ниже.'),
+
+                Textarea::make($key.'.text')
+                    ->label('Описание')
+                    ->rows(3),
+
+                TextInput::make($key.'.button_text')
+                    ->label('Текст кнопки'),
+
+                TextInput::make($key.'.button_url')
+                    ->label('Ссылка кнопки')
+                    ->helperText('Полный адрес каталога, начинается с https://. Без текста или ссылки кнопка не показывается.')
+                    // Проверка тем же методом, что и на выводе
+                    // (`OutboundLink::isAllowed()`), а не своим похожим
+                    // условием и не штатным `->url()`: два правила про одно
+                    // и то же разошлись бы в сторону «форма приняла,
+                    // страница отклонила», то есть в молчаливо пропавшую
+                    // кнопку.
+                    ->rule(static fn (): Closure => static function (string $attribute, mixed $value, Closure $fail): void {
+                        // Пустое значение — рабочий сценарий «кнопки нет»:
+                        // строго, а не через `empty()` (правило `RULES.md`).
+                        if ($value === null || $value === '') {
+                            return;
+                        }
+
+                        if (! OutboundLink::isAllowed(is_string($value) ? trim($value) : null)) {
+                            $fail('Нужен полный адрес сайта, начинающийся с https://.');
+                        }
+                    }),
+
+                // Пикер без связи, как у промо-блока. Путь этого поля
+                // перечислен в `MediaSettingKeys` — оттуда его читает
+                // проверка «файл где-то используется» перед удалением
+                // из медиабиблиотеки.
+                MediaPicker::make($key.'.image_id')
+                    ->label('Фон')
+                    ->helperText('Широкий горизонтальный снимок. Текст лежит поверх кадра слева внизу. Без фона блок рисуется на тёмной заливке.'),
+
+                Toggle::make($key.'.show_on_home')
+                    ->label('Показывать на главной')
+                    ->helperText('Тот же блок появится на главной странице после блока «Всё для автомобиля в одном месте».'),
+            ]);
     }
 
     /**

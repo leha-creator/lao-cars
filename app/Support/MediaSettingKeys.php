@@ -58,6 +58,11 @@ final class MediaSettingKeys
             'path' => 'image_id',
             'label' => 'Настройки: фотография шоу-рума на главной',
         ],
+        [
+            'setting' => 'parts_page.hero',
+            'path' => 'image_id',
+            'label' => 'Настройки: первый экран страницы запчастей',
+        ],
     ];
 
     /**
