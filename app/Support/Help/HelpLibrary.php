@@ -269,16 +269,19 @@ final class HelpLibrary
                 summary: 'Бегущая строка, промо-баннер, преимущества, этапы покупки, состав цены и вопросы.',
                 section: HelpSection::Settings,
                 gate: ManageSiteSettings::class,
-                related: ['media-library', 'seo-defaults', 'about-page-texts'],
+                // `service-pages-texts` — из-за блока каталога автозапчастей:
+                // показывается он на главной, а правится на вкладке
+                // «Автосервис и запчасти», и искать его придут сюда.
+                related: ['media-library', 'seo-defaults', 'about-page-texts', 'service-pages-texts'],
             ),
 
             new HelpArticle(
                 slug: 'service-pages-texts',
                 title: 'Тексты автосервиса и запчастей',
-                summary: 'Вступления, оговорка о ценах, условия поставки и блок «почему сюда».',
+                summary: 'Вступления, оговорка о ценах, блок «почему сюда», первый экран запчастей и условия поставки.',
                 section: HelpSection::Settings,
                 gate: ManageSiteSettings::class,
-                related: ['price-list', 'service-categories'],
+                related: ['price-list', 'service-categories', 'home-blocks', 'media-library'],
             ),
 
             // Веха 4.16. Справочник вехи 4.13 разбирался внутри статьи
