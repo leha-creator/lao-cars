@@ -146,7 +146,7 @@
 
 ### Фаза 2 — Уведомления без данных клиента
 
-- [ ] **Задача 5: текст уведомления в Telegram**
+- [x] **Задача 5: текст уведомления в Telegram**
 
   `TelegramNotifier::format()` оставляет четыре строки: «Новая заявка № N», источник (`sourceLabel()`), признак «Подбор запчасти» без марки, модели и VIN, ссылка на карточку в панели. Имя, телефон, e-mail, комментарий, способ связи, удобное время и адрес страницы из сообщения уходят. `e()` на источнике остаётся: название услуги пишет администратор, а `parse_mode` по-прежнему HTML.
 
@@ -156,7 +156,7 @@
 
   Файлы: `app/Services/TelegramNotifier.php`, `app/Notifications/NewLeadNotification.php`, `app/Jobs/NotifyManagerAboutLead.php` (докблок), существующие проверки текста в `tests/Feature/Jobs/NotifyManagerAboutLeadTest.php`.
 
-- [ ] **Задача 6: push без имени клиента**
+- [x] **Задача 6: push без имени клиента**
 
   `NewLeadNotification::toWebPush()` — тело только из `sourceLabel()`. Колокольчик панели (`toDatabase()`) не меняется: он за авторизацией и на сервере оператора.
 

@@ -2,6 +2,7 @@
 
 use App\Jobs\NotifyManagerAboutLead;
 use App\Models\Lead;
+use App\Models\Service;
 use App\Services\TelegramNotifier;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -148,28 +149,37 @@ it('skips the notification with a warning when telegram is not configured', func
     Http::assertNothingSent();
 });
 
-it('escapes angle brackets coming from the client', function () {
+it('sends the lead number and source without any client data', function () {
     config(['services.telegram.token' => 'token', 'services.telegram.chat_id' => '1']);
     Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
 
-    $lead = Lead::factory()->general()->create([
-        'name' => 'Иван <b>жирный</b>',
+    $lead = Lead::factory()->forService(Service::factory()->create(['title' => 'Замена масла <b>срочно</b>']))->create([
+        'name' => 'Иван Петров',
+        'phone' => '+7 999 123-45-67',
+        'email' => 'ivan@example.com',
         'message' => 'Сравните a < b > c',
+        'part_vin' => 'XTA21099912345678',
     ]);
 
     app(TelegramNotifier::class)->send($lead, CHAT_ID);
 
-    // При `parse_mode: HTML` пропущенный `e()` даёт 400 от Telegram,
-    // пять ретраев и запись в failed_jobs — по вине формата сообщения,
-    // а не сети. Ошибка не воспроизводится на нормальных данных и ждёт
-    // первого клиента с `<` в имени.
-    Http::assertSent(function (Request $request): bool {
+    // До правки сообщение несло имя, телефон, почту, комментарий и VIN.
+    // Сервис иностранный, и уничтожить сообщение оттуда оператор не может,
+    // поэтому теперь в нём только номер заявки, её предмет и ссылка в панель.
+    //
+    // `e()` при этом остался на источнике: название услуги пишет
+    // администратор, а при `parse_mode: HTML` пропущенное экранирование
+    // даёт 400 от Telegram и пять ретраев по вине формата, а не сети.
+    Http::assertSent(function (Request $request) use ($lead): bool {
         $text = (string) $request['text'];
 
-        return str_contains($text, 'Иван &lt;b&gt;жирный&lt;/b&gt;')
-            && str_contains($text, 'a &lt; b &gt; c')
-            // Собственная разметка сообщения при этом цела.
-            && str_contains($text, '<b>Новая заявка</b>');
+        return str_contains($text, '<b>Новая заявка № '.$lead->id.'</b>')
+            && str_contains($text, 'Услуга: Замена масла &lt;b&gt;срочно&lt;/b&gt;')
+            && ! str_contains($text, 'Иван')
+            && ! str_contains($text, '999 123')
+            && ! str_contains($text, 'ivan@example.com')
+            && ! str_contains($text, 'Сравните')
+            && ! str_contains($text, 'XTA21099912345678');
     });
 });
 
