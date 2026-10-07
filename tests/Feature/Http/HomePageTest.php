@@ -493,6 +493,20 @@ it('makes the header transparent on the home page only', function () {
         ->assertSee('sticky top-0');
 });
 
+it('keeps backdrop blur off the header element itself', function () {
+    // `backdrop-filter` на `<header>` делает его containing block для
+    // `fixed`-панели мобильного меню: она сжимается до высоты шапки,
+    // и пункты меню ложатся поверх страницы без подложки. Размытие
+    // обязано жить на отдельном слое внутри шапки.
+    $html = $this->get('/catalog')->assertOk()->getContent();
+
+    preg_match('/<header\b[^>]*>/', $html, $header);
+
+    expect($header)->not->toBeEmpty()
+        ->and($header[0])->not->toContain('backdrop-blur')
+        ->and($html)->toContain('backdrop-blur-[14px]');
+});
+
 it('takes the page title and description from site settings', function () {
     Setting::set('seo.default_title', 'Проверочный заголовок сайта');
     Setting::set('seo.default_description', 'Проверочное описание сайта.');

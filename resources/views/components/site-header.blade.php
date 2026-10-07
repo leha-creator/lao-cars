@@ -17,10 +17,22 @@
         // Поверх хиро (веха 4.2): без липкости, фон — градиент, чтобы
         // фотография под шапкой оставалась видимой.
         'relative bg-gradient-to-b from-page/92 to-page/0' => $overlay,
-        // Внутренние страницы: липкая, полупрозрачная с размытием.
-        'sticky top-0 border-b border-line bg-page/90 backdrop-blur-[14px]' => ! $overlay,
+        // Внутренние страницы: липкая; полупрозрачный фон с размытием —
+        // отдельным слоем ниже.
+        'sticky top-0 border-b border-line' => ! $overlay,
     ])
 >
+    {{-- Размытие живёт на собственном слое, а не на `<header>`:
+         `backdrop-filter` делает элемент containing block для потомков
+         с `position: fixed`, и панель мобильного меню (`fixed inset-0`)
+         сжималась до высоты шапки — пункты меню вываливались из неё
+         поверх страницы без подложки. На главной этого не было видно:
+         у шапки поверх хиро размытия нет. По той же причине на сам
+         `<header>` нельзя вешать `filter`, `transform` и `contain`. --}}
+    @unless ($overlay)
+        <div class="absolute inset-0 -z-10 bg-page/90 backdrop-blur-[14px]" aria-hidden="true"></div>
+    @endunless
+
     <div class="mx-auto flex max-w-page items-center justify-between gap-6 px-5 py-3 lg:px-8 lg:py-4">
         <a href="{{ route('home') }}" class="flex shrink-0 items-center" aria-label="ЛАО КАРС — на главную">
             {{-- Размеры проставлены явно: без них шапка меняет высоту
