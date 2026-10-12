@@ -51,8 +51,14 @@ laocars/
 │   │   │   ├── Reviews/
 │   │   │   ├── Services/
 │   │   │   └── Users/
-│   │   └── Pages/                      # ManageSiteSettings — страница
-│   │                                   # настроек, собрана через content()
+│   │   ├── Pages/                      # ManageSiteSettings — страница
+│   │   │                               # настроек, собрана через content();
+│   │   │                               # Dashboard — главная панели: фильтр
+│   │   │                               # периода и порядок виджетов
+│   │   └── Widgets/                    # Виджеты инфопанели администратора.
+│   │       └── Concerns/               # Запросов не пишут — зовут сервисы.
+│   │                                   # AdminOnly: доступ одним трейтом,
+│   │                                   # политика к виджету не применяется
 │   ├── Http/
 │   │   ├── Controllers/                # ── PRESENTATION ──
 │   │   │   ├── HomeController.php      # тонкие: приняли → делегировали → отдали
@@ -64,7 +70,12 @@ laocars/
 │   │   ├── Requests/                   # Валидация входа (FormRequest)
 │   │   │   ├── StoreLeadRequest.php    # + toData(): собирает LeadData
 │   │   │   └── CatalogFilterRequest.php
-│   │   └── Middleware/                 # Сквозное: throttle, auth
+│   │   └── Middleware/                 # Сквозное: throttle, auth,
+│   │                                   # RecordRequestMetrics — учёт запроса
+│   │                                   # в terminate(). Единственный, кроме
+│   │                                   # FormRequest, кто отдаёт `Request`
+│   │                                   # сервису (`VisitRecorder`): граница
+│   │                                   # presentation-слоя проходит по нему
 │   ├── Jobs/                           # Фоновые задачи
 │   │   └── NotifyManagerAboutLead.php  # адрес получателя — параметр
 │   │                                   # задачи, одна задача на человека
@@ -113,6 +124,13 @@ laocars/
 │   │   │                               # под блок, а не под страницу
 │   │   ├── CarStructuredData.php       # JSON-LD карточки: Car + BreadcrumbList
 │   │   ├── SimilarCars.php             # подбор похожих для карточки
+│   │   ├── RequestCounter.php          # счётчик запросов в Redis (скаляры)
+│   │   ├── VisitRecorder.php           # просмотры: буфер Redis → page_views
+│   │   ├── VisitorHash.php             # хеш посетителя с суточной солью
+│   │   ├── TrafficReport.php           # всё чтение page_views для инфопанели
+│   │   ├── ServerStatus.php            # диск, память, нагрузка (+ ServerSnapshot)
+│   │   ├── OpsStatus.php               # файл состояния служб (+ OpsSnapshot)
+│   │   ├── SchedulerHeartbeat.php      # пульс задач планировщика
 │   │   └── TelegramNotifier.php        # внешний API
 │   ├── Support/                        # Чистые правила без слоя и состояния
 │   │   ├── ThumbnailPath.php           # соответствие «оригинал → превью»

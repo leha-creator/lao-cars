@@ -15,6 +15,7 @@ use App\Filament\Resources\Reviews\ReviewResource;
 use App\Filament\Resources\ServiceCategories\ServiceCategoryResource;
 use App\Filament\Resources\Services\ServiceResource;
 use App\Filament\Resources\Users\UserResource;
+use App\Filament\Widgets\OpsStatusWidget;
 
 /**
  * Реестр статей справки: что есть, как называется и с чем связано.
@@ -345,6 +346,22 @@ final class HelpLibrary
                 section: HelpSection::Settings,
                 gate: UserResource::class,
                 related: ['first-steps', 'notifications-setup', 'profile-and-password'],
+            ),
+
+            // Ключ доступа — ВИДЖЕТ, а не страница: сама инфопанель
+            // открыта обеим ролям (менеджер видит там карточку своей
+            // учётной записи), а блоки, которые статья описывает, — только
+            // администратору. `canAccess()` виджету даёт трейт
+            // `Widgets\Concerns\AdminOnly`; у штатного виджета Filament
+            // такого метода нет. Любой из восьми виджетов годится — правило
+            // у них одно; взят первый на странице.
+            new HelpArticle(
+                slug: 'site-dashboard',
+                title: 'Инфопанель: сервер и посещаемость',
+                summary: 'Что значит каждая карточка на главной странице панели, как читать посещаемость и когда звать разработчика.',
+                section: HelpSection::Settings,
+                gate: OpsStatusWidget::class,
+                related: ['first-steps', 'notifications-setup'],
             ),
 
             // Веха 4.16. Ключа доступа нет намеренно: свой профиль

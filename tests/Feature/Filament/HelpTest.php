@@ -76,8 +76,12 @@ it('registers exactly the planned number of articles per section', function () {
     // 11 → 12 в «Настройке параметров» вехой 4.17: добавлена «Персональные
     // данные и приём заявок» — восьмая вкладка настроек сайта и переключатель,
     // без которого формы на сайте не работают вовсе.
+    // 12 → 13 в «Настройке параметров»: добавлена «Инфопанель: сервер
+    // и посещаемость» — главная страница панели получила блоки состояния
+    // сервера и статистики посещений, и без статьи карточка «Упало задач»
+    // оставалась бы числом без объяснения, что с ним делать.
     expect(HelpLibrary::inSection(HelpSection::Scenarios))->toHaveCount(11)
-        ->and(HelpLibrary::inSection(HelpSection::Settings))->toHaveCount(12);
+        ->and(HelpLibrary::inSection(HelpSection::Settings))->toHaveCount(13);
 });
 
 it('hides closed articles from a manager in the section list', function () {
@@ -143,6 +147,9 @@ it('forbids a manager from opening a closed article by its direct address', func
     // а как контент сайта — так же, как позиции прайса
     // (`ServiceCategoryPolicy` наследует `AdminOnlyPolicy`).
     'service-categories',
+    // Ключ доступа — виджет инфопанели, а не страница: сама страница
+    // открыта обеим ролям, блоки на ней — только администратору.
+    'site-dashboard',
 ]);
 
 it('opens articles a manager is allowed to read', function (string $slug) {
