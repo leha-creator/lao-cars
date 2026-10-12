@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RecordRequestMetrics;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,6 +21,21 @@ return Application::configure(basePath: dirname(__DIR__))
         // панели — эндпоинт подписки на push — отдал бы гостю не редирект,
         // а `RouteNotFoundException`, то есть 500 вместо страницы входа.
         $middleware->redirectGuestsTo(fn () => route('filament.admin.auth.login'));
+
+        // Учёт запросов и посещений для инфопанели администратора.
+        //
+        // ГЛОБАЛЬНО, а не в группе `web`: панель Filament собирает свой
+        // стек middleware и в группу `web` не входит, а счётчик обязан
+        // видеть и её — иначе опрос колокольчика нельзя отделить
+        // от посещаемости сайта. Глобальный стек видит и 404 без маршрута.
+        //
+        // Вся работа — в `terminate()`, уже после отправки ответа:
+        // статистика не имеет права задержать или уронить запрос.
+        //
+        // Запросы за время `artisan down` сюда не доходят: их отбивает
+        // `PreventRequestsDuringMaintenance`, стоящий в стеке раньше.
+        // Поэтому окно выката не рисует на графике ложный всплеск 5xx.
+        $middleware->append(RecordRequestMetrics::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Условие `expectsJson()` добавлено вехой 4.7 и обязательно.

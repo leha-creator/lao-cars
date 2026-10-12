@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
 
 /*
@@ -82,6 +83,50 @@ pest()->beforeEach(function () use ($paginationDefaults): void {
 function resetRateLimiters(): void
 {
     Cache::flush();
+}
+
+/**
+ * Сбросить состояние учёта запросов и посещений.
+ *
+ * Счётчик запросов, буфер просмотров, суточная соль посетителя и отметки
+ * планировщика живут в Redis-соединении `default`, а не в кеше: кеш чистит
+ * каждый выкат (`optimize:clear`), и соль пропадала бы вместе с ним.
+ * Следствие для тестов — `Cache::flush()` из `resetRateLimiters()` эти
+ * ключи не трогает, и просмотр, записанный одним тестом, достаётся
+ * следующему.
+ *
+ * Удаляются ТОЛЬКО свои ключи, `FLUSHDB` запрещён: в той же базе
+ * (`REDIS_DB=1`) живёт очередь, и на `Queue::size()` стоят сторожа.
+ *
+ * Префикс соединения учитывается руками: predis дописывает его к ключу
+ * в `DEL`, но НЕ к шаблону `SCAN`, а найденные ключи возвращает уже
+ * с префиксом. Шаблон без префикса не находит ничего, а удаление найденного
+ * «как есть» дописывает префикс второй раз и не удаляет ничего — оба
+ * варианта молчат.
+ *
+ * Вызывать в `beforeEach` каждого файла, который делает HTTP-запросы
+ * и смотрит на счётчик или буфер, либо пишет в них сам. Глобально
+ * не ставится по той же причине, что `resetRateLimiters()`.
+ */
+function resetAnalytics(): void
+{
+    $redis = Redis::connection();
+    $prefix = (string) config('database.redis.options.prefix');
+
+    foreach (['analytics:*', 'ops:*'] as $pattern) {
+        $cursor = '0';
+
+        do {
+            [$cursor, $keys] = $redis->scan($cursor, ['match' => $prefix.$pattern, 'count' => 500]);
+
+            if ($keys !== []) {
+                $redis->del(array_map(
+                    static fn (string $key): string => substr($key, strlen($prefix)),
+                    $keys,
+                ));
+            }
+        } while ((string) $cursor !== '0');
+    }
 }
 
 /**

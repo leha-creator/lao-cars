@@ -106,3 +106,31 @@ it('clears price notes left on positions without a price', function () {
         ->and(DB::table('services')->where('id', $orphan->id)->value('price_note'))->toBeNull()
         ->and(DB::table('services')->where('id', $priced->id)->value('price_note'))->toBe('за колесо');
 });
+
+/*
+ * Таблица просмотров собственной статистики посещений.
+ */
+
+it('creates the page views table with its indexes and drops it on rollback', function () {
+    $indexes = static fn () => collect(DB::select("select indexname, indexdef from pg_indexes where tablename = 'page_views'"))
+        ->pluck('indexdef', 'indexname');
+
+    expect(Schema::hasTable('page_views'))->toBeTrue()
+        // По периоду режут все отчёты и ночная чистка.
+        ->and($indexes())->toHaveKey('page_views_viewed_at_index')
+        ->and($indexes())->toHaveKey('page_views_car_id_index')
+        // Индекс частичный: карточку автомобиля смотрит малая доля просмотров.
+        ->and($indexes()['page_views_car_id_index'])->toContain('WHERE (car_id IS NOT NULL)');
+
+    // DDL в PostgreSQL транзакционен: откат и повторный накат живут
+    // в транзакции теста и соседям схему не меняют.
+    $migration = require database_path('migrations/2026_10_07_140000_create_page_views_table.php');
+
+    $migration->down();
+
+    expect(Schema::hasTable('page_views'))->toBeFalse();
+
+    $migration->up();
+
+    expect(Schema::hasTable('page_views'))->toBeTrue();
+});
