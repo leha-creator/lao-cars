@@ -142,8 +142,31 @@ it('prints the hero button as an outside link opened in a new tab', function () 
     $html = flatHtml($this->get('/parts')->assertOk()->getContent());
 
     expect($html)->toMatch(
-        '#<a\s[^>]*href="https://parts\.example\.com/catalog"[^>]*target="_blank"[^>]*rel="noopener noreferrer"[^>]*>\s*Открыть каталог\s*</a>#u',
+        '#<a\s[^>]*href="https://parts\.example\.com/catalog"[^>]*target="_blank"[^>]*rel="noopener noreferrer"[^>]*>\s*<img\s[^>]*alt="Открыть каталог"[^>]*>\s*</a>#u',
     );
+});
+
+it('draws the hero button as the avito badge named by the button text', function () {
+    // Кнопка — картинка, и надпись на ней нарисована кривыми. Текст кнопки
+    // из настроек обязан доехать в `alt`: без него у ссылки нет имени —
+    // программа экранного доступа прочтёт адрес, а при незагрузившейся
+    // картинке на её месте не останется ничего.
+    partsHero();
+
+    $html = flatHtml($this->get('/parts')->assertOk()->getContent());
+
+    preg_match('#<a\s[^>]*href="https://parts\.example\.com/catalog"[^>]*>\s*(<img\s[^>]*>)\s*</a>#u', $html, $link);
+
+    expect($link)->not->toBeEmpty('ссылка-картинка первого экрана не найдена')
+        ->and($link[1])->toContain('avito-badge')
+        ->and($link[1])->toContain('alt="Открыть каталог"')
+        // Без явных размеров блок прыгает, пока картинка грузится.
+        ->and($link[1])->toContain('width="280"')
+        ->and($link[1])->toContain('height="56"');
+
+    // Текстом в теле ссылки подпись не печатается: два имени у одной
+    // ссылки программа экранного доступа прочла бы подряд.
+    expect($html)->not->toMatch('#Открыть каталог\s*</a>#u');
 });
 
 it('leaves a link to the site itself in the same tab', function () {
@@ -152,7 +175,7 @@ it('leaves a link to the site itself in the same tab', function () {
 
     $html = flatHtml($this->get('/parts')->assertOk()->getContent());
 
-    preg_match('#<a\s[^>]*href="https://laocars\.test/catalog"[^>]*>\s*Открыть каталог#u', $html, $link);
+    preg_match('#<a\s[^>]*href="https://laocars\.test/catalog"[^>]*>\s*<img\s[^>]*alt="Открыть каталог"#u', $html, $link);
 
     expect($link)->not->toBeEmpty()
         ->and($link[0])->not->toContain('target=');

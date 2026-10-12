@@ -91,14 +91,42 @@
                  или с адресом не по http(s) сервис отдаёт `null`. Внешний
                  адрес открывается в новой вкладке, и `noopener` там
                  обязателен — без него открытая страница получает доступ
-                 к нашей вкладке через `window.opener`. --}}
+                 к нашей вкладке через `window.opener`.
+
+                 Кнопка — КАРТИНКА, а не текст: плашка «Лао Карс на Авито»
+                 из `resources/images/avito-badge.svg`. Надпись на ней
+                 нарисована кривыми, поэтому текст кнопки из настроек
+                 никуда не делся — он стал подписью `alt`: это единственное,
+                 что прочтёт программа экранного доступа и что останется
+                 на месте картинки, если она не загрузилась. Пустой `alt`
+                 дал бы ссылку без имени.
+
+                 Плашка белая сама по себе (заливка внутри файла), и литерал
+                 `white` в классах здесь не нужен. Размеры проставлены явно —
+                 пропорция файла 705×141, — иначе блок прыгает при загрузке.
+
+                 Картинка зашита в вёрстку, а адрес приходит из настроек:
+                 если адрес ведёт не на Авито, плашка обещает не то, куда
+                 приведёт. Триггер вернуть текстовую кнопку или завести
+                 выбор — первый каталог не на Авито.
+
+                 Пробовали и составной вариант — надпись текстом плюс плашка
+                 с одним логотипом. Заказчик выбрал цельную плашку. --}}
             @if ($hero['button'] !== null)
                 <div class="mt-8">
                     <a
                         href="{{ $hero['button']['url'] }}"
                         @if ($hero['button']['external']) target="_blank" rel="noopener noreferrer" @endif
-                        class="inline-block rounded-full bg-accent-solid px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover"
-                    >{{ $hero['button']['text'] }}</a>
+                        class="inline-block rounded-full transition hover:-translate-y-0.5 hover:opacity-90"
+                    >
+                        <img
+                            src="{{ Vite::asset('resources/images/avito-badge.svg') }}"
+                            width="280"
+                            height="56"
+                            alt="{{ $hero['button']['text'] }}"
+                            class="h-14 w-auto"
+                        >
+                    </a>
                 </div>
             @endif
         </div>
