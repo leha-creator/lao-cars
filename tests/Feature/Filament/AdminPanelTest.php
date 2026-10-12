@@ -7,9 +7,13 @@
  * здесь проверяется только сам каркас панели: маршруты, вход и дашборд.
  */
 
+// Своя страница, а не штатная `Filament\Pages\Dashboard`: главную панели
+// отдаёт её наследник с фильтром периода и виджетами инфопанели. Штатный
+// класс в панели больше не зарегистрирован, и тест на него проверял бы
+// страницу, которой в панели нет.
+use App\Filament\Pages\Dashboard;
 use App\Models\User;
 use Filament\Auth\Pages\Login;
-use Filament\Pages\Dashboard;
 
 use function Pest\Livewire\livewire;
 

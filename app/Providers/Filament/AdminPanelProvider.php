@@ -4,20 +4,19 @@ namespace App\Providers\Filament;
 
 use App\Filament\NavigationGroup;
 use App\Filament\Pages\Auth\EditProfile;
+use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Help\Scenarios;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -95,13 +94,23 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups(NavigationGroup::class)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
+            // Главная страница панели — своя `App\Filament\Pages\Dashboard`,
+            // наследник штатной: у неё фильтр периода и заданный порядок
+            // виджетов инфопанели. `discoverPages` выше находит её и сам;
+            // строка оставлена явной, потому что именно эта страница
+            // отвечает на `/admin`, а `getPages()` дубли убирает.
             ->pages([
                 Dashboard::class,
             ])
+            // Виджеты инфопанели (сервер, службы, запросы, посещаемость)
+            // находятся автодискавери и видны только администратору —
+            // трейт `Widgets\Concerns\AdminOnly`.
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
+            // `FilamentInfoWidget` (версия Filament и ссылки на его
+            // документацию) убран: заказчику он не говорит ничего,
+            // а версию кода показывает собственная карточка «Версия».
             ->widgets([
                 AccountWidget::class,
-                FilamentInfoWidget::class,
             ])
             // Подписка браузера на push-уведомления (веха 4.7). Панель
             // работает на собственной сборке и бандл публичной части
