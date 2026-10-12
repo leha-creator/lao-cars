@@ -1,0 +1,6 @@
+generated_at=2026-10-07T12:35:01+03:00
+problem=воркер laocars-queue не запущен
+problem=контейнер laocars-redis: unhealthy
+backup_db_at=2026-10-07T03:30:12+03:00
+backup_media_at=2026-10-05T04:30:40+03:00
+ssl_not_after=2026-11-12T08:14:00+03:00

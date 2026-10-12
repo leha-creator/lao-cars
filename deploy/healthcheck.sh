@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 #
-# Локальный монитор ЛАО КАРС. Cron каждые 5 минут от пользователя laocars:
+# Локальный монитор ЛАО КАРС. Cron каждые 5 минут ОТ ROOT:
 #
 #     */5 * * * * /var/www/laocars/deploy/healthcheck.sh >> /var/log/laocars/healthcheck.log 2>&1
+#
+# От root, а не от `laocars`: `docker` и `systemctl` деплой-пользователю
+# недоступны намеренно, а файл состояния для инфопанели (см. `write_status`)
+# читает каталог бэкапов с режимом 0700 и сертификат из /etc/letsencrypt.
 #
 # ЭТОТ СКРИПТ НЕ ЗАМЕНЯЕТ ВНЕШНИЙ МОНИТОР.
 #
@@ -15,7 +19,13 @@ set -uo pipefail
 
 APP_DIR="/var/www/laocars"
 STATE_FILE="/var/log/laocars/healthcheck.state"
+STATUS_FILE="/var/log/laocars/status.txt"
+BACKUP_DIR="/var/backups/laocars"
 DOMAIN="laocars.ru"
+# То же число, что `disk_warning_percent` в config/ops.php: по нему красит
+# диск инфопанель администратора. Одно знание в двух местах — менять
+# вместе, иначе панель и тревога в Telegram разойдутся в оценке диска.
+# Совпадение стережёт тест ServerStatusTest.
 DISK_THRESHOLD=85
 
 source "${APP_DIR}/deploy/notify.sh"
@@ -107,6 +117,88 @@ if [ -n "${tg_token}" ]; then
         problems+=("Telegram недоступен — уведомления о заявках не уходят")
     fi
 fi
+
+# --- Файл состояния для инфопанели -----------------------------------
+#
+# Инфопанель администратора (`/admin`) показывает состояние служб,
+# свежесть бэкапов и срок сертификата. Сама она этого узнать не может:
+# бэкапы лежат в каталоге с режимом 0700 от root, сертификат —
+# в /etc/letsencrypt, а `systemctl` и `docker` пулу php-fpm недоступны
+# намеренно. Давать вебу `exec()` или права на эти каталоги ради
+# страницы админки нельзя — поэтому всё нужное приносит этот скрипт,
+# а PHP файл только читает (сервис OpsStatus).
+#
+# ФОРМАТ — СТРОКИ `ключ=значение`, строка `problem=` повторяется.
+# НЕ JSON: `jq` на сервере нет, а экранирование JSON руками в bash —
+# место для тихой порчи файла первой же кавычкой в тексте проблемы.
+#
+# В ФАЙЛ НЕ ДОЛЖЕН ПОПАСТЬ НИ ОДИН СЕКРЕТ: режим 0644, читает его веб.
+# Тексты проблем выше статичны, токен Telegram в них не подставляется.
+# Добавляя проверку, смотрите глазами, что уходит в `problems+=`.
+#
+# Запись атомарная (`mktemp` + `mv`): панель не должна прочитать
+# половину файла. Сбой любой подкоманды здесь не имеет права уронить
+# сам монитор — у скрипта нет `set -e`, и добавлять его нельзя.
+
+# Время изменения самого свежего файла каталога в ISO 8601.
+# Каталог пуст или отсутствует — пустая строка.
+newest_mtime() {
+    local epoch
+
+    epoch="$(find "$1" -maxdepth 1 -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -n 1 | cut -d. -f1)"
+
+    if [ -n "${epoch}" ]; then
+        date -d "@${epoch}" -Iseconds 2>/dev/null
+    fi
+}
+
+write_status() {
+    local tmp value problem
+
+    tmp="$(mktemp "${STATUS_FILE}.XXXXXX" 2>/dev/null)" || return 0
+
+    {
+        # По возрасту этой строки панель отличает «всё в порядке»
+        # от «монитор давно не запускался».
+        printf 'generated_at=%s\n' "$(date -Iseconds)"
+
+        # `${arr[@]+…}` — пустой массив под `set -u` в bash до 4.4
+        # считается необъявленной переменной.
+        for problem in ${problems[@]+"${problems[@]}"}; do
+            # Перевод строки внутри текста сломал бы формат «строка = запись».
+            printf 'problem=%s\n' "$(printf '%s' "${problem}" | tr '\r\n' '  ')"
+        done
+
+        value="$(newest_mtime "${BACKUP_DIR}/db")"
+        if [ -n "${value}" ]; then
+            printf 'backup_db_at=%s\n' "${value}"
+        fi
+
+        value="$(newest_mtime "${BACKUP_DIR}/media")"
+        if [ -n "${value}" ]; then
+            printf 'backup_media_at=%s\n' "${value}"
+        fi
+
+        value="$(openssl x509 -enddate -noout -in "/etc/letsencrypt/live/${DOMAIN}/cert.pem" 2>/dev/null | cut -d= -f2-)"
+        if [ -n "${value}" ]; then
+            value="$(date -d "${value}" -Iseconds 2>/dev/null)"
+        fi
+        if [ -n "${value}" ]; then
+            printf 'ssl_not_after=%s\n' "${value}"
+        fi
+    } > "${tmp}" 2>/dev/null
+
+    chmod 0644 "${tmp}" 2>/dev/null
+
+    if ! mv -f "${tmp}" "${STATUS_FILE}" 2>/dev/null; then
+        rm -f "${tmp}"
+    fi
+}
+
+# ДО решения об алерте, а не после: ниже скрипт выходит с кодом 1 при
+# проблемах, и файл обязан обновиться именно тогда, когда проблемы есть.
+# В лог запись файла не идёт — туда пишутся только смены состояния.
+write_status
 
 # --- Решение об алерте -----------------------------------------------
 #
