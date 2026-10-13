@@ -217,14 +217,18 @@
                          Отсюда же `min(5.6vw,34px)` и `sm:text-[40px]`
                          в кегле: строка «Автомобиль под ключ» шириной
                          ~14em, и в прежних 34/44px на телефоне и планшете
-                         она переносится третьей строкой. --}}
-                    Автомобиль <span class="text-accent">под ключ</span><br>
+                         она переносится третьей строкой.
+
+                         Между флагом и названием страны пробела НЕТ, и это
+                         не опечатка вёрстки: заказчик попросил вместо него
+                         отступ в полтора межбуквенных — его даёт
+                         `mr-[0.12em]`. Перенос строки между `<img>`
+                         и словом вернёт пробел. --}}
+                    <span class="text-accent">Автомобиль под ключ</span><br>
                     <span class="whitespace-nowrap">
                         из
-                        <img src="{{ Vite::asset('resources/images/flag-south-korea.svg') }}" width="48" height="48" alt="" aria-hidden="true" class="inline-block size-[0.8em] align-[-0.06em]">
-                        Кореи и
-                        <img src="{{ Vite::asset('resources/images/flag-china.svg') }}" width="48" height="48" alt="" aria-hidden="true" class="inline-block size-[0.8em] align-[-0.06em]">
-                        Китая
+                        <img src="{{ Vite::asset('resources/images/flag-south-korea.svg') }}" width="48" height="48" alt="" aria-hidden="true" class="mr-[0.12em] ml-[0.2em] inline-block size-[0.8em] align-[-0.06em]">Кореи и
+                        <img src="{{ Vite::asset('resources/images/flag-china.svg') }}" width="48" height="48" alt="" aria-hidden="true" class="mr-[0.12em] ml-[0.2em] inline-block size-[0.8em] align-[-0.06em]">Китая
                     </span>
                 </h1>
 
