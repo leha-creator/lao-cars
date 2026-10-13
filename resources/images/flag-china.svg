@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_Слой_1" data-name="Слой_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 241.81 241.81">
+  <!-- Generator: Adobe Illustrator 30.4.0, SVG Export Plug-In . SVG Version: 2.1.4 Build 226)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: none;
+      }
+
+      .st1 {
+        fill: #ec1c24;
+      }
+
+      .st2 {
+        fill: #fff100;
+      }
+
+      .st3 {
+        clip-path: url(#clippath);
+      }
+    </style>
+    <clipPath id="clippath">
+      <circle class="st0" cx="120.91" cy="120.91" r="120.91" transform="translate(-50.08 120.91) rotate(-45)"/>
+    </clipPath>
+  </defs>
+  <g class="st3">
+    <g>
+      <rect class="st1" x="0" y="0" width="241.81" height="241.81"/>
+      <g>
+        <polygon class="st2" points="131.98 48.59 137.05 57 137.9 47.22 147.46 44.99 138.44 41.15 139.27 31.38 132.83 38.79 123.79 34.97 128.85 43.39 122.41 50.79 131.98 48.59"/>
+        <polygon class="st2" points="75.86 71.77 66.8 43.9 57.71 71.77 28.41 71.77 52.1 89.02 43.07 116.89 66.8 99.68 90.51 116.88 81.48 89.02 105.17 71.77 75.86 71.77"/>
+        <polygon class="st2" points="157.33 74.32 158.74 83.98 163.29 75.34 172.9 76.99 166.1 69.99 170.63 61.34 161.87 65.67 155.05 58.68 156.46 68.35 147.7 72.67 157.33 74.32"/>
+        <polygon class="st2" points="173.66 106.54 163.88 106.87 160.55 97.68 157.83 107.07 148.06 107.39 156.16 112.89 153.45 122.27 161.17 116.28 169.27 121.75 165.96 112.56 173.66 106.54"/>
+        <polygon class="st2" points="139.05 125.46 132.79 132.97 123.71 129.34 128.92 137.62 122.66 145.12 132.14 142.74 137.36 151 138 141.25 147.48 138.86 138.42 135.21 139.05 125.46"/>
+      </g>
+    </g>
+  </g>
+</svg>

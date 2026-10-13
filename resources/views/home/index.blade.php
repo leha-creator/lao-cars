@@ -198,20 +198,42 @@
             <div class="absolute inset-0 bg-gradient-to-b from-page/10 via-page/55 via-55% to-page/96"></div>
         </div>
 
-        <div class="relative z-2 flex flex-1 items-end px-5 pt-[66px] pb-14 lg:px-8 lg:pt-[76px] lg:pb-18">
+        {{-- `lg:pb-44` — это прежние `lg:pb-18` плюс высота снятого блока
+             фактов с его отступом (~104px): содержимое прижато к низу
+             секции, и без добавки заголовок с кнопками сползают вниз.
+             На мобильном добавки нет: там секция растёт по содержимому,
+             и сползать нечему. --}}
+        <div class="relative z-2 flex flex-1 items-end px-5 pt-[66px] pb-14 lg:px-8 lg:pt-[76px] lg:pb-44">
             <div class="mx-auto w-full max-w-page">
                 <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Автосалон · сервис · детейлинг в Москве</div>
 
-                <h1 class="mb-6 max-w-4xl font-display text-[34px] leading-[1.14] font-semibold text-pretty sm:text-[44px] lg:mb-6.5 lg:text-[56px]">
-                    Автомобиль из Китая — <span class="text-accent">под ключ</span>
+                <h1 class="mb-6 max-w-4xl font-display text-[min(5.6vw,34px)] leading-[1.14] font-semibold text-pretty sm:text-[40px] lg:mb-6.5 lg:text-[56px]">
+                    {{-- Две строки с разрывом после «под ключ» — требование
+                         заказчика, поэтому `<br>`, а вторая строка не
+                         переносится. Флаги декоративные (страна названа
+                         словом сразу за ним) и размером в долях `em`:
+                         растут вместе с кеглем заголовка.
+
+                         Отсюда же `min(5.6vw,34px)` и `sm:text-[40px]`
+                         в кегле: строка «Автомобиль под ключ» шириной
+                         ~14em, и в прежних 34/44px на телефоне и планшете
+                         она переносится третьей строкой. --}}
+                    Автомобиль <span class="text-accent">под ключ</span><br>
+                    <span class="whitespace-nowrap">
+                        из
+                        <img src="{{ Vite::asset('resources/images/flag-south-korea.svg') }}" width="48" height="48" alt="" aria-hidden="true" class="inline-block size-[0.8em] align-[-0.06em]">
+                        Кореи и
+                        <img src="{{ Vite::asset('resources/images/flag-china.svg') }}" width="48" height="48" alt="" aria-hidden="true" class="inline-block size-[0.8em] align-[-0.06em]">
+                        Китая
+                    </span>
                 </h1>
 
                 <p class="mb-9 max-w-[38rem] text-lg leading-[1.65] text-ink-muted">
-                    Подбираем, проверяем, доставляем и готовим автомобиль к эксплуатации.
+                    От подбора до сервиса — всё в одном месте.
                     После выдачи остаёмся рядом: сервис, детейлинг и запчасти в одном месте.
                 </p>
 
-                <div class="mb-11 flex flex-wrap gap-4 lg:gap-5">
+                <div class="flex flex-wrap gap-4 lg:gap-5">
                     {{-- Главная кнопка ведёт в КАТАЛОГ, а не на якорь `#cars`,
                          как в макете. Расхождение осознанное: макет нарисован
                          для одностраничника, у которого отдельного каталога
@@ -228,41 +250,14 @@
                         class="rounded-full border border-line-loud px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] transition hover:-translate-y-0.5 hover:border-ink-muted"
                     >Подборка под бюджет</a>
                 </div>
-
-                {{-- Факты первого экрана. Тексты живут в шаблоне, а не
-                     в настройках: это по одной строке на карточку, жёстко
-                     привязанной к вёрстке блока, и репитер под них означал бы
-                     форму настроек, в которой заказчик ломает первый экран.
-                     Триггер завести настройку назван: первая просьба
-                     заказчика поправить эти тексты.
-
-                     Первые три пункта — статусы каталога словами покупателя,
-                     а не значениями `CarStatus`. С вехой «Статус „В пути“»
-                     все три статуса в базе есть, но связь остаётся
-                     смысловой, а не технической: подписи здесь про то,
-                     что человек получает, а порядок подобран под вёрстку
-                     блока, а не под порядок кейсов enum-а. --}}
-                <div class="grid grid-cols-2 gap-5 lg:grid-cols-4 lg:gap-7">
-                    @foreach ([
-                        ['title' => 'В наличии', 'text' => 'автомобили, которые можно посмотреть в салоне'],
-                        ['title' => 'В пути', 'text' => 'понятный статус и ориентировочный срок'],
-                        ['title' => 'Под заказ', 'text' => 'подбор комплектации и цвета под задачу'],
-                        ['title' => 'После покупки', 'text' => 'сервис, детейлинг и расходники'],
-                    ] as $fact)
-                        <div class="border-t border-line-strong pt-3.5">
-                            <div class="mb-1 text-sm font-semibold text-accent">{{ $fact['title'] }}</div>
-
-                            <div class="text-[13px] leading-[1.5] text-ink-muted">{{ $fact['text'] }}</div>
-                        </div>
-                    @endforeach
-                </div>
             </div>
         </div>
     </section>
 
     {{--
-        Полоса доверия. Тексты — в шаблоне по той же причине, что и факты
-        хиро: одна строка на карточку, привязанная к вёрстке блока.
+        Полоса доверия. Тексты — в шаблоне, а не в настройках: одна строка
+        на карточку, привязанная к вёрстке блока, и репитер под них означал
+        бы форму настроек, в которой заказчик ломает блок.
 
         ПЕРВАЯ СВЕТЛАЯ СЕКЦИЯ СТРАНИЦЫ (веха 4.11), и здесь же — про весь
         механизм, потому что дальше он повторяется классом без объяснений.
@@ -1931,10 +1926,20 @@
                                                  по сравнению вывода со строкой
                                                  «по запросу»: иначе
                                                  формулировка жила бы
-                                                 в двух местах. --}}
+                                                 в двух местах.
+
+                                                 `max-w-[60%]` без
+                                                 `whitespace-nowrap`: длинная
+                                                 цена («от 4 500 до 6 000 ₽
+                                                 за сезон») одной строкой шире
+                                                 карточки на телефоне и давала
+                                                 странице горизонтальную
+                                                 прокрутку. Сумму перенос
+                                                 не рвёт — внутри неё
+                                                 неразрывные пробелы. --}}
                                             <span
                                                 @class([
-                                                    'shrink-0 whitespace-nowrap text-sm',
+                                                    'max-w-[60%] shrink-0 text-right text-sm',
                                                     'font-display font-semibold text-accent' => $service->hasPrice(),
                                                     'font-medium text-ink-muted' => ! $service->hasPrice(),
                                                 ])
@@ -2132,7 +2137,11 @@
                 <div class="mx-auto max-w-page">
                     <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Почему мы</div>
 
-                    <h2 class="mb-12 max-w-160 font-display text-3xl font-semibold lg:mb-16 lg:text-[34px]">
+                    {{-- `min(8.5vw,30px)` вместо `text-3xl`: слово «Преимущества,»
+                         в 30px шире экрана 320px и давало странице
+                         горизонтальную прокрутку. `leading-9` — межстрочный
+                         интервал, который приносил `text-3xl`. --}}
+                    <h2 class="mb-12 max-w-160 font-display text-[min(8.5vw,30px)] leading-9 font-semibold lg:mb-16 lg:text-[34px]">
                         Преимущества, за которые нас выбирают <span class="text-accent">клиенты</span>
                     </h2>
 
