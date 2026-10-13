@@ -619,7 +619,7 @@
              секция (быстрый подбор) тёмная, и переход происходит там. --}}
         <section id="cars" class="theme-light px-5 pt-4 pb-20 lg:px-8 lg:pb-30">
             <div class="mx-auto max-w-page">
-                <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                <div class="mb-12 lg:mb-14">
                     <div>
                         {{-- Надзаголовок ОСТАЁТСЯ, хотя заказчик просил
                              «переименовать блок просто в „Актуальные
@@ -638,11 +638,6 @@
                             Актуальные <span class="text-accent">предложения</span>
                         </h2>
                     </div>
-
-                    <x-ui.lede class="lg:max-w-110 lg:text-right">
-                        Показываем статус автомобиля и ведём к следующему действию: посмотреть,
-                        запросить точный расчёт или подобрать альтернативу.
-                    </x-ui.lede>
                 </div>
 
                 {{--
@@ -793,7 +788,7 @@
 
         <section id="selection" class="bg-page-alt px-5 py-20 lg:px-8 lg:py-30">
             <div class="mx-auto max-w-page">
-                <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                <div class="mb-12 lg:mb-14">
                     <div>
                         <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Быстрый подбор</div>
 
@@ -801,11 +796,6 @@
                             Автомобиль под ваш бюджет и <span class="text-accent">сценарий</span>
                         </h2>
                     </div>
-
-                    <x-ui.lede class="lg:max-w-110 lg:text-right">
-                        Короткая форма вместо длинного каталога: видно, сколько автомобилей
-                        подходит под запрос, ещё до заявки.
-                    </x-ui.lede>
                 </div>
 
                 {{--
@@ -1058,7 +1048,7 @@
                          собственное поле над карточками прибавляется к этому
                          отступу. Полный отступ читается разрывом между
                          заголовком и тем, что он называет. --}}
-                    <div class="mb-8 flex flex-col gap-5 lg:mb-10 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                    <div class="mb-8 lg:mb-10">
                         <div>
                             <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Как проходит покупка</div>
 
@@ -1066,11 +1056,6 @@
                                 Каждый этап понятен <span class="text-accent">до начала сделки</span>
                             </h2>
                         </div>
-
-                        <x-ui.lede class="lg:max-w-110 lg:text-right">
-                            Что делает ЛАО КАРС, что требуется от клиента и какой статус
-                            он видит на каждом шаге.
-                        </x-ui.lede>
                     </div>
                 </div>
             </div>
@@ -1889,7 +1874,7 @@
                  не читалась вовсе. --}}
             <section id="services" class="theme-light px-5 py-20 lg:px-8 lg:py-30">
                 <div class="mx-auto max-w-page">
-                    <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                    <div class="mb-12 lg:mb-14">
                         <div>
                             <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Услуги</div>
 
@@ -1897,11 +1882,6 @@
                                 Основные услуги <span class="text-accent">сервиса и детейлинга</span>
                             </h2>
                         </div>
-
-                        <x-ui.lede class="lg:max-w-110 lg:text-right">
-                            Свой сервис, а не партнёрская сеть: работы, шиномонтаж, детейлинг
-                            и подготовка автомобиля выполняются в одной мастерской.
-                        </x-ui.lede>
                     </div>
 
                     <div class="grid gap-6 min-[900px]:grid-cols-2">
@@ -2069,7 +2049,7 @@
                  участок, как полоса доверия с промо и подборкой наверху. --}}
             <section id="about" class="theme-light px-5 py-20 lg:px-8 lg:py-30">
                 <div class="mx-auto max-w-page">
-                    <div class="mb-12 flex flex-col gap-5 lg:mb-14 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+                    <div class="mb-12 lg:mb-14">
                         <div>
                             <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Доверие</div>
 
@@ -2077,11 +2057,6 @@
                                 Отзывы доказывают результат, а не <span class="text-accent">просто хвалят</span>
                             </h2>
                         </div>
-
-                        <x-ui.lede class="lg:max-w-110 lg:text-right">
-                            Публикуем после проверки: каждый отзыв проходит модерацию
-                            в админке перед тем, как попасть на сайт.
-                        </x-ui.lede>
                     </div>
 
                     <div class="grid gap-6 md:grid-cols-3">
