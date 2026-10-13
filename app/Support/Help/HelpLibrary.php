@@ -267,7 +267,7 @@ final class HelpLibrary
             new HelpArticle(
                 slug: 'home-blocks',
                 title: 'Блоки главной страницы',
-                summary: 'Бегущая строка, промо-баннер, преимущества, этапы покупки, состав цены и вопросы.',
+                summary: 'Фоновые фотографии, бегущая строка, промо-баннер, преимущества, этапы покупки, состав цены и вопросы.',
                 section: HelpSection::Settings,
                 gate: ManageSiteSettings::class,
                 // `service-pages-texts` — из-за блока каталога автозапчастей:
@@ -279,7 +279,7 @@ final class HelpLibrary
             new HelpArticle(
                 slug: 'service-pages-texts',
                 title: 'Тексты автосервиса и запчастей',
-                summary: 'Вступления, оговорка о ценах, блок «почему сюда», первый экран запчастей и условия поставки.',
+                summary: 'Вступления, оговорка о ценах, блок «почему сюда» с фотографией мастерской, первый экран запчастей и условия поставки.',
                 section: HelpSection::Settings,
                 gate: ManageSiteSettings::class,
                 related: ['price-list', 'service-categories', 'home-blocks', 'media-library'],
