@@ -8,6 +8,7 @@ use App\Models\Review;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Setting;
+use App\Support\HomeEcosystem;
 use App\Support\Typography;
 use Illuminate\Support\Facades\Log;
 
@@ -1364,4 +1365,323 @@ it('spends one query on all three backgrounds', function () {
     // в один запрос: `find()` на каждый фон дал бы три.
     expect($without)->toBeGreaterThan(0)
         ->and($with)->toBe($without + 1);
+});
+
+/*
+ * Блок «Экосистема» из настройки `home.ecosystem`.
+ *
+ * Правило блока противоположно остальной странице: пустое поле не убирает
+ * строку, а возвращает текст по умолчанию. На проде ключа нет до первого
+ * сохранения формы, и без фолбэка выкат снёс бы блок с главной. Поэтому
+ * у каждого поля проверяются ОБЕ ветки — своё значение и умолчание.
+ */
+
+/**
+ * Разметка секции «Экосистема» — от её тега до ближайшего закрытия.
+ *
+ * Резать страницу обязательно: «в одном месте», `#lead-form` и кружок
+ * значка встречаются и в других блоках главной.
+ */
+function ecosystemSectionHtml(string $html): string
+{
+    $start = strpos($html, '<section id="service"');
+
+    expect($start)->not->toBeFalse('секция `#service` не найдена в разметке страницы');
+
+    $end = strpos($html, '</section>', (int) $start);
+
+    expect($end)->not->toBeFalse('у секции `#service` не найдено закрытие');
+
+    return substr($html, (int) $start, (int) $end - (int) $start);
+}
+
+/**
+ * Значение настройки блока: умолчания с подменёнными полями.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function ecosystemSetting(array $overrides = []): array
+{
+    return array_merge(HomeEcosystem::defaults(), $overrides);
+}
+
+/**
+ * Плашка с проверочным названием.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function ecosystemTile(string $title, array $overrides = []): array
+{
+    return array_merge([
+        'icon' => 'gear',
+        'title' => $title,
+        'text' => null,
+        'link' => 'parts',
+    ], $overrides);
+}
+
+it('shows the default ecosystem block while the setting was never saved', function () {
+    // Ровно то состояние, в котором блок окажется на проде сразу после
+    // выката: сиды там не запускаются, ключа нет.
+    expect(Setting::get(HomeEcosystem::SETTING_KEY))->toBeNull();
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+    $defaults = HomeEcosystem::defaults();
+
+    expect($section)->toContain($defaults['eyebrow'])
+        ->and($section)->toContain($defaults['title'].' <span class="text-accent">'.$defaults['title_accent'].'</span>')
+        ->and($section)->toContain($defaults['panel_eyebrow'])
+        ->and($section)->toContain($defaults['panel_title'])
+        ->and($section)->toContain((string) Typography::tie($defaults['panel_text']))
+        // Адреса четырёх плашек прежние.
+        ->and($section)->toContain('href="'.route('services.index').'#maintenance"')
+        ->and($section)->toContain('href="'.route('services.index').'#detailing"')
+        ->and($section)->toContain('href="'.route('parts.index').'"')
+        ->and($section)->toContain('href="#lead-form"');
+
+    foreach ($defaults['tiles'] as $tile) {
+        expect($section)->toContain($tile['title'])
+            ->and($section)->toContain((string) Typography::tie($tile['text']));
+    }
+});
+
+it('renders the ecosystem texts and tiles from the setting', function () {
+    Setting::set(HomeEcosystem::SETTING_KEY, [
+        'eyebrow' => 'Проверочный надзаголовок',
+        'title' => 'Проверочный заголовок',
+        'title_accent' => 'с проверочным хвостом',
+        'panel_eyebrow' => 'Проверочная подпись',
+        'panel_title' => 'Проверочный заголовок на фотографии',
+        'panel_text' => 'Проверочный текст на фотографии и ещё слово.',
+        'tiles' => [
+            ecosystemTile('Проверочная плашка', ['text' => 'Проверочный текст плашки и ещё слово.', 'link' => 'catalog']),
+        ],
+    ]);
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+
+    expect($section)->toContain('Проверочный надзаголовок')
+        ->and($section)->toContain('Проверочный заголовок <span class="text-accent">с проверочным хвостом</span>')
+        ->and($section)->toContain('Проверочная подпись')
+        ->and($section)->toContain('Проверочный заголовок на фотографии')
+        // Проза проходит склейку — и подпись на фотографии, и текст плашки.
+        ->and($section)->toContain((string) Typography::tie('Проверочный текст на фотографии и ещё слово.'))
+        ->and($section)->toContain('Проверочная плашка')
+        ->and($section)->toContain((string) Typography::tie('Проверочный текст плашки и ещё слово.'))
+        ->and($section)->toContain('href="'.route('catalog.index').'"')
+        // Умолчаний рядом со своими значениями нет.
+        ->and($section)->not->toContain(HomeEcosystem::defaults()['eyebrow'])
+        ->and($section)->not->toContain('Детейлинг');
+});
+
+it('returns the default text for an emptied ecosystem field', function (string $field, mixed $empty) {
+    // Форма настроек пишет пустое значение как есть — и `null`, и пустую
+    // строку. Оба обязаны вернуть умолчание, а не пустой тег.
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting([$field => $empty]));
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+    $default = HomeEcosystem::defaults()[$field];
+
+    expect($section)->toContain($field === 'panel_text' ? (string) Typography::tie($default) : $default);
+})->with([
+    'eyebrow' => ['eyebrow', null],
+    'title' => ['title', ''],
+    'panel_eyebrow' => ['panel_eyebrow', ''],
+    'panel_title' => ['panel_title', null],
+    'panel_text' => ['panel_text', '   '],
+]);
+
+it('keeps the default accent only together with the default title', function () {
+    // Заголовок и выделенная часть — пара. Свой заголовок со стёртым
+    // хвостом не должен получить «в одном месте» от умолчания.
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting([
+        'title' => 'Сервис после покупки',
+        'title_accent' => null,
+    ]));
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+
+    expect($section)->toContain('Сервис после покупки')
+        ->and($section)->not->toContain('<span class="text-accent">')
+        ->and($section)->not->toContain(HomeEcosystem::defaults()['title_accent']);
+
+    // Обратная сторона пары: пустой заголовок возвращает умолчание
+    // ВМЕСТЕ с хвостом, даже если в хвост вписано своё.
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting([
+        'title' => null,
+        'title_accent' => 'чужой хвост',
+    ]));
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+    $defaults = HomeEcosystem::defaults();
+
+    expect($section)->toContain($defaults['title'].' <span class="text-accent">'.$defaults['title_accent'].'</span>')
+        ->and($section)->not->toContain('чужой хвост');
+});
+
+it('renders ecosystem tiles in the stored order, skipping the nameless and the seventh', function () {
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting(['tiles' => [
+        ecosystemTile('Плашка вторая по алфавиту'),
+        ecosystemTile('', ['text' => 'Текст плашки без названия.']),
+        ecosystemTile('Плашка первая по алфавиту'),
+        ecosystemTile('Плашка номер три'),
+        ecosystemTile('Плашка номер четыре'),
+        ecosystemTile('Плашка номер пять'),
+        ecosystemTile('Плашка номер шесть'),
+        ecosystemTile('Плашка номер семь'),
+    ]]));
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+
+    expect(strpos($section, 'Плашка вторая по алфавиту'))->toBeLessThan(strpos($section, 'Плашка первая по алфавиту'))
+        // Значок над пустотой выглядит как поломка вёрстки.
+        ->and($section)->not->toContain('Текст плашки без названия.')
+        ->and($section)->toContain('Плашка номер шесть')
+        // Потолок считает показанные плашки, а не элементы списка:
+        // безымянная вторая в него не входит.
+        ->and($section)->not->toContain('Плашка номер семь');
+});
+
+it('returns the default tiles when the stored list is empty', function (mixed $tiles) {
+    // Форма опустошить список не даёт, но значение может приехать мимо
+    // неё — и очищенный репитер отдаёт `null`, а не `[]`.
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting(['tiles' => $tiles]));
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+
+    foreach (HomeEcosystem::defaults()['tiles'] as $tile) {
+        expect($section)->toContain($tile['title']);
+    }
+})->with([
+    'null' => [null],
+    'пустой список' => [[]],
+    'только безымянные' => [[['icon' => 'gear', 'title' => '', 'text' => null, 'link' => 'parts']]],
+]);
+
+it('keeps the homepage up when a tile icon is not in the set', function () {
+    Log::spy();
+
+    // `x-ui.icon` на неизвестном имени бросает исключение: без сверки
+    // в `HomeContent` опечатка в настройке уронила бы главную целиком.
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting(['tiles' => [
+        ecosystemTile('Плашка с чужим значком', ['icon' => 'definitely-not-an-icon']),
+    ]]));
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+
+    expect($section)->toContain('Плашка с чужим значком')
+        ->and($section)->toContain('<svg');
+
+    Log::shouldHaveReceived('warning')->withArgs(
+        fn (string $message, array $context): bool => str_contains($message, 'у плашки экосистемы неизвестный значок')
+            && ($context['icon'] ?? null) === 'definitely-not-an-icon'
+            && ($context['tile'] ?? null) === 'Плашка с чужим значком',
+    )->once();
+});
+
+it('sends a tile with an unknown address to the lead form', function (mixed $link) {
+    Log::spy();
+
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting(['tiles' => [
+        ecosystemTile('Плашка с чужим адресом', ['link' => $link]),
+    ]]));
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+
+    // Плашка в секции одна, поэтому и ссылка в ней одна.
+    expect(substr_count($section, '<a'))->toBe(1)
+        ->and($section)->toContain('href="#lead-form"');
+
+    Log::shouldHaveReceived('warning')->withArgs(
+        fn (string $message, array $context): bool => str_contains($message, 'у плашки экосистемы неизвестный адрес')
+            && ($context['tile'] ?? null) === 'Плашка с чужим адресом',
+    )->once();
+})->with([
+    'нет в списке' => ['https://example.com/'],
+    'пусто' => [null],
+]);
+
+it('leads a tile to the block of the category chosen in the setting', function () {
+    Log::spy();
+
+    // Категория заведена заказчиком, а не миграцией: адрес обязан
+    // разрешаться по справочнику, а не по двум зашитым слагам.
+    showcaseCategory('Проверочная категория плашки', 'test-ecosystem');
+
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting(['tiles' => [
+        ecosystemTile('Плашка в свою категорию', ['link' => 'category:test-ecosystem']),
+        ecosystemTile('Плашка в удалённую категорию', ['link' => 'category:test-gone']),
+    ]]));
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+
+    expect($section)->toContain('href="'.route('services.index').'#test-ecosystem"')
+        // Промах ведёт на страницу услуг без якоря, а не в никуда.
+        ->and($section)->toContain('href="'.route('services.index').'"')
+        ->and($section)->not->toContain('#test-gone');
+
+    Log::shouldHaveReceived('warning')->withArgs(
+        fn (string $message, array $context): bool => str_contains($message, 'плашка экосистемы ссылается на несуществующую категорию')
+            && ($context['slug'] ?? null) === 'test-gone',
+    )->once();
+});
+
+it('stretches the last ecosystem tile only when their number is odd', function (int $count, int $stretched) {
+    $tiles = [];
+
+    for ($i = 1; $i <= $count; $i++) {
+        $tiles[] = ecosystemTile('Плашка сетки '.$i);
+    }
+
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting(['tiles' => $tiles]));
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+
+    // Сетка в две колонки: при нечётном числе справа внизу осталась бы
+    // дыра. Класс больше нигде в секции не встречается.
+    expect(substr_count($section, 'sm:col-span-2'))->toBe($stretched);
+})->with([
+    'одна' => [1, 1],
+    'две' => [2, 0],
+    'три' => [3, 1],
+    'четыре' => [4, 0],
+    'пять' => [5, 1],
+]);
+
+it('prints no paragraph under a tile without a text', function () {
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting(['tiles' => [
+        ecosystemTile('Плашка без текста'),
+    ]]));
+
+    $section = ecosystemSectionHtml($this->get('/')->assertOk()->getContent());
+
+    // Абзац в секции остаётся один — подпись на фотографии. Пустой `<p>`
+    // под заголовком плашки держал бы отступ над пустотой.
+    expect(substr_count($section, '<p '))->toBe(1)
+        ->and($section)->toContain('Плашка без текста');
+});
+
+it('spends no query on the ecosystem block', function () {
+    warmSettingsCache();
+
+    $without = countQueries(fn () => $this->get('/')->assertOk());
+
+    Setting::set(HomeEcosystem::SETTING_KEY, ecosystemSetting(['tiles' => [
+        ecosystemTile('Плашка первая', ['link' => 'category:maintenance']),
+        ecosystemTile('Плашка вторая', ['link' => 'category:detailing']),
+        ecosystemTile('Плашка третья', ['link' => 'services']),
+    ]]));
+
+    // Запись настройки сбрасывает кеш — прогреть заново.
+    warmSettingsCache();
+
+    $with = countQueries(fn () => $this->get('/')->assertOk());
+
+    // Нижняя граница обязательна — правило `RULES.md`. Справочник
+    // категорий блок берёт у витрины услуг, а не запрашивает сам:
+    // запрос на плашку здесь был бы N+1 на главной.
+    expect($without)->toBeGreaterThan(0)
+        ->and($with)->toBe($without);
 });

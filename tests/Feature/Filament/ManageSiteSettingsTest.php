@@ -13,6 +13,7 @@ use App\Filament\Pages\ManageSiteSettings;
 use App\Models\Media;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\HomeEcosystem;
 use App\Support\Legal\PrivacyPolicy;
 use App\Support\MediaSettingKeys;
 use App\Support\WorkSchedule;
@@ -632,4 +633,106 @@ it('returns a background to the layout file when the picker is cleared', functio
     // Очистка поля — штатный способ вернуть прежнюю фотографию.
     expect(Setting::get('home.hero'))->toBe(['image_id' => null])
         ->and($media->fresh()->usages())->toBe([]);
+});
+
+/*
+ * Блок «Экосистема» главной: настройка-объект `home.ecosystem` с шестью
+ * текстами и списком плашек.
+ *
+ * Два места, где ошибка молчит. Первое — база без ключа: на проде сиды
+ * не запускаются, сайт показывает умолчания, и секция обязана открыться
+ * с ними же, а не пустой. Второе — адрес плашки, ведущий в категорию,
+ * которой уже нет: поле с вариантом вне списка открылось бы пустым,
+ * и пересохранение формы стёрло бы адрес.
+ */
+
+it('stores the ecosystem block as one object with a list of tiles', function () {
+    $tiles = [
+        ['icon' => 'wheel', 'title' => 'Проверочная плашка', 'text' => 'Проверочный текст.', 'link' => 'catalog'],
+        ['icon' => 'phone', 'title' => 'Вторая плашка', 'text' => null, 'link' => 'category:detailing'],
+    ];
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm([
+            'home.ecosystem.title' => 'Проверочный заголовок',
+            'home.ecosystem.title_accent' => '',
+            'home.ecosystem.tiles' => $tiles,
+        ])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $stored = Setting::get(HomeEcosystem::SETTING_KEY);
+
+    expect($stored)->toHaveKeys(array_keys(HomeEcosystem::defaults()))
+        ->and($stored['title'])->toBe('Проверочный заголовок')
+        ->and($stored['title_accent'])->toBeIn([null, ''])
+        // Нетронутые поля объекта не теряются.
+        ->and($stored['eyebrow'])->toBe(HomeEcosystem::defaults()['eyebrow'])
+        // Список, а не объект с ключами репитера: шаблон идёт по нему
+        // в порядке хранения.
+        ->and(array_is_list($stored['tiles']))->toBeTrue()
+        ->and($stored['tiles'])->toHaveCount(2)
+        ->and($stored['tiles'][0])->toMatchArray($tiles[0])
+        ->and($stored['tiles'][1]['link'])->toBe('category:detailing');
+});
+
+it('opens the ecosystem section with the defaults while the key is missing', function () {
+    // Состояние прода сразу после выката: ключа в базе нет.
+    Setting::query()->where('key', HomeEcosystem::SETTING_KEY)->delete();
+    Setting::flushCache();
+
+    expect(Setting::get(HomeEcosystem::SETTING_KEY))->toBeNull();
+
+    $defaults = HomeEcosystem::defaults();
+
+    livewire(ManageSiteSettings::class)
+        ->assertSchemaStateSet([
+            'home.ecosystem.eyebrow' => $defaults['eyebrow'],
+            'home.ecosystem.title' => $defaults['title'],
+            'home.ecosystem.title_accent' => $defaults['title_accent'],
+            'home.ecosystem.panel_text' => $defaults['panel_text'],
+        ])
+        // Сохранение нетронутой формы записывает умолчания — вместе
+        // со списком плашек, который в состоянии формы лежит под ключами
+        // репитера и поэтому проверяется уже по базе.
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // `toEqual`, а не `toBe`: PostgreSQL порядок ключей в jsonb
+    // не сохраняет (правило `RULES.md`), а порядок самих плашек — список,
+    // и он сравнивается как есть.
+    expect(Setting::get(HomeEcosystem::SETTING_KEY)['tiles'])->toEqual($defaults['tiles']);
+});
+
+it('refuses an emptied list of ecosystem tiles and a seventh tile', function () {
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['home.ecosystem.tiles' => []])
+        ->call('save')
+        ->assertHasErrors('data.home.ecosystem.tiles');
+
+    $tile = ['icon' => 'gear', 'title' => 'Плашка', 'text' => null, 'link' => 'parts'];
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['home.ecosystem.tiles' => array_fill(0, HomeEcosystem::MAX_TILES + 1, $tile)])
+        ->call('save')
+        ->assertHasErrors('data.home.ecosystem.tiles');
+
+    // Ни один из двух отказов до базы не дошёл.
+    expect(Setting::get(HomeEcosystem::SETTING_KEY)['tiles'])->toHaveCount(4);
+});
+
+it('keeps a tile address pointing at a missing category through a resave', function () {
+    // Категорию переименовали или удалили после того, как плашку на неё
+    // направили. Значение вне списка вариантов не должно ни ронять
+    // сохранение остальной формы, ни стираться молча.
+    $value = HomeEcosystem::defaults();
+    $value['tiles'][0]['link'] = 'category:test-gone';
+
+    Setting::set(HomeEcosystem::SETTING_KEY, $value);
+
+    livewire(ManageSiteSettings::class)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get(HomeEcosystem::SETTING_KEY)['tiles'][0]['link'])->toBe('category:test-gone');
 });

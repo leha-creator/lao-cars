@@ -193,7 +193,7 @@
 
 ### Фаза 3 — Тесты
 
-- [ ] **Задача 6: сторожа** (зависит от 3, 5)
+- [x] **Задача 6: сторожа** (зависит от 3, 5)
 
   Файлы: `tests/Unit/HomeEcosystemTest.php` (новый), `tests/Feature/Http/HomePageTest.php`, `tests/Feature/Filament/ManageSiteSettingsTest.php`, `tests/Feature/View/IconTest.php`.
 
