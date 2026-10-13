@@ -204,12 +204,10 @@
              На мобильном добавки нет: там секция растёт по содержимому,
              и сползать нечему.
 
-             На телефоне содержимое стоит ПО ЦЕНТРУ (`items-center`), а не
-             прижато к низу: заказчик попросил одинаковую пустоту сверху
-             и снизу. Центр считается от низа шапки, а не от верха секции:
-             `pt-[98px]` — это 66px шапки, под которую секция заезжает,
-             плюс те же 32px, что в `pb-8`. --}}
-        <div class="relative z-2 flex flex-1 items-center px-5 pt-[98px] pb-8 sm:items-end sm:pt-[66px] sm:pb-14 lg:px-8 lg:pt-[76px] lg:pb-44">
+             На телефоне содержимое прижато к ВЕРХУ (`items-start`), а не
+             к низу: заказчик попросил убрать пустоту над текстом. `pt-24` —
+             это 66px шапки, под которую секция заезжает, плюс зазор. --}}
+        <div class="relative z-2 flex flex-1 items-start px-5 pt-24 pb-14 sm:items-end sm:pt-[66px] lg:px-8 lg:pt-[76px] lg:pb-44">
             <div class="mx-auto w-full max-w-page">
                 <div class="mb-4 text-[13px] tracking-[0.2em] text-accent uppercase">Автосалон · сервис · детейлинг в Москве</div>
 
@@ -255,9 +253,14 @@
                         class="rounded-full bg-accent-solid px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] text-on-accent transition hover:-translate-y-0.5 hover:bg-accent-hover"
                     >Посмотреть автомобили</a>
 
+                    {{-- Подложка `bg-scrim/30` — по просьбе заказчика: на
+                         телефоне кнопка лежит поверх автомобиля, и без неё
+                         надпись спорит с кадром. Токен затемнения под
+                         фотографию, а не литерал `black` — он запрещён
+                         тем же правилом, что и `white`. --}}
                     <a
                         href="#selection"
-                        class="rounded-full border border-line-loud px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] transition hover:-translate-y-0.5 hover:border-ink-muted"
+                        class="rounded-full border border-line-loud bg-scrim/30 px-9 py-4.5 text-[15px] font-semibold tracking-[0.02em] transition hover:-translate-y-0.5 hover:border-ink-muted"
                     >Подборка под бюджет</a>
                 </div>
             </div>
