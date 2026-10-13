@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Enums\ServicePage;
 use App\Enums\Weekday;
 use App\Filament\Actions\HelpAction;
 use App\Filament\Forms\Components\MediaPicker;
 use App\Filament\NavigationGroup;
+use App\Models\ServiceCategory;
 use App\Models\Setting;
 use App\Services\PartsHeroContent;
+use App\Support\HomeEcosystem;
 use App\Support\Legal\ConsentText;
 use App\Support\Legal\LeadIntake;
 use App\Support\Legal\PrivacyPolicy;
@@ -22,6 +25,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
@@ -129,6 +133,12 @@ final class ManageSiteSettings extends Page
             // не пустой блок: шаблон подставляет файл вёрстки.
             'home.hero',
             'home.lead',
+            // Блок «Экосистема» — ОДИН ключ с объектом внутри (шесть
+            // текстов и список плашек), а не семь ключей: реестр сверяется
+            // с сидом по ключу целиком. Фотографии блока здесь нет — она
+            // общая со страницей автосервиса и живёт в `services_page.panel`.
+            // Умолчания — в `App\Support\HomeEcosystem`.
+            'home.ecosystem',
         ],
         'footer' => [
             'footer.guarantee',
@@ -284,6 +294,15 @@ final class ManageSiteSettings extends Page
         foreach (self::settingKeys() as $key) {
             $values[$key] = Setting::get($key);
         }
+
+        // Блок «Экосистема» — единственный ключ, у которого форма
+        // подставляет умолчания сама. На проде ключа нет до первого
+        // сохранения (сиды там не запускаются), а сайт при этом показывает
+        // тексты и четыре плашки по умолчанию: без подстановки секция
+        // открылась бы с пустым списком плашек, и править было бы нечего.
+        // `null` здесь означает именно «ключа нет» — форма пишет этот ключ
+        // только объектом. Первое сохранение запишет умолчания в базу.
+        $values[HomeEcosystem::SETTING_KEY] ??= HomeEcosystem::defaults();
 
         // `Arr::undot()`, а не плоский массив с ключами-точками: Filament
         // разбирает имя поля как путь через `data_get()`, а тот, в отличие
@@ -947,6 +966,10 @@ final class ManageSiteSettings extends Page
                 ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
                 ->defaultItems(0),
 
+            // Стоит после этапов покупки: порядок формы повторяет порядок
+            // страницы.
+            self::ecosystemSection(),
+
             Repeater::make('home.price_breakdown')
                 ->label('Состав цены')
                 ->helperText('Блок «Прозрачность цены» на главной. Суммы здесь не указываются — только статьи расходов.')
@@ -996,6 +1019,157 @@ final class ManageSiteSettings extends Page
                 ->label('Секция заявки: фон')
                 ->helperText('Фотография под формой заявки внизу главной. Загружайте её как служебное изображение — без логотипа. Пока поле пустое, показывается фотография по умолчанию.'),
         ]);
+    }
+
+    /**
+     * Блок «Экосистема» главной: тексты и плашки.
+     *
+     * Главное про секцию — пустое текстовое поле НЕ убирает строку
+     * с сайта, а возвращает текст по умолчанию (`App\Support\HomeEcosystem`).
+     * Блок «не бывает пустым» по тому же основанию, что фоны первого экрана
+     * и секции заявки, и остальной вкладке это правило противоположно —
+     * поэтому оно вынесено в описание секции, а умолчание каждого поля
+     * показано его же подсказкой-заполнителем.
+     *
+     * Фотографии здесь нет намеренно: снимок мастерской общий со страницей
+     * автосервиса и выбирается на её вкладке. Поле в двух местах означало
+     * бы два места правки одного и того же.
+     */
+    private static function ecosystemSection(): Section
+    {
+        $key = HomeEcosystem::SETTING_KEY;
+        $defaults = HomeEcosystem::defaults();
+
+        // Один запрос на сборку формы, а не по одному на плашку: варианты
+        // адреса спрашивает каждая строка репитера, а справочник на всех
+        // один. Мемоизация через `once()` здесь не годится — в статическом
+        // методе она пережила бы запрос и отдавала бы устаревший список.
+        $linkOptions = self::ecosystemLinkOptions();
+
+        return Section::make('Экосистема')
+            ->description('Блок «Всё для автомобиля в одном месте». Пустое поле не убирает строку с сайта, а возвращает текст по умолчанию — он показан в поле серым. Фотография блока выбирается на вкладке «Автосервис и запчасти».')
+            ->schema([
+                TextInput::make($key.'.eyebrow')
+                    ->label('Надзаголовок')
+                    ->placeholder($defaults['eyebrow']),
+
+                Grid::make(2)->schema([
+                    TextInput::make($key.'.title')
+                        ->label('Заголовок')
+                        ->placeholder($defaults['title']),
+
+                    // Пара с заголовком: умолчание выделенной части
+                    // подставляется, только когда пуст сам заголовок
+                    // (`HomeContent::ecosystem()`). Поэтому заполнителя
+                    // у поля нет — он обещал бы хвост, который при своём
+                    // заголовке не появится.
+                    TextInput::make($key.'.title_accent')
+                        ->label('Заголовок: выделенная часть')
+                        ->helperText('Продолжает заголовок акцентным цветом. Можно оставить пустой — тогда заголовок будет одного цвета.'),
+                ]),
+
+                TextInput::make($key.'.panel_eyebrow')
+                    ->label('На фотографии: надзаголовок')
+                    ->placeholder($defaults['panel_eyebrow']),
+
+                TextInput::make($key.'.panel_title')
+                    ->label('На фотографии: заголовок')
+                    ->placeholder($defaults['panel_title']),
+
+                Textarea::make($key.'.panel_text')
+                    ->label('На фотографии: текст')
+                    ->placeholder($defaults['panel_text'])
+                    ->rows(2),
+
+                Repeater::make($key.'.tiles')
+                    ->label('Плашки')
+                    ->helperText('От одной до шести. На сайте стоят в две колонки; нечётная последняя растягивается на всю ширину.')
+                    ->schema([
+                        Grid::make(2)->schema([
+                            // Закрытый список, а не свободное поле: значок
+                            // с неизвестным именем роняет страницу целиком
+                            // (`x-ui.icon` бросает исключение). `HomeContent`
+                            // сверяет имя повторно — значение может приехать
+                            // и мимо формы.
+                            Select::make('icon')
+                                ->label('Значок')
+                                ->options(HomeEcosystem::icons())
+                                ->required(),
+
+                            TextInput::make('title')
+                                ->label('Название')
+                                ->required(),
+                        ]),
+
+                        Textarea::make('text')
+                            ->label('Текст')
+                            ->rows(2),
+
+                        // Тоже закрытый список: форма заявки, страницы
+                        // разделов и блоки категорий страницы автосервиса.
+                        // Свободная ссылка потребовала бы проверки схемы
+                        // и сняла бы сторожа якорей категорий.
+                        Select::make('link')
+                            ->label('Куда ведёт')
+                            ->options(fn (mixed $state): array => self::withStaleEcosystemLink($linkOptions, $state))
+                            ->required(),
+                    ])
+                    ->reorderable()
+                    ->collapsed()
+                    ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
+                    // Опустошить список нельзя: состояние «в форме пусто,
+                    // на сайте четыре плашки по умолчанию» было бы
+                    // необъяснимо. Потолок — предел вёрстки блока.
+                    ->minItems(1)
+                    ->maxItems(HomeEcosystem::MAX_TILES)
+                    ->defaultItems(0),
+            ]);
+    }
+
+    /**
+     * Варианты поля «Куда ведёт» у плашки экосистемы: статические адреса
+     * и блоки категорий страницы автосервиса.
+     *
+     * @return array<string, string>
+     */
+    private static function ecosystemLinkOptions(): array
+    {
+        $options = HomeEcosystem::pageLinks();
+
+        $categories = ServiceCategory::query()
+            ->onPage(ServicePage::Services)
+            ->ordered()
+            ->get(['name', 'slug']);
+
+        foreach ($categories as $category) {
+            $options[HomeEcosystem::CATEGORY_PREFIX.$category->slug] = 'Автосервис: блок «'.$category->name.'»';
+        }
+
+        return $options;
+    }
+
+    /**
+     * Те же варианты плюс сохранённое значение, которого в списке уже нет.
+     *
+     * Категорию могли переименовать или удалить после того, как плашку
+     * на неё направили. Без этого варианта поле открылось бы пустым,
+     * а пересохранение формы молча стёрло бы адрес. С пометкой
+     * администратор видит причину и выбирает адрес заново.
+     *
+     * @param  array<string, string>  $options
+     * @return array<string, string>
+     */
+    private static function withStaleEcosystemLink(array $options, mixed $current): array
+    {
+        if (is_string($current) && $current !== '' && ! array_key_exists($current, $options)) {
+            $slug = HomeEcosystem::categorySlug($current);
+
+            $options[$current] = $slug === null
+                ? 'Адрес не найден: '.$current
+                : 'Категория не найдена: '.$slug;
+        }
+
+        return $options;
     }
 
     private static function footerTab(): Tab

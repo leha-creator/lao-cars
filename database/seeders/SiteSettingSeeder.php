@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Models\Setting;
+use App\Support\HomeEcosystem;
 use App\Support\Legal\ConsentText;
 use App\Support\Legal\PrivacyPolicy;
 use App\Support\WorkSchedule;
@@ -193,6 +194,14 @@ class SiteSettingSeeder extends Seeder
                     'image_id' => null,
                 ],
             ],
+
+            // Блок «Экосистема»: надзаголовок, заголовок, подпись
+            // на фотографии мастерской и плашки. Значение берётся из общего
+            // источника, а не дублируется здесь: те же умолчания читают
+            // форма настроек и `HomeContent`, и копия в сиде разошлась бы
+            // с ними на первой правке. Фотография блока сюда не входит —
+            // она общая со страницей автосервиса (`services_page.panel`).
+            HomeEcosystem::SETTING_KEY => HomeEcosystem::defaults(),
 
             // Состав цены. Сумм здесь нет намеренно: блок показывает
             // структуру расходов, а не цену — цена зависит от автомобиля
