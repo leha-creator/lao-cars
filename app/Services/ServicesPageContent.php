@@ -37,6 +37,14 @@ use Illuminate\Support\Facades\Log;
 final class ServicesPageContent
 {
     /**
+     * `SiteBackgrounds` приходит через конструктор, а не создаётся `new`
+     * внутри: правило `ARCHITECTURE.md` — иначе его не подменить в тесте.
+     */
+    public function __construct(
+        private readonly SiteBackgrounds $siteBackgrounds,
+    ) {}
+
+    /**
      * @return array{
      *     title: string,
      *     intro: ?string,
@@ -44,11 +52,13 @@ final class ServicesPageContent
      *     services: EloquentCollection<int, Service>,
      *     disclaimer: ?string,
      *     advantages: list<array{number: ?string, title: string, text: ?string}>,
+     *     panelImage: ?array{url: string, width: ?int, height: ?int},
      * }
      */
     public function build(): array
     {
         $blocks = $this->blocks();
+        $advantages = $this->advantages();
 
         return [
             // Фолбэк на очищенный заголовок, а не только на отсутствующий
@@ -60,8 +70,31 @@ final class ServicesPageContent
             'blocks' => $blocks,
             'services' => $this->flatten($blocks),
             'disclaimer' => $this->prose(Setting::get('services_page.price_disclaimer')),
-            'advantages' => $this->advantages(),
+            'advantages' => $advantages,
+            'panelImage' => $this->panelImage($advantages),
         ];
+    }
+
+    /**
+     * Фотография мастерской из медиабиблиотеки или `null`.
+     *
+     * `null` не убирает фотопанель: шаблон подставляет файл вёрстки.
+     * Снимок общий с блоком «Экосистема» главной, поэтому разрешает его
+     * `SiteBackgrounds`, а не этот сервис.
+     *
+     * Без преимуществ слот не разрешается вовсе: секция «Почему сюда»
+     * тогда не рендерится вместе с фотопанелью, и запрос был бы впустую.
+     *
+     * @param  list<array{number: ?string, title: string, text: ?string}>  $advantages
+     * @return ?array{url: string, width: ?int, height: ?int}
+     */
+    private function panelImage(array $advantages): ?array
+    {
+        if ($advantages === []) {
+            return null;
+        }
+
+        return $this->siteBackgrounds->resolve([SiteBackgrounds::SERVICE_PANEL])[SiteBackgrounds::SERVICE_PANEL];
     }
 
     /**

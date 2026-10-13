@@ -76,6 +76,7 @@ final class HomeContent
     public function __construct(
         private readonly CatalogFilterOptions $filterOptions,
         private readonly PartsHeroContent $partsHero,
+        private readonly SiteBackgrounds $siteBackgrounds,
     ) {}
 
     /**
@@ -95,11 +96,13 @@ final class HomeContent
      *     partsHero: ?array{title: string, text: ?string, button: ?array{text: string, url: string, external: bool}, image_url: ?string, show_on_home: bool},
      *     selector: array{cars: list<array{price: ?int, engine: ?string, status: string}>, engines: list<array{value: string, label: string}>, price_min: ?int, price_max: ?int, total: int},
      *     contacts: array{phone: ?string, email: ?string, address: ?string},
+     *     backgrounds: array{hero: ?array{url: string, width: ?int, height: ?int}, lead: ?array{url: string, width: ?int, height: ?int}, servicePanel: ?array{url: string, width: ?int, height: ?int}},
      *     seo: array{title: ?string, description: ?string},
      * }
      */
     public function build(): array
     {
+        $backgrounds = $this->backgrounds();
         $cars = $this->cars();
         $steps = $this->steps();
         $priceBreakdown = $this->priceBreakdown();
@@ -125,6 +128,11 @@ final class HomeContent
             'reviews' => $reviews->count(),
             'service_groups' => count($price['groups']),
             'parts_hero' => $partsHero !== null,
+            // `false` — не пустой блок, а файл вёрстки на его месте.
+            'own_backgrounds' => array_map(
+                static fn (?array $image): bool => $image !== null,
+                $backgrounds,
+            ),
         ]);
 
         return [
@@ -143,7 +151,34 @@ final class HomeContent
             'partsHero' => $partsHero,
             'selector' => $this->selector(),
             'contacts' => $this->contacts(),
+            'backgrounds' => $backgrounds,
             'seo' => $this->seo(),
+        ];
+    }
+
+    /**
+     * Фоны первого экрана и секции заявки и фотография мастерской —
+     * снимки из медиабиблиотеки или `null`.
+     *
+     * Три слота одним вызовом, а не тремя: `SiteBackgrounds` разрешает
+     * их одним запросом. `null` не убирает блок — шаблон подставляет
+     * на это место файл вёрстки из `resources/images/`, и хиро по-прежнему
+     * «не бывает пустым».
+     *
+     * @return array{hero: ?array{url: string, width: ?int, height: ?int}, lead: ?array{url: string, width: ?int, height: ?int}, servicePanel: ?array{url: string, width: ?int, height: ?int}}
+     */
+    private function backgrounds(): array
+    {
+        $images = $this->siteBackgrounds->resolve([
+            SiteBackgrounds::HERO,
+            SiteBackgrounds::LEAD,
+            SiteBackgrounds::SERVICE_PANEL,
+        ]);
+
+        return [
+            'hero' => $images[SiteBackgrounds::HERO],
+            'lead' => $images[SiteBackgrounds::LEAD],
+            'servicePanel' => $images[SiteBackgrounds::SERVICE_PANEL],
         ];
     }
 

@@ -153,17 +153,45 @@
                 Изображение декоративное: смысл несёт текст поверх него,
                 поэтому пустой `alt` и `aria-hidden`.
             --}}
-            <img
-                src="{{ Vite::asset('resources/images/hero-1920.webp') }}"
-                srcset="{{ Vite::asset('resources/images/hero-960.webp') }} 960w, {{ Vite::asset('resources/images/hero-1920.webp') }} 1920w"
-                sizes="100vw"
-                fetchpriority="high"
-                width="1920"
-                height="1080"
-                alt=""
-                aria-hidden="true"
-                class="size-full object-cover"
-            >
+            @if ($backgrounds['hero'] !== null)
+                {{--
+                    Снимок из медиабиблиотеки, выбранный в настройках сайта.
+
+                    `srcset` здесь нет намеренно: библиотека хранит одну
+                    ширину, а дескриптор без настоящего файла заставил бы
+                    браузер выбрать заведомо не тот вариант (`RULES.md`).
+                    Цена — телефон получает полный файл; триггер пересмотра
+                    записан в `docs/homepage.md`.
+
+                    Размеры выводятся, только когда известны оба: у записей
+                    старше вехи 4.14 колонки пусты. На раскладку они
+                    не влияют — кадр лежит абсолютным слоем.
+                --}}
+                <img
+                    src="{{ $backgrounds['hero']['url'] }}"
+                    fetchpriority="high"
+                    @if ($backgrounds['hero']['width'] !== null && $backgrounds['hero']['height'] !== null)
+                        width="{{ $backgrounds['hero']['width'] }}"
+                        height="{{ $backgrounds['hero']['height'] }}"
+                    @endif
+                    alt=""
+                    aria-hidden="true"
+                    class="size-full object-cover"
+                >
+            @else
+                {{-- Файл вёрстки: стоит, пока фон не выбран в панели. --}}
+                <img
+                    src="{{ Vite::asset('resources/images/hero-1920.webp') }}"
+                    srcset="{{ Vite::asset('resources/images/hero-960.webp') }} 960w, {{ Vite::asset('resources/images/hero-1920.webp') }} 1920w"
+                    sizes="100vw"
+                    fetchpriority="high"
+                    width="1920"
+                    height="1080"
+                    alt=""
+                    aria-hidden="true"
+                    class="size-full object-cover"
+                >
+            @endif
 
             {{-- Маска: без неё белый текст на светлом участке фотографии
                  нечитаем. Значения стопов — из макета. --}}
@@ -1684,11 +1712,19 @@
                     поэтому пустой `alt` и `aria-hidden`. В отличие от хиро —
                     `loading="lazy"`: блок стоит глубоко ниже первого экрана,
                     и правило LCP из `RULES.md` к нему не относится.
+
+                    Снимок выбирается в настройках сайта (вкладка
+                    «Автосервис и запчасти»); пока он не выбран, стоит файл
+                    вёрстки. Ветка обязана совпадать с `/services`.
                 --}}
                 <img
-                    src="{{ Vite::asset('resources/images/service-panel.webp') }}"
-                    width="720"
-                    height="961"
+                    @if ($backgrounds['servicePanel'] !== null)
+                        src="{{ $backgrounds['servicePanel']['url'] }}"
+                    @else
+                        src="{{ Vite::asset('resources/images/service-panel.webp') }}"
+                        width="720"
+                        height="961"
+                    @endif
                     loading="lazy"
                     alt=""
                     aria-hidden="true"
@@ -2230,7 +2266,7 @@
             eyebrow="Заявка"
             heading="Получите подборку автомобилей под ваш запрос"
             text="Перезвоним в течение 15 минут в рабочее время. Все данные передаются менеджеру напрямую."
-            :background="Vite::asset('resources/images/lead-bg.webp')"
+            :background="$backgrounds['lead']['url'] ?? Vite::asset('resources/images/lead-bg.webp')"
         >
             @if ($leadContacts !== [])
                 <x-slot:below>
