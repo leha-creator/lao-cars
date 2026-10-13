@@ -124,6 +124,11 @@ final class ManageSiteSettings extends Page
             // настройки и путь внутрь её значения, и `data_get()` с пустым
             // путём проверку использования не выполнил бы.
             'home.trust',
+            // Фоны первого экрана и секции заявки. Форма значения та же,
+            // что у `home.trust`, и по той же причине. Пустое значение —
+            // не пустой блок: шаблон подставляет файл вёрстки.
+            'home.hero',
+            'home.lead',
         ],
         'footer' => [
             'footer.guarantee',
@@ -144,6 +149,9 @@ final class ManageSiteSettings extends Page
             // в колонку `service_categories.description`.
             'services_page.price_disclaimer',
             'services_page.advantages',
+            // Фотография мастерской — объект с одним полем, как `home.trust`.
+            // Снимок один на две страницы: `/services` и главную.
+            'services_page.panel',
             'parts_page.intro_title',
             'parts_page.intro_text',
             'parts_page.delivery_terms',
@@ -828,6 +836,16 @@ final class ManageSiteSettings extends Page
                 ->reorderable()
                 ->defaultItems(0),
 
+            // Фон первого экрана. Стоит здесь, а не в конце вкладки:
+            // порядок формы повторяет порядок страницы.
+            //
+            // Путь этого поля перечислен в `MediaSettingKeys` — оттуда
+            // его читает проверка «файл где-то используется» перед
+            // удалением из медиабиблиотеки.
+            MediaPicker::make('home.hero.image_id')
+                ->label('Первый экран: фон')
+                ->helperText('Широкий горизонтальный снимок, не меньше 1920 пикселей по ширине. Загружайте его как служебное изображение — без логотипа. Пока поле пустое, показывается фотография по умолчанию.'),
+
             // Полоса доверия (веха 4.5). Из админки правится только
             // фотография: четыре текста карточек по-прежнему живут
             // в шаблоне — правило вехи 4.6 «одна строка на карточку,
@@ -971,6 +989,12 @@ final class ManageSiteSettings extends Page
                 ->collapsed()
                 ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
                 ->defaultItems(0),
+
+            // Фон секции заявки — последний блок страницы и последнее
+            // поле вкладки. Путь перечислен в `MediaSettingKeys`.
+            MediaPicker::make('home.lead.image_id')
+                ->label('Секция заявки: фон')
+                ->helperText('Фотография под формой заявки внизу главной. Загружайте её как служебное изображение — без логотипа. Пока поле пустое, показывается фотография по умолчанию.'),
         ]);
     }
 
@@ -1044,6 +1068,15 @@ final class ManageSiteSettings extends Page
                 ->collapsed()
                 ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
                 ->defaultItems(0),
+
+            // Фотография рядом с карточками «Почему сюда». Правится здесь,
+            // а не на вкладке «Главная», хотя главная её тоже показывает:
+            // это снимок автосервиса, и поле в двух местах означало бы два
+            // места правки одного и того же. Путь перечислен
+            // в `MediaSettingKeys`.
+            MediaPicker::make('services_page.panel.image_id')
+                ->label('Автосервис: фотография мастерской')
+                ->helperText('Вертикальный снимок рядом с карточками «Почему сюда». Тот же снимок стоит на главной в блоке «Всё для автомобиля в одном месте». Подпись на фотографии не меняется. Пока поле пустое, показывается фотография по умолчанию.'),
 
             self::partsHeroSection(),
 

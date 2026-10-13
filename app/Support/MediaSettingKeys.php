@@ -59,6 +59,21 @@ final class MediaSettingKeys
             'label' => 'Настройки: фотография шоу-рума на главной',
         ],
         [
+            'setting' => 'home.hero',
+            'path' => 'image_id',
+            'label' => 'Настройки: фон первого экрана главной',
+        ],
+        [
+            'setting' => 'home.lead',
+            'path' => 'image_id',
+            'label' => 'Настройки: фон секции заявки на главной',
+        ],
+        [
+            'setting' => 'services_page.panel',
+            'path' => 'image_id',
+            'label' => 'Настройки: фотография мастерской',
+        ],
+        [
             'setting' => 'parts_page.hero',
             'path' => 'image_id',
             'label' => 'Настройки: первый экран страницы запчастей',
