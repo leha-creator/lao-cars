@@ -267,7 +267,7 @@ final class HelpLibrary
             new HelpArticle(
                 slug: 'home-blocks',
                 title: 'Блоки главной страницы',
-                summary: 'Фоновые фотографии, бегущая строка, промо-баннер, преимущества, этапы покупки, состав цены и вопросы.',
+                summary: 'Фоновые фотографии, бегущая строка, промо-баннер, преимущества, этапы покупки, блок с плашками направлений, состав цены и вопросы.',
                 section: HelpSection::Settings,
                 gate: ManageSiteSettings::class,
                 // `service-pages-texts` — из-за блока каталога автозапчастей:
