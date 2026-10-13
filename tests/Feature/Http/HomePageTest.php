@@ -1199,3 +1199,157 @@ it('renders every lede through the component that ties it', function () {
         expect(Typography::tie($text))->toBe($text);
     }
 });
+
+/*
+ * Фоновые фотографии из настроек: первый экран, секция заявки и фотография
+ * мастерской.
+ *
+ * Пустая настройка здесь — не пустой блок, а файл вёрстки на его месте:
+ * хиро «не бывает пустым», и на проде ключей нет до первого сохранения
+ * формы. Поэтому у каждого фона проверяются ОБЕ ветки — без второй сторож
+ * зеленел бы и на шаблоне, который настройку не читает вовсе.
+ */
+
+/**
+ * Тег фона первого экрана — единственный `<img>` страницы с высоким
+ * приоритетом загрузки.
+ */
+function homeHeroImageTag(string $html): string
+{
+    preg_match_all('/<img\b[^>]*fetchpriority="high"[^>]*>/su', $html, $matches);
+
+    // Ровно один: второй такой тег означал бы, что приоритет получили
+    // оба варианта фона разом или что его унаследовал чужой блок.
+    expect($matches[0])->toHaveCount(1);
+
+    return $matches[0][0];
+}
+
+/**
+ * Тег `<img>` с заданным адресом — или пустая строка.
+ */
+function homeImageTagBySrc(string $html, string $src): string
+{
+    preg_match('/<img\b[^>]*\bsrc="'.preg_quote($src, '/').'"[^>]*>/su', $html, $match);
+
+    return $match[0] ?? '';
+}
+
+it('shows the hero background chosen in the settings', function () {
+    $media = Media::factory()->create(['width' => 1920, 'height' => 1280]);
+
+    Setting::set('home.hero', ['image_id' => $media->getKey()]);
+
+    $html = $this->get('/')->assertOk()->getContent();
+    $tag = homeHeroImageTag($html);
+
+    expect($tag)->toContain('src="'.$media->url.'"')
+        // Библиотека хранит одну ширину: дескриптор без настоящего файла
+        // заставил бы браузер выбрать заведомо не тот вариант (`RULES.md`).
+        ->and($tag)->not->toContain('srcset')
+        // LCP-элемент остаётся LCP-элементом и со снимком из библиотеки.
+        ->and($tag)->not->toContain('loading=')
+        ->and($tag)->toContain('width="1920"')
+        ->and($tag)->toContain('height="1280"')
+        // Файла вёрстки на странице при этом нет ни в каком виде.
+        ->and($html)->not->toContain('hero-1920')
+        ->and($html)->not->toContain('hero-960');
+});
+
+it('omits the hero dimensions when the library record has none', function () {
+    // У записей старше вехи 4.14 колонки размеров пусты, и `width=""`
+    // в разметке — невалидный атрибут, а не «размер неизвестен».
+    $media = Media::factory()->create(['width' => null, 'height' => null]);
+
+    Setting::set('home.hero', ['image_id' => $media->getKey()]);
+
+    $tag = homeHeroImageTag($this->get('/')->assertOk()->getContent());
+
+    expect($tag)->toContain('src="'.$media->url.'"')
+        ->and($tag)->not->toContain('width=')
+        ->and($tag)->not->toContain('height=');
+});
+
+it('keeps the layout file as the hero background until a photo is chosen', function (mixed $value) {
+    if ($value !== 'missing') {
+        Setting::set('home.hero', $value);
+    }
+
+    $tag = homeHeroImageTag($this->get('/')->assertOk()->getContent());
+
+    expect($tag)->toContain('hero-1920')
+        // У файла вёрстки обе ширины настоящие, и свой `srcset` он сохраняет.
+        ->and($tag)->toContain(' 960w')
+        ->and($tag)->toContain(' 1920w')
+        ->and($tag)->not->toContain('loading=');
+})->with([
+    'ключа нет' => ['missing'],
+    'поле очищено' => [['image_id' => null]],
+]);
+
+it('returns to the layout hero when the chosen photo is gone from the library', function () {
+    $media = Media::factory()->create();
+    $id = $media->getKey();
+    $media->forceDelete();
+
+    Setting::set('home.hero', ['image_id' => $id]);
+
+    // Первый экран не бывает пустым: пропавшая запись не оставляет хиро
+    // без фотографии. Предупреждение в лог проверяет `SiteBackgroundsTest`.
+    expect(homeHeroImageTag($this->get('/')->assertOk()->getContent()))->toContain('hero-1920');
+});
+
+it('shows the lead section background chosen in the settings', function () {
+    $html = $this->get('/')->assertOk()->getContent();
+
+    expect($html)->toContain('lead-bg');
+
+    $media = Media::factory()->create();
+
+    Setting::set('home.lead', ['image_id' => $media->getKey()]);
+
+    $html = $this->get('/')->assertOk()->getContent();
+
+    expect($html)->not->toContain('lead-bg')
+        // Блок стоит внизу страницы: в отличие от хиро, он грузится лениво.
+        ->and(homeImageTagBySrc($html, $media->url))->toContain('loading="lazy"');
+});
+
+it('shows the workshop photo chosen in the settings', function () {
+    $html = $this->get('/')->assertOk()->getContent();
+
+    expect($html)->toContain('service-panel');
+
+    $media = Media::factory()->create();
+
+    Setting::set('services_page.panel', ['image_id' => $media->getKey()]);
+
+    $html = $this->get('/')->assertOk()->getContent();
+    $tag = homeImageTagBySrc($html, $media->url);
+
+    expect($html)->not->toContain('service-panel')
+        ->and($tag)->toContain('loading="lazy"')
+        // Размеры 720×961 принадлежат файлу вёрстки, а не снимку заказчика.
+        ->and($tag)->not->toContain('width="720"');
+});
+
+it('spends one query on all three backgrounds', function () {
+    warmSettingsCache();
+
+    $without = countQueries(fn () => $this->get('/')->assertOk());
+
+    Setting::set('home.hero', ['image_id' => Media::factory()->create()->getKey()]);
+    Setting::set('home.lead', ['image_id' => Media::factory()->create()->getKey()]);
+    Setting::set('services_page.panel', ['image_id' => Media::factory()->create()->getKey()]);
+
+    // Запись настройки сбрасывает кеш — прогреть заново, иначе промах
+    // кеша добавил бы второму замеру запрос, не относящийся к фонам.
+    warmSettingsCache();
+
+    $with = countQueries(fn () => $this->get('/')->assertOk());
+
+    // Нижняя граница обязательна — правило `RULES.md`. Прибавка ровно
+    // в один запрос: `find()` на каждый фон дал бы три.
+    expect($without)->toBeGreaterThan(0)
+        ->and($with)->toBe($without + 1);
+});

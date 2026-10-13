@@ -725,3 +725,59 @@ it('fits the card photo instead of cropping it', function () {
         ->and($card[0])->toContain('object-contain')
         ->and($card[0])->not->toContain('object-cover');
 });
+
+/*
+ * Фотография мастерской из настроек. Снимок общий с блоком «Экосистема»
+ * главной и разрешается тем же `SiteBackgrounds`; пустая настройка — файл
+ * вёрстки, а не пустая панель.
+ */
+
+it('shows the workshop photo chosen in the settings next to the advantages', function () {
+    Setting::set('services_page.advantages', [
+        ['number' => '01', 'title' => 'Согласуем до начала', 'text' => null],
+    ]);
+
+    $html = $this->get('/services')->assertOk()->getContent();
+
+    expect($html)->toContain('service-panel');
+
+    $media = Media::factory()->create();
+
+    Setting::set('services_page.panel', ['image_id' => $media->getKey()]);
+
+    $html = $this->get('/services')->assertOk()->getContent();
+
+    preg_match('/<img\b[^>]*\bsrc="'.preg_quote($media->url, '/').'"[^>]*>/su', $html, $match);
+
+    expect($html)->not->toContain('service-panel')
+        ->and($match[0] ?? '')->toContain('loading="lazy"')
+        // Размеры 720×961 принадлежат файлу вёрстки, а не снимку заказчика.
+        ->and($match[0] ?? '')->not->toContain('width="720"');
+});
+
+it('does not look the workshop photo up when the advantages are emptied', function () {
+    // Без карточек «Почему сюда» секция не рендерится вместе с фотопанелью,
+    // и запрос за снимком был бы впустую на каждом открытии страницы.
+    $media = Media::factory()->create();
+
+    Setting::set('services_page.panel', ['image_id' => $media->getKey()]);
+    Setting::set('services_page.advantages', null);
+    warmSettingsCache();
+
+    $response = $this->get('/services')->assertOk();
+
+    expect($response->getContent())->not->toContain($media->url);
+
+    $without = countQueries(fn () => $this->get('/services')->assertOk());
+
+    Setting::set('services_page.advantages', [
+        ['number' => '01', 'title' => 'Согласуем до начала', 'text' => null],
+    ]);
+    warmSettingsCache();
+
+    $with = countQueries(fn () => $this->get('/services')->assertOk());
+
+    // Нижняя граница обязательна — правило `RULES.md`.
+    expect($without)->toBeGreaterThan(0)
+        ->and($with)->toBe($without + 1);
+});

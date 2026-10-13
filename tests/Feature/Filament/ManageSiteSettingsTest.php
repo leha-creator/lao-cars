@@ -591,3 +591,45 @@ it('accepts an emptied parts hero button address', function () {
 
     expect(Setting::get('parts_page.hero')['button_url'])->toBeIn([null, '']);
 });
+
+/*
+ * Фоновые фотографии: первый экран и секция заявки на вкладке «Главная»,
+ * фотография мастерской на вкладке «Автосервис и запчасти».
+ *
+ * Что нетронутая форма не объявляет эти ключи изменёнными, проверяет
+ * сторож `reports nothing as changed when the form is saved untouched`
+ * выше: сид задаёт всем трём форму значения, и форма пишет её же.
+ */
+
+it('stores a background photo chosen by a picker', function (string $setting, string $label) {
+    $media = Media::factory()->create();
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm([$setting.'.image_id' => $media->getKey()])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // Объект целиком, а не скаляр: `MediaSettingKeys` ищет ссылку
+    // по пути внутрь значения.
+    expect(Setting::get($setting))->toBe(['image_id' => $media->getKey()])
+        ->and($media->fresh()->usages())->toContain($label);
+})->with([
+    'первый экран' => ['home.hero', 'Настройки: фон первого экрана главной'],
+    'секция заявки' => ['home.lead', 'Настройки: фон секции заявки на главной'],
+    'мастерская' => ['services_page.panel', 'Настройки: фотография мастерской'],
+]);
+
+it('returns a background to the layout file when the picker is cleared', function () {
+    $media = Media::factory()->create();
+
+    Setting::set('home.hero', ['image_id' => $media->getKey()]);
+
+    livewire(ManageSiteSettings::class)
+        ->fillForm(['home.hero.image_id' => null])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // Очистка поля — штатный способ вернуть прежнюю фотографию.
+    expect(Setting::get('home.hero'))->toBe(['image_id' => null])
+        ->and($media->fresh()->usages())->toBe([]);
+});

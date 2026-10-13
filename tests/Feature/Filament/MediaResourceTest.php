@@ -356,3 +356,39 @@ it('records the dimensions of an uploaded library file', function () {
     expect($media->width)->toBe(800)
         ->and($media->height)->toBe(533);
 });
+
+/*
+ * Фоновые фотографии из настроек. Без строк в реестре `MediaSettingKeys`
+ * выбранный фон числился бы свободным файлом и удалялся по кнопке,
+ * а сайт молча возвращался бы к фотографии по умолчанию.
+ */
+
+it('reports a record used as a background photo', function (string $setting, string $label) {
+    $media = Media::factory()->create();
+    $other = Media::factory()->create();
+
+    Setting::set($setting, ['image_id' => $media->getKey()]);
+
+    expect($media->usages())->toBe([$label])
+        ->and($other->usages())->toBe([]);
+})->with([
+    'первый экран' => ['home.hero', 'Настройки: фон первого экрана главной'],
+    'секция заявки' => ['home.lead', 'Настройки: фон секции заявки на главной'],
+    'мастерская' => ['services_page.panel', 'Настройки: фотография мастерской'],
+]);
+
+it('cancels deletion of a record used as the hero background', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('media/home-hero.webp', 'original');
+
+    $media = Media::factory()->create(['path' => 'media/home-hero.webp']);
+
+    Setting::set('home.hero', ['image_id' => $media->getKey()]);
+
+    livewire(EditMedia::class, ['record' => $media->getRouteKey()])
+        ->callAction(DeleteAction::class);
+
+    expect(Media::query()->whereKey($media->id)->exists())->toBeTrue();
+
+    Storage::disk('public')->assertExists('media/home-hero.webp');
+});
