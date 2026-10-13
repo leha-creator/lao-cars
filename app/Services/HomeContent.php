@@ -12,6 +12,7 @@ use App\Models\Review;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Setting;
+use App\Support\HomeEcosystem;
 use App\Support\Typography;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
@@ -57,15 +58,6 @@ final class HomeContent
     private const int SELECTOR_CARS_WARNING_THRESHOLD = 500;
 
     /**
-     * Слаги категорий, на блоки которых ведут плашки «Экосистемы».
-     *
-     * Список живёт здесь, а не в шаблоне: адрес плашки надо СВЕРИТЬ
-     * со справочником, а Blade в БД не ходит. Сами плашки (заголовок,
-     * текст, иконка) остаются в шаблоне — они не данные, а вёрстка.
-     */
-    private const array ECOSYSTEM_ANCHORS = ['maintenance', 'detailing'];
-
-    /**
      * `CatalogFilterOptions` внедряется через конструктор, а не создаётся
      * `new` внутри: правило `ARCHITECTURE.md` — иначе его не подменить
      * в тесте. По тому же правилу приходит `PartsHeroContent`. Границы бюджета и список двигателей быстрого подбора
@@ -92,7 +84,7 @@ final class HomeContent
      *     reviews: EloquentCollection<int, Review>,
      *     serviceGroups: list<array{category: ServiceCategory, note: ?string, items: EloquentCollection<int, Service>}>,
      *     services: EloquentCollection<int, Service>,
-     *     ecosystemLinks: array<string, string>,
+     *     ecosystem: array{eyebrow: string, title: string, title_accent: ?string, panel: array{eyebrow: string, title: string, text: string}, tiles: list<array{icon: string, title: string, text: ?string, url: string}>},
      *     partsHero: ?array{title: string, text: ?string, button: ?array{text: string, url: string, external: bool}, image_url: ?string, show_on_home: bool},
      *     selector: array{cars: list<array{price: ?int, engine: ?string, status: string}>, engines: list<array{value: string, label: string}>, price_min: ?int, price_max: ?int, total: int},
      *     contacts: array{phone: ?string, email: ?string, address: ?string},
@@ -110,6 +102,7 @@ final class HomeContent
         $reviews = $this->reviews();
         $price = $this->servicePrice();
         $partsHero = $this->partsHero();
+        $ecosystem = $this->ecosystem($price['categories']);
 
         // Одно сообщение на всю сборку, а не по одному на блок: по нему
         // видно, КАКОЙ блок исчез со страницы, — а именно этот вопрос
@@ -128,6 +121,7 @@ final class HomeContent
             'reviews' => $reviews->count(),
             'service_groups' => count($price['groups']),
             'parts_hero' => $partsHero !== null,
+            'ecosystem_tiles' => count($ecosystem['tiles']),
             // `false` — не пустой блок, а файл вёрстки на его месте.
             'own_backgrounds' => array_map(
                 static fn (?array $image): bool => $image !== null,
@@ -147,7 +141,7 @@ final class HomeContent
             'reviews' => $reviews,
             'serviceGroups' => $price['groups'],
             'services' => $price['services'],
-            'ecosystemLinks' => $this->ecosystemLinks($price['categories']),
+            'ecosystem' => $ecosystem,
             'partsHero' => $partsHero,
             'selector' => $this->selector(),
             'contacts' => $this->contacts(),
@@ -597,7 +591,7 @@ final class HomeContent
      * одно и живёт у категории.
      *
      * Категории возвращаются третьим значением ради плашек «Экосистемы»
-     * (`ecosystemLinks()`): им нужен тот же справочник, и второй запрос
+     * (`ecosystem()`): им нужен тот же справочник, и второй запрос
      * за теми же строками был бы платой за раздельность методов.
      *
      * @return array{
@@ -664,45 +658,182 @@ final class HomeContent
     }
 
     /**
-     * Адреса плашек «Экосистемы», ведущих в блоки категорий на `/services`.
+     * Блок «Экосистема»: тексты, подпись на фотографии мастерской и плашки.
+     *
+     * До первой просьбы заказчика тексты жили в шаблоне; теперь они
+     * приходят из настройки `home.ecosystem`, а прежние строки стали
+     * умолчаниями (`App\Support\HomeEcosystem`).
+     *
+     * **Пустое поле возвращает текст по умолчанию, блок не бывает пустым.**
+     * Остальным блокам главной это правило противоположно, и причина
+     * та же, что у фоновых фотографий: на проде ключа нет до первого
+     * сохранения формы, и без фолбэка выкат снёс бы блок с главной.
+     * Отсюда же: значение настройки, не являющееся массивом, — это
+     * «ключа нет», а не ошибка.
+     *
+     * **Заголовок и выделенная часть — пара.** Умолчание хвоста
+     * подставляется, только когда пуст сам заголовок: иначе свой заголовок
+     * со стёртым хвостом превратился бы в «Сервис после покупки в одном
+     * месте». Заполненный заголовок с пустым хвостом — заголовок без акцента.
+     *
+     * Фотографии блока здесь нет: она общая со страницей автосервиса
+     * и приходит слотом `servicePanel` из `backgrounds()`.
+     *
+     * @param  EloquentCollection<int, ServiceCategory>  $categories
+     * @return array{eyebrow: string, title: string, title_accent: ?string, panel: array{eyebrow: string, title: string, text: string}, tiles: list<array{icon: string, title: string, text: ?string, url: string}>}
+     */
+    private function ecosystem(EloquentCollection $categories): array
+    {
+        $stored = Setting::get(HomeEcosystem::SETTING_KEY);
+        $defaults = HomeEcosystem::defaults();
+
+        if (! is_array($stored)) {
+            // По этой записи видно, что форма настроек на этом стенде ещё
+            // ни разу не сохранялась: блок целиком стоит на умолчаниях.
+            Log::debug('[Главная] блок экосистемы собран из умолчаний: настройка не сохранялась');
+
+            $stored = [];
+        }
+
+        $title = $this->string($stored['title'] ?? null);
+
+        $tiles = $this->ecosystemTiles($stored['tiles'] ?? null, $categories);
+
+        if ($tiles === []) {
+            // Форма опустошить список не даёт (`minItems`), так что сюда
+            // приводят отсутствующий ключ и значение, приехавшее мимо
+            // формы. Умолчания проходят тот же разбор, что и настройка:
+            // их адреса тоже сверяются со справочником категорий.
+            $tiles = $this->ecosystemTiles($defaults['tiles'], $categories);
+        }
+
+        return [
+            'eyebrow' => $this->string($stored['eyebrow'] ?? null) ?? $defaults['eyebrow'],
+            'title' => $title ?? $defaults['title'],
+            'title_accent' => $title === null
+                ? $defaults['title_accent']
+                : $this->string($stored['title_accent'] ?? null),
+            'panel' => [
+                'eyebrow' => $this->string($stored['panel_eyebrow'] ?? null) ?? $defaults['panel_eyebrow'],
+                'title' => $this->string($stored['panel_title'] ?? null) ?? $defaults['panel_title'],
+                'text' => $this->prose($stored['panel_text'] ?? null) ?? (string) $this->prose($defaults['panel_text']),
+            ],
+            'tiles' => $tiles,
+        ];
+    }
+
+    /**
+     * Плашки «Экосистемы» из значения репитера.
+     *
+     * Плашка без названия выпадает по тому же правилу, что карточка
+     * преимущества: значок над пустотой выглядит как поломка вёрстки.
+     * Список усекается до `HomeEcosystem::MAX_TILES` — сетка рядом
+     * с фотографией на большее не рассчитана.
+     *
+     * Значок сверяется с закрытым списком ЗДЕСЬ, а не только в форме:
+     * `x-ui.icon` на неизвестном имени бросает исключение, то есть
+     * опечатка в jsonb уронила бы главную целиком.
+     *
+     * @param  EloquentCollection<int, ServiceCategory>  $categories
+     * @return list<array{icon: string, title: string, text: ?string, url: string}>
+     */
+    private function ecosystemTiles(mixed $value, EloquentCollection $categories): array
+    {
+        $slugs = $categories->pluck('slug')->all();
+        $icons = HomeEcosystem::icons();
+
+        $tiles = [];
+
+        foreach ($this->listFrom($value) as $item) {
+            if (count($tiles) >= HomeEcosystem::MAX_TILES) {
+                break;
+            }
+
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $title = $this->string($item['title'] ?? null);
+
+            if ($title === null) {
+                continue;
+            }
+
+            $icon = $this->string($item['icon'] ?? null);
+
+            if ($icon === null || ! array_key_exists($icon, $icons)) {
+                Log::warning('[Главная] у плашки экосистемы неизвестный значок', [
+                    'tile' => $title,
+                    'icon' => $icon,
+                    'hint' => 'выберите значок у плашки заново на вкладке «Главная» настроек сайта',
+                ]);
+
+                $icon = HomeEcosystem::DEFAULT_ICON;
+            }
+
+            $tiles[] = [
+                'icon' => $icon,
+                'title' => $title,
+                'text' => $this->prose($item['text'] ?? null),
+                'url' => $this->ecosystemUrl($this->string($item['link'] ?? null), $title, $slugs),
+            ];
+        }
+
+        return $tiles;
+    }
+
+    /**
+     * Адрес плашки «Экосистемы».
      *
      * Разрешение живёт здесь, а не в шаблоне, по правилу проекта «Blade
-     * не ходит в БД». До вехи 4.13 разрешать было нечего: якорь выдавал
-     * `ServiceCategory::anchor()` у кейса енама, и промахнуться мимо
-     * существующего блока было физически нельзя. Теперь слаг правится
-     * из админки, то есть промах стал ДОСТИЖИМЫМ состоянием, а ссылка
+     * не ходит в БД»: адрес блока категории надо СВЕРИТЬ со справочником.
+     * Слаг категории правится из админки, то есть промах мимо
+     * существующего блока — ДОСТИЖИМОЕ состояние, а ссылка
      * на несуществующий якорь не работает МОЛЧА — ни ошибки в консоли,
      * ни падения теста разметки.
      *
      * Промах даёт ссылку на страницу услуг БЕЗ якоря: она приводит туда,
      * куда обещала плашка, просто без прокрутки к блоку. Ссылка в никуда
      * была бы хуже — человек остаётся на главной и решает, что сайт сломан.
+     * Неизвестный адрес ведёт к форме заявки на той же странице.
      *
-     * @param  EloquentCollection<int, ServiceCategory>  $categories
-     * @return array<string, string>
+     * @param  list<string>  $slugs  слаги категорий страницы автосервиса
      */
-    private function ecosystemLinks(EloquentCollection $categories): array
+    private function ecosystemUrl(?string $target, string $tile, array $slugs): string
     {
-        $slugs = $categories->pluck('slug')->all();
+        $fallback = HomeEcosystem::pageUrl(HomeEcosystem::DEFAULT_LINK) ?? '#lead-form';
 
-        $links = [];
+        $slug = $target === null ? null : HomeEcosystem::categorySlug($target);
 
-        foreach (self::ECOSYSTEM_ANCHORS as $slug) {
+        if ($slug !== null) {
+            $services = HomeEcosystem::pageUrl('services') ?? $fallback;
+
             if (in_array($slug, $slugs, true)) {
-                $links[$slug] = route('services.index').'#'.$slug;
-
-                continue;
+                return $services.'#'.$slug;
             }
 
             Log::warning('[Главная] плашка экосистемы ссылается на несуществующую категорию', [
                 'slug' => $slug,
-                'hint' => 'заведите категорию с этим слагом в разделе «Категории услуг» или поправьте плашку в шаблоне главной',
+                'tile' => $tile,
+                'hint' => 'выберите адрес у плашки заново на вкладке «Главная» настроек сайта или верните категории прежний слаг',
             ]);
 
-            $links[$slug] = route('services.index');
+            return $services;
         }
 
-        return $links;
+        $url = $target === null ? null : HomeEcosystem::pageUrl($target);
+
+        if ($url === null) {
+            Log::warning('[Главная] у плашки экосистемы неизвестный адрес', [
+                'tile' => $tile,
+                'link' => $target,
+                'hint' => 'выберите адрес у плашки заново на вкладке «Главная» настроек сайта',
+            ]);
+
+            return $fallback;
+        }
+
+        return $url;
     }
 
     /**
