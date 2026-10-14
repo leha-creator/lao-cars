@@ -25,16 +25,15 @@
     в плане вехи — просьба заказчика развести «Оригинальные детали»
     и «Аналоги» с отдельными описаниями.
 
-    Форма источник НЕ проставляет. Заявку на подбор отличают поля автомобиля
-    (`Lead::isPartsRequest()` — марка и VIN), а категория без артикула
-    менеджеру не добавляет ничего: он всё равно идёт к поставщику по VIN.
-    Второй селект в форме, где уже три дополнительных поля, стоит дороже,
-    чем даёт. Триггер пересмотра: просьба менеджеров разделять заявки
-    по категориям запчастей.
-
-    Флаг `:parts` — единственное, что отличает эту форму от остальных,
-    и потерять его при правке шаблона проще всего, поэтому на него стоит
-    отдельный тест.
+    **Формы заявки на странице нет** — её убрали по просьбе заказчика.
+    Страница ведёт в каталог автозапчастей кнопкой первого экрана.
+    Кнопка «Оставить заявку» в шапке ведёт на `#lead-form`, якоря здесь
+    нет, и браузер остаётся на месте — так же, как на `/privacy`
+    и `/consent`. Ветка `:parts` у `x-lead-form` (марка, модель, VIN)
+    осталась в компоненте без вызова: вернуть форму — одна строка
+    `<x-lead-section :parts="true" … />` в конце страницы. Старые заявки
+    на подбор в панели это не затрагивает — `Lead::isPartsRequest()`
+    смотрит на колонки, а не на форму.
 --}}
 @extends('layouts.app')
 
@@ -54,9 +53,6 @@
 @section('description', 'Подбор оригинальных запчастей и проверенных аналогов по марке, модели и VIN.')
 
 @section('content')
-    {{-- Страница светлая целиком (веха 4.11). Нижнего поля секциям
-         не задаём: страница всегда заканчивается секцией заявки, и отступ
-         даёт она. --}}
     {{-- Первый экран ЗАМЕНЯЕТ заголовок страницы, а не встаёт над ним:
          H1 на странице один. Блок не заполнен — страница выглядит
          как до его появления, с заголовком и вступлением из настроек. --}}
@@ -71,44 +67,48 @@
          (`PartsController`), а не молчание — и WARN-а там ДВА: страница
          без единой категории и категории без единой опубликованной
          позиции чинятся по-разному. --}}
-    @if ($items->isNotEmpty())
-        <section class="theme-light px-5 pt-12 lg:px-8 lg:pt-16">
-            <div class="mx-auto max-w-page">
-                <h2 class="mb-8 font-display text-[26px] leading-[1.2] font-semibold lg:mb-10 lg:text-3xl">
-                    Что подбираем
-                </h2>
+    {{-- Страница светлая целиком (веха 4.11). Нижнее поле задаёт обёртка,
+         а не последняя секция: раньше страница заканчивалась секцией
+         заявки, и отступ давала она, а теперь последней может оказаться
+         любая из двух — или ни одной. --}}
+    <div class="theme-light pb-16 lg:pb-20">
+        @if ($items->isNotEmpty())
+            <section class="theme-light px-5 pt-12 lg:px-8 lg:pt-16">
+                <div class="mx-auto max-w-page">
+                    <h2 class="mb-8 font-display text-[26px] leading-[1.2] font-semibold lg:mb-10 lg:text-3xl">
+                        Что подбираем
+                    </h2>
 
-                {{-- `items-start` обязателен, и это не косметика: в одной
-                     сетке стоят карточки с кадром и без него, а умолчание
-                     `stretch` растягивает короткую карточку на высоту
-                     соседней с фотографией — получается белый прямоугольник
-                     в полтора экрана с одной строкой заголовка наверху.
-                     На странице услуг такого нет: там карточки с фотографией
-                     лежат своей группой, и высоты у них сравнимые. --}}
-                <div class="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    @foreach ($items as $item)
-                        <x-services.card :service="$item" :price-fallback="false" />
-                    @endforeach
+                    {{-- `items-start` обязателен, и это не косметика: в одной
+                         сетке стоят карточки с кадром и без него, а умолчание
+                         `stretch` растягивает короткую карточку на высоту
+                         соседней с фотографией — получается белый прямоугольник
+                         в полтора экрана с одной строкой заголовка наверху.
+                         На странице услуг такого нет: там карточки с фотографией
+                         лежат своей группой, и высоты у них сравнимые. --}}
+                    <div class="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach ($items as $item)
+                            <x-services.card :service="$item" :price-fallback="false" />
+                        @endforeach
+                    </div>
+
+                    {{-- У позиций стоят цены, значит и оговорка «не оферта»
+                         обязана стоять рядом с ними, а не только на странице
+                         автосервиса. --}}
+                    <x-price-disclaimer :text="$priceDisclaimer" class="mt-8" />
                 </div>
+            </section>
+        @endif
 
-                {{-- У позиций стоят цены, значит и оговорка «не оферта»
-                     обязана стоять рядом с ними, а не только на странице
-                     автосервиса. --}}
-                <x-price-disclaimer :text="$priceDisclaimer" class="mt-8" />
-            </div>
-        </section>
-    @endif
-
-    @if ($deliveryTerms !== null && $deliveryTerms !== '')
-        <section class="theme-light px-5 pt-12 lg:px-8">
-            <div class="mx-auto max-w-page">
-                <div class="max-w-2xl rounded-card border border-line bg-surface p-6 lg:p-8">
-                    <div class="mb-2 text-sm font-semibold">Условия поставки</div>
-                    <p class="text-sm leading-relaxed text-ink-muted">{{ $deliveryTerms }}</p>
+        @if ($deliveryTerms !== null && $deliveryTerms !== '')
+            <section class="theme-light px-5 pt-12 lg:px-8">
+                <div class="mx-auto max-w-page">
+                    <div class="max-w-2xl rounded-card border border-line bg-surface p-6 lg:p-8">
+                        <div class="mb-2 text-sm font-semibold">Условия поставки</div>
+                        <p class="text-sm leading-relaxed text-ink-muted">{{ $deliveryTerms }}</p>
+                    </div>
                 </div>
-            </div>
-        </section>
-    @endif
-
-    <x-lead-section :parts="true" title="Подобрать запчасть" submit="Отправить запрос" />
+            </section>
+        @endif
+    </div>
 @endsection

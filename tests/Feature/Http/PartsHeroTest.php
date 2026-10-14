@@ -269,15 +269,16 @@ it('keeps the hero up when its background was deleted from the library', functio
         ->once();
 });
 
-it('keeps the parts request form and its anchor under the hero', function () {
+it('keeps the parts page without a lead form under the hero', function () {
     partsHero();
 
     $html = $this->get('/parts')->assertOk()->getContent();
 
-    // Блок заменил заголовок, а не страницу: форма подбора с полями
-    // автомобиля и якорь, на который ведёт кнопка в шапке, на месте.
-    expect(substr_count($html, 'id="lead-form"'))->toBe(1)
-        ->and($html)->toContain('name="part_vin"');
+    // Формы на странице нет и с заполненным первым экраном: его кнопка
+    // ведёт в каталог автозапчастей, а не к заявке.
+    expect($html)->toContain('Каталог проверочных запчастей')
+        ->and($html)->not->toContain('id="lead-form"')
+        ->and($html)->not->toContain('name="part_vin"');
 });
 
 it('does not leak blade comments into the pages with the hero', function (string $uri) {

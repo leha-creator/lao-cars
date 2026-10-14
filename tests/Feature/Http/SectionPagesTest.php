@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\Queue;
  * явно: без этого набор остался бы зелёным, а единственная страница
  * без трёх сквозных сторожей — незамеченной. Заводя следующую публичную
  * страницу, пройдите по файлу поиском по `/contacts`.
+ *
+ * **`/parts` в перечнях про форму нет намеренно**: форму со страницы
+ * запчастей убрали по просьбе заказчика, и её отсутствие сторожит
+ * `PartsPageTest`. Вернёте форму — верните и адрес в эти перечни.
  */
 
 /*
@@ -79,15 +83,11 @@ it('shows contacts from site settings on the contacts page', function () {
         ->assertSee('WhatsApp');
 });
 
-it('asks for part details only on the parts page', function () {
-    // Флаг `:parts` на компоненте формы — единственное, что отличает заявку
-    // на подбор запчасти от остальных (`Lead::isPartsRequest()`), и потерять
-    // его при правке шаблона проще всего.
-    $this->get('/parts')
-        ->assertOk()
-        ->assertSee('name="part_vin"', escape: false);
-
-    foreach (['/', '/services', '/about', '/contacts'] as $uri) {
+it('asks for part details on no section page', function () {
+    // Поля подбора (флаг `:parts`) жили только в форме страницы запчастей,
+    // а её убрали. На остальные страницы они не протекали и не должны
+    // протечь теперь — в том числе на саму `/parts`.
+    foreach (['/', '/services', '/parts', '/about', '/contacts'] as $uri) {
         $this->get($uri)
             ->assertOk()
             ->assertDontSee('name="part_vin"', escape: false);
@@ -109,28 +109,7 @@ it('captures a lead from every section page', function (string $uri) {
     // Проверка не декоративная: вёрстка вехи 4.1 переписала разметку формы,
     // и переименованное поле потеряло бы заявку молча.
     expect(Lead::query()->count())->toBe(1);
-})->with(['/', '/services', '/parts', '/about', '/contacts']);
-
-it('captures part details from the parts page form', function () {
-    Queue::fake();
-
-    $this->from('/parts')
-        ->post(route('leads.store'), [
-            'name' => 'Иван',
-            'phone' => '+7 999 123-45-67',
-            'consent' => '1',
-            'part_brand' => 'Zeekr',
-            'part_model' => '001',
-            'part_vin' => 'XW8ZZZ61ZJG000001',
-        ])
-        ->assertRedirect('/parts')
-        ->assertSessionHasNoErrors();
-
-    $lead = Lead::query()->sole();
-
-    expect($lead->isPartsRequest())->toBeTrue()
-        ->and($lead->part_vin)->toBe('XW8ZZZ61ZJG000001');
-});
+})->with(['/', '/services', '/about', '/contacts']);
 
 it('runs section page intros through typography', function () {
     // Веха 4.14, пункт 6: висячие слова лечатся не только `text-pretty`,
@@ -206,7 +185,7 @@ it('replaces the form with a phone number while intake is switched off', functio
         ->assertSee('Приём заявок через сайт временно приостановлен')
         ->assertSee('+7 495 000-11-22')
         ->assertDontSee('action="'.route('leads.store').'"', escape: false);
-})->with(['/', '/services', '/parts', '/about', '/contacts']);
+})->with(['/', '/services', '/about', '/contacts']);
 
 it('keeps the lead-form anchor alive while intake is switched off', function (string $uri) {
     // САМОЕ ВАЖНОЕ в этом блоке. Кнопка «Оставить заявку» в шапке ведёт
@@ -221,7 +200,7 @@ it('keeps the lead-form anchor alive while intake is switched off', function (st
         ->assertOk()
         ->assertSee('id="lead-form"', escape: false)
         ->assertSee('href="#lead-form"', escape: false);
-})->with(['/', '/services', '/parts', '/about', '/contacts']);
+})->with(['/', '/services', '/about', '/contacts']);
 
 it('omits the phone line instead of offering an empty tel link', function () {
     // Правило подвала, применённое здесь же: ссылка `tel:` на пустой номер
