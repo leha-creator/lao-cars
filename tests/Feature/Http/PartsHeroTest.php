@@ -4,6 +4,7 @@ use App\Models\Media;
 use App\Models\Setting;
 use App\Support\Typography;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /*
  * Первый экран страницы запчастей и его показ на главной.
@@ -279,6 +280,30 @@ it('keeps the parts page without a lead form under the hero', function () {
     expect($html)->toContain('Каталог проверочных запчастей')
         ->and($html)->not->toContain('id="lead-form"')
         ->and($html)->not->toContain('name="part_vin"');
+});
+
+it('puts the hero right on the footer when nothing follows it', function () {
+    // Под первым экраном нет ни позиций, ни условий поставки. Светлая
+    // обёртка секций с нижним отступом тогда не рендерится: пустая, она
+    // стояла светлой полосой между тёмным первым экраном и подвалом.
+    partsHero();
+
+    $html = $this->get('/parts')->assertOk()->getContent();
+    $main = Str::between($html, '<main id="content">', '</main>');
+
+    expect($main)->toContain('Каталог проверочных запчастей')
+        ->and($main)->not->toContain('theme-light');
+});
+
+it('keeps the light wrapper under the hero when a section follows it', function () {
+    // Парный сторож: условие не должно выкинуть обёртку вместе с секцией.
+    partsHero();
+    Setting::set('parts_page.delivery_terms', 'Проверочные условия поставки.');
+
+    $main = Str::between($this->get('/parts')->assertOk()->getContent(), '<main id="content">', '</main>');
+
+    expect($main)->toContain('Проверочные условия поставки.')
+        ->and($main)->toContain('theme-light pb-16');
 });
 
 it('does not leak blade comments into the pages with the hero', function (string $uri) {

@@ -70,7 +70,15 @@
     {{-- Страница светлая целиком (веха 4.11). Нижнее поле задаёт обёртка,
          а не последняя секция: раньше страница заканчивалась секцией
          заявки, и отступ давала она, а теперь последней может оказаться
-         любая из двух — или ни одной. --}}
+         любая из двух.
+
+         Обёртка рендерится, ТОЛЬКО когда в ней есть хотя бы одна секция.
+         Пустая оставила бы светлую полосу высотой в собственный отступ
+         между тёмным первым экраном и подвалом — без ошибок, заметно
+         только глазом. Без секций первый экран встаёт прямо на подвал. --}}
+    @php $hasDeliveryTerms = $deliveryTerms !== null && $deliveryTerms !== ''; @endphp
+
+    @if ($items->isNotEmpty() || $hasDeliveryTerms)
     <div class="theme-light pb-16 lg:pb-20">
         @if ($items->isNotEmpty())
             <section class="theme-light px-5 pt-12 lg:px-8 lg:pt-16">
@@ -100,7 +108,7 @@
             </section>
         @endif
 
-        @if ($deliveryTerms !== null && $deliveryTerms !== '')
+        @if ($hasDeliveryTerms)
             <section class="theme-light px-5 pt-12 lg:px-8">
                 <div class="mx-auto max-w-page">
                     <div class="max-w-2xl rounded-card border border-line bg-surface p-6 lg:p-8">
@@ -111,4 +119,5 @@
             </section>
         @endif
     </div>
+    @endif
 @endsection
